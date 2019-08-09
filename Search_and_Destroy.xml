@@ -225,7 +225,7 @@
 		ColourNote("#808080", "", "\n+=================================================================+")
 		ColourNote("#FF3000", "", "    " .. current_sd_version .. " installed at " .. os.time() )
 		print("")
-		ColourNote("#FF3000", "", "    " .. "For support, contact aardstar@gmail.com (Starling)" )
+		ColourNote("#FF3000", "", "    " .. "For support, contact Crowley" )
 		ColourNote("#808080", "", "+=================================================================+\n")
 		windowinfo = movewindow.install (win, miniwin.pos_center, miniwin.create_absolute_location, false, nil, {mouseup=MouseUp, mousedown=LeftClickOnly, dragmove=LeftClickOnly, dragrelease=LeftClickOnly},{x=win_pos_x, y=win_pos_y})
 		xg_create_window()

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient> 
-<plugin version="4.2" name="Search_and_Destroy" version="4.1" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="4.4" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -42,6 +42,7 @@
 	require "wait"
 
     PLUGIN_VERSION  = GetPluginInfo(GetPluginID(), 19)
+	PLUGIN_NAME 	= GetPluginInfo(GetPluginID(), 1)
 	
 	local current_sd_version 		= "Search & Destroy v" .. PLUGIN_VERSION
 	local plugin_id_gmcp_handler 	= "3e7dedbe37e44942dd46d264"		-- easier to remember the var names than the plugin id's

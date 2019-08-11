@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient> 
-<plugin name="Search_and_Destroy_v4" version="4.0" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin name="Search_and_Destroy_v4" version="4.1" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -30,7 +30,7 @@
 <script>
 <![CDATA[
 
-	-- This script was originally "improved" upon by someone who no longer is welcome on Aardwolf. As such, it was suggested that I branch it out so I can make sure it stays safe and legal for the public to use without fear that something illegal is going to be added, thus possibly destroying your character. I will not name the previous author, nor credit them, as I feel it's best not to praise rulebreakers. If you have any questions, feel free to shoot me a message on Personal or through tells. I'll make changes as I see fit to the code, however. // Crowley
+	-- This script was originally "improved" upon by Starling. As such, it was suggested that I branch it out so I can make sure it stays safe and legal for the public to use without fear that something illegal is going to be added, thus possibly destroying your character. Credit is due to Starling for the job she did on the plugin in the past, but now it's time to make sure it remains something everyone can use. If you have any questions, feel free to shoot me a message on Personal or through tells. I'll make changes as I see fit to the code, however. // Crowley
 	
 	-- total lines of code: 4143	(at start of merge)
 	-- total lines of code: ____	(at end of merge)

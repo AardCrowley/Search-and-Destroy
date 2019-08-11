@@ -43,7 +43,7 @@
 
     PLUGIN_VERSION  = GetPluginInfo(GetPluginID(), 19)
 	
-	local current_sd_version 		= "Search & Destroy v3.0 (rel-1.0.6)"
+	local current_sd_version 		= "Search & Destroy v" .. PLUGINVERSION
 	local plugin_id_gmcp_handler 	= "3e7dedbe37e44942dd46d264"		-- easier to remember the var names than the plugin id's
 	local plugin_id_gmcp_mapper		= "b6eae87ccedd84f510b74714"
 	local plugin_id_z_order 		= "462b665ecb569efbf261422f"

@@ -3937,7 +3937,7 @@ function goto_number(name, line, wildcards)
 
     function raw_get(retval, page, status, headers, full_status, request_url)
         if status == 200 then
-            raw_version = tonumber(string.match(page, '%s+version="([0-9%.]+)">'))
+            raw_version = tonumber(string.match(page, '%s+version="([0-9%.]+)"'))
         end
 
         if raw_version == PLUGIN_VERSION then

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient> 
-<plugin version="4.5" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="4.51" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -29,8 +29,15 @@
 
 <script>
 <![CDATA[
+--Line 152
+	-- This script was originally improved upon by Starling. Credit is due to Starling for the job she did on the plugin in the past, but in order to ensure future compliance with Aardwolf and MUSHclient, maintenance will now be provided by me. If you have any questions, feel free to shoot me a message on Personal or through tells. I'll make changes as I see fit to the code. // Crowley
 
-	-- This plugin is a branch of Starling's version. Starling took S&D to a new level when she decided to tackle the project, merging the three original plugins into one and improving the original code before being banned from Aardwolf. In order to ensure future compliance with MUSHClient and Aardwolf rules, version 4.0+ is a fresh branch that will be maintained by me. If you have any questions, feel free to shoot me a message on Personal or through tells. I'll make changes as I see fit to the code. // Crowley
+	--[[ ToDo List:
+		* Move 'hiding' mobs further down the list
+		* Add a mob database
+		* Add ability to keyword mobs, tie in with mob database
+		* Change way XRT works - if no shortname found, run to best matching area ]]--
+
 	
 	-- total lines of code: 4143	(at start of merge)
 	-- total lines of code: ____	(at end of merge)
@@ -41,7 +48,9 @@
 	require "tprint"
 	require "wait"
 
-    PLUGIN_VERSION  = GetPluginInfo(GetPluginID(), 19)
+--line 171
+
+	PLUGIN_VERSION  = GetPluginInfo(GetPluginID(), 19)
 	PLUGIN_NAME 	= GetPluginInfo(GetPluginID(), 1)
 	
 	local current_sd_version 		= "Search & Destroy v" .. PLUGIN_VERSION
@@ -1001,6 +1010,86 @@
 							["a large mole"]						= { kw="mole"				},
 							["a very large firefly"]				= { kw="larg firef"			},
 							["the fattest kobold ever"]				= { kw="fat kobold"			}, },
+
+		["sohtwo"]      = { ["An evil form of Sagen"]               = { kw="notcarlsagen"        },
+							["Angelic Demonspawn"]                  = { kw="angelic"             },
+							["Bubbly Obyron"]                       = { kw="fuzzybunny"          },
+							["Dejected Broud"]                      = { kw="dejected"            },
+							["Disagreeable Rumour"]                 = { kw="obstinate"           },
+							["Disoriented Dadrake"]                 = { kw="letsturnlefthere"    },
+							["Evil Aaeron"] 	                    = { kw="shinythings"         },
+							["Evil Althalus"]                       = { kw="homeskillet"         },
+							["Evil Belmont"]                        = { kw="bridgetroll"         },
+							["Evil Domain"]                         = { kw="66"                  },
+							["Evil Euphonix"]                       = { kw="ragbrai"             },
+							["Evil Ghaan"]                          = { kw="longghaan"           },
+							["Evil Halo"]                           = { kw="jackandcoke"         },
+							["Evil Ikyu"]                           = { kw="ickypoo"             },
+							["Evil Justme"]                         = { kw="helperisme"          },
+							["Evil Kharpern"]                       = { kw="kittyimm"            },
+							["Evil KlauWaard"]                      = { kw="tricksy"             },
+							["Evil Kt"]                             = { kw="ktkat"               },
+							["Evil Lasher"]                         = { kw="thearchitect"        },
+							["Evil Madcatz"]                        = { kw="mathizard"           },
+							["Evil Maerchyng"]                      = { kw="maerchyng"           },
+							["Evil Morrigu"]                        = { kw="morrigu"             },
+							["Evil OrcWarrior"]                     = { kw="sheepshagger"        },
+							["Evil Pane"]                           = { kw="painintheneck"       },
+							["Evil Plaideleon"]                     = { kw="crazycanadian"       },
+							["Evil Rekhart"]                        = { kw="hartsawreck"         },
+							["Evil Sarlock"]                        = { kw="l33td00d"            },
+							["Evil Tela"]                           = { kw="telllllllla"         },
+							["Evil Timeghost"]                      = { kw="floppyimm"           },
+							["Good Tripitaka"]                      = { kw="laketripitaka"       },
+							["Evil Tymme"]                          = { kw="hourglass"           },
+							["Evil Vladia"]                         = { kw="sexyvamp"            },
+							["Evil Whitdjinn"]                      = { kw="thundercat"          },
+							["Evil Windjammer"]                     = { kw="justsomeimm"         },
+							["Evil Wolfe"]                          = { kw="likeobybutbritish"   },
+							["Evil Xyzzy"]                          = { kw="weirdcode"           },
+							["Good Aerianne"]                       = { kw="pointyears"          },
+							["Good Cadaver"]                        = { kw="newbiehater"         },
+							["Good Delight"]                        = { kw="turkishdelight"       },
+							["Good Dirtworm"]                       = { kw="wormy"                },
+							["Good Eclaboussure"]                   = { kw="dropbearimm"          },
+							["Good Filt"]                           = { kw="plainolefilt"         },
+							["Good Glimmer"]                        = { kw="betterhalfofclaire"   },
+							["Good Kinson"]                         = { kw="upgradeboy"           },
+							["Good Lumina"]                         = { kw="thievesrus"           },
+							["Good Oladon"]                         = { kw="spellingbee"          },
+							["Good Rhuli"]                          = { kw="rulistheworld"        },
+							["Good Sausage"]                        = { kw="fatbreakfast"         },
+							["Good Sirene"]                         = { kw="warriorprincess"      },
+							["Good Takihisis"]                      = { kw="dragonlady"           },
+							["Good Terrill"]                        = { kw="askcitron"            },
+							["Good Tyanon"]                         = { kw="tieoneon"             },
+							["Good Valkur"]                         = { kw="demonlord"            },
+							["Good Vilgan"]                         = { kw="unabridged"           },
+							["Good Xantcha"]                        = { kw="pokerimm"             },
+							["Good Zane"]                           = { kw="inzanity"             },
+							["Goodie Goodie Jaenelle"]              = { kw="goodie"               },
+							["Impatient Styliann"]                  = { kw="willyouhurryup"       },
+							["Kinda-Sorta Good Whisper"]            = { kw="kinda"                },
+							["Master Shen"]                         = { kw="master"               },
+							["Mathematical Mordist"]                = { kw="complex"              },
+							["Nascaard Rezit"]                      = { kw="nascaard"             },
+							["Pandemonium Penthesilea"]             = { kw="pandemonium"          },
+							["Record Holding Guinness"]             = { kw="cantwriteatall"       },
+							["Singing Paramore"]                    = { kw="failedmusician"       },
+							["Sith Lord Neeper"]                    = { kw="sith"                 },
+							["Smurfy Laren"]                        = { kw="lovethemsmurfs"       },
+							["Sober Citron"]                        = { kw="sober"                },
+							["Socialite Arthon"]                    = { kw="airhead"              },
+							["Straight Dreamfyre"]                  = { kw="straight"             },
+							["The cool version of Xeno"]            = { kw="onex"                 },
+							["The Pancake Flat"]                    = { kw="pancake"              },
+							["Tjopping Quadrapus"]                  = { kw="tjopping"             },
+							["Unhelpful Claire"]                    = { kw="cookies"              },
+							["Unremarkable Korridel"]               = { kw="unremarkable"         },
+							["Unrestrained Elvandar"]               = { kw="omgsheneverstopstalking"},
+							["Warsnail Anaristos"]                  = { kw="warsnail"             },
+							["Cuddlebear Koala"]                    = { kw="cuddlebear"           },
+							["(Helper) Fenix"]                      = { kw="helper"               },},
 		
 		["snuckles"]	= {	["Sarah, the grieving snuckle"]			= { kw="sarah griev"		}, },
 
@@ -1118,11 +1207,11 @@
 				ColourNote("#FF1010", "", "\n'Target quest mob' (xq) not done - the mob is currently dead, or you can't see it (check detects).")
 				ColourNote("#FF1010", "", "\n'The last known location, before it went missing, was:\n")
 				ColourNote("#FF5000", "", "mob : ",
-							   "#00C040", "", qt.mob.." ")
+							"#00C040", "", qt.mob.." ")
 				ColourNote("#FF5000", "", "area: ",
-							   "#00C040", "", qt.areaName .. " ("..qt.arid..")")
+							"#00C040", "", qt.areaName .. " ("..qt.arid..")")
 				ColourNote("#FF5000", "", "room: ",
-							   "#00C040", "", qt.room)
+							"#00C040", "", qt.room)
 			end
 		else
 			full_mob_name = qt.mob
@@ -1134,11 +1223,11 @@
 			if (bool == true) then
 				ColourNote("#FF5000", "", "\nYour quest mob is: \n") 
 				ColourNote("#FF5000", "", "mob : ",
-						   "#00C040", "", qt.mob.." ")
+						"#00C040", "", qt.mob.." ")
 				ColourNote("#FF5000", "", "area: ",
-						   "#00C040", "", qt.areaName .. " ("..qt.arid..")")
+						"#00C040", "", qt.areaName .. " ("..qt.arid..")")
 				ColourNote("#FF5000", "", "room: ",
-						   "#00C040", "", qt.room)
+						"#00C040", "", qt.room)
 			end
 		end
 		Execute("xm "..qt.room.."|"..qt.arid)
@@ -1568,7 +1657,7 @@
 		
 		if (player_on_cp == "yes") then
 			DoAfterSpecial(0.4, [[ ColourNote("#FF5000", "#000000", "Reloading your cp targets....")
-								   do_cp_info() ]], sendto.script)
+								do_cp_info() ]], sendto.script)
 		end
 	end
 	
@@ -1614,7 +1703,7 @@
 			for row in db:nrows(select) do
 				results_found = true
 				table.insert(t,
-				  {	mob = v.mob,
+				{	mob = v.mob,
 					arid = row.arid,
 					qty = v.qty,
 					is_dead = dead,
@@ -1625,7 +1714,7 @@
 			end
 			if (results_found == false) then
 				table.insert(t, 
-				  {	mob = v.mob,
+				{	mob = v.mob,
 					location = v.loc, 
 					arid = "-1", 
 					qty = v.qty,
@@ -2086,7 +2175,7 @@ function goto_number(name, line, wildcards)
 					if (vnt.j > 3) then
 						EnableTimer("vidblain_nav_timer", false) -- stop vidblain timer
 						do_mapper_goto(vnt.rmid, "walk")
- 						execute_in_area(vnt.arid, eiat.f)	-- start EIA timer
+						execute_in_area(vnt.arid, eiat.f)	-- start EIA timer
 						vidblain_nav_tbl = { i=0, j=0, rmid="", arid="", stat=1 }
 					end
 				else
@@ -2303,21 +2392,21 @@ function goto_number(name, line, wildcards)
 		end
 	end
 	
- 	function ht_continue()
+	function ht_continue()
 		local s = short_mob_name
 		local ix = (ht.index + 1) or 1
 		do_hunt_trick(ix, s)
- 	end
+	end
 	
- 	function ht_complete(name, line, wildcards)
+	function ht_complete(name, line, wildcards)
 		EnableTriggerGroup("AutoHunt", false)
 		local s = short_mob_name
 		local ix = ht.index or 1
 		qw_arg("", "", {index=ix, mob=s})
 		ht_reset()
- 	end
+	end
 	
- 	function ht_abort(name, line, wildcards)
+	function ht_abort(name, line, wildcards)
 		EnableTriggerGroup("HuntTrick", false)
 		ht = {}
 		ColourNote("#FF5000", "", "Search and Destroy:  Hunt trick cancelled.")
@@ -2597,7 +2686,7 @@ function goto_number(name, line, wildcards)
 			end
 		else
 			ColourNote("#FF5000", "", "\nSearch and Destroy: 'noexp' is *manually* OFF." ..
-									  "\nType 'noexp' again to turn it back on.")
+									"\nType 'noexp' again to turn it back on.")
 		end
 		xg_draw_window()
 	end
@@ -2754,10 +2843,10 @@ function goto_number(name, line, wildcards)
 		local serial = serialize.save_simple(area_start_rooms)
 		SetVariable("mcvar_areaStartRooms", serial)
 		ColourNote("#FF5000", "", "\nxset mark: Room ",
-				   "#00C040", "", ri.rmid,
-				   "#FF5000", "", " set as start of area ",
-				   "#00C040", "", ri.arid,
-				   "#FF5000", "", ".\n")
+				"#00C040", "", ri.rmid,
+				"#FF5000", "", " set as start of area ",
+				"#00C040", "", ri.arid,
+				"#FF5000", "", ".\n")
 	end
  	
 	function get_start_room(area_id)
@@ -3118,14 +3207,14 @@ function goto_number(name, line, wildcards)
 	end
 	
 	local button_1_list = {
-  --[[ 1 ]]	["hsXCP"] = { L=  0, text="xcp", tdx=3, tdy=3, exec1=     "xcp", exec2=   "xcp 0", tooltip="Left click = get target\nRight click = clear target" },
-  --[[ 2 ]]	["hsGO"]  = { L= 31, text= "go", tdx=7, tdy=3, exec1=      "go", exec2=    "go 0", tooltip="Left click = Go to room 1\nRight click = Go to area start" },
-  --[[ 3 ]]	["hsKK"]  = { L= 62, text= "kk", tdx=8, tdy=3, exec1=      "kk", exec2=      "kk", tooltip="Left click = 'kill' target mob\nRight click = kill with special" },			
-  --[[ 4 ]]	["hsNX"]  = { L= 93, text= "nx", tdx=7, tdy=3, exec1=      "nx", exec2=     "nx-", tooltip="Left click = goto next\nRight click = goto prev" },
-  --[[ 5 ]]	["hsQS"]  = { L=124, text= "qs", tdx=8, tdy=3, exec1=      "qs", exec2=      "qs", tooltip="Quick-scan for current target (cp, quest, ht, qw)" },
-  --[[ 6 ]]	["hsQW"]  = { L=219, text= "qw", tdx=5, tdy=3, exec1=      "qw", exec2=     "qwx", tooltip="Left click = Quick-where\nRight click = Quick-where exact" },
-  --[[ 7 ]]	["hsHT"]  = { L=248, text= "ht", tdx=9, tdy=3, exec1=      "ht", exec2=     "hta", tooltip="Left click = Do hunt trick\nRight click = Cancel hunt trick" },
-  --[[ 8 ]]	["hsREF"] = { L=277, text="ref", tdx=6, tdy=3, exec1="xgui ref", exec2="xgui rel", tooltip="Left click = Refresh target list - cp (gq) check\nRight click = Reload target data - cp (gq) info" } }
+--[[ 1 ]]	["hsXCP"] = { L=  0, text="xcp", tdx=3, tdy=3, exec1=     "xcp", exec2=   "xcp 0", tooltip="Left click = get target\nRight click = clear target" },
+--[[ 2 ]]	["hsGO"]  = { L= 31, text= "go", tdx=7, tdy=3, exec1=      "go", exec2=    "go 0", tooltip="Left click = Go to room 1\nRight click = Go to area start" },
+--[[ 3 ]]	["hsKK"]  = { L= 62, text= "kk", tdx=8, tdy=3, exec1=      "kk", exec2=      "kk", tooltip="Left click = 'kill' target mob\nRight click = kill with special" },			
+--[[ 4 ]]	["hsNX"]  = { L= 93, text= "nx", tdx=7, tdy=3, exec1=      "nx", exec2=     "nx-", tooltip="Left click = goto next\nRight click = goto prev" },
+--[[ 5 ]]	["hsQS"]  = { L=124, text= "qs", tdx=8, tdy=3, exec1=      "qs", exec2=      "qs", tooltip="Quick-scan for current target (cp, quest, ht, qw)" },
+--[[ 6 ]]	["hsQW"]  = { L=219, text= "qw", tdx=5, tdy=3, exec1=      "qw", exec2=     "qwx", tooltip="Left click = Quick-where\nRight click = Quick-where exact" },
+--[[ 7 ]]	["hsHT"]  = { L=248, text= "ht", tdx=9, tdy=3, exec1=      "ht", exec2=     "hta", tooltip="Left click = Do hunt trick\nRight click = Cancel hunt trick" },
+--[[ 8 ]]	["hsREF"] = { L=277, text="ref", tdx=6, tdy=3, exec1="xgui ref", exec2="xgui rel", tooltip="Left click = Refresh target list - cp (gq) check\nRight click = Reload target data - cp (gq) info" } }
 	
 	function draw_b1_action_buttons(left, top)
 		local b1 = button_1_list
@@ -3407,9 +3496,9 @@ function goto_number(name, line, wildcards)
 	end
 	
 	function mousedown_resize_window(flags, hotspot_id)
-	   if (hotspot_id == "hsResize") then
-		  startx, starty = WindowInfo (win, 17), WindowInfo (win, 18)
-	   end
+	if (hotspot_id == "hsResize") then
+		startx, starty = WindowInfo (win, 17), WindowInfo (win, 18)
+	end
 	end	
 	
 	function mouseup_noexp(flags)
@@ -3671,8 +3760,8 @@ function goto_number(name, line, wildcards)
 	
 	function dbcheck(code, query)
 		if (code ~= sqlite3.OK) and    -- no error
-		   (code ~= sqlite3.ROW) and   -- completed OK with another row of data
-		   (code ~= sqlite3.DONE) then -- completed OK, no more rows
+		(code ~= sqlite3.ROW) and   -- completed OK with another row of data
+		(code ~= sqlite3.DONE) then -- completed OK, no more rows
 			local err = db:errmsg ()  -- the rollback will change the error message
 			err = err.."\n\nCODE: "..code.."\nQUERY: "..query.."\n"
 			db:exec("ROLLBACK")      -- rollback any transaction to unlock the database
@@ -3697,13 +3786,13 @@ function goto_number(name, line, wildcards)
 	end
 
 	function gmcp(s)
-	   local ret, datastring = CallPlugin(plugin_id_gmcp_handler, "gmcpdata_as_string", s)
-	   pcall(loadstring("data = "..datastring))
-	   return data
+	local ret, datastring = CallPlugin(plugin_id_gmcp_handler, "gmcpdata_as_string", s)
+	pcall(loadstring("data = "..datastring))
+	return data
 	end
 
 	function send_gmcp_packet(s)
-	   CallPlugin(plugin_id_gmcp_handler, "GMCP_send", s)
+	CallPlugin(plugin_id_gmcp_handler, "GMCP_send", s)
 	end
 		
 	function int(n)
@@ -3730,12 +3819,12 @@ function goto_number(name, line, wildcards)
 	end
 	
 	function round_banker(x)		-- round normally, but when number ends in exactly .5 round to nearest even value.
-	   if (x == 0) then return 0 end	-- prevent returning -0
-	   if (x + 0.5) % 2 == 0 then
-		  return math.floor(x + 0.5)
-	   else
-		  return math.ceil(x - 0.5)
-	   end
+	if (x == 0) then return 0 end	-- prevent returning -0
+	if (x + 0.5) % 2 == 0 then
+		return math.floor(x + 0.5)
+	else
+		return math.ceil(x - 0.5)
+	end
 	end
 	
 	function rtrim(s)
@@ -3765,7 +3854,7 @@ function goto_number(name, line, wildcards)
 			end
 		end
 		return iter
-    end
+	end
  	
 	function split(line, delim)
 		local result = {}
@@ -3924,41 +4013,42 @@ function goto_number(name, line, wildcards)
 	
 	end
 	
-    function update_plugin()
-        raw = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/Search_and_Destroy.xml"
+	function update_plugin()
+		raw = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/Search_and_Destroy.xml"
 
-        async_ok, async = pcall (require, "async")
+		async_ok, async = pcall (require, "async")
 
-        if async_ok then
-            plugin_page = async.doAsyncRemoteRequest(raw, raw_get, "HTTPS")
-        else
-            ColourNote("white", "blue", "Error on plugin update!")
-        end
-    end
+		if async_ok then
+			plugin_page = async.doAsyncRemoteRequest(raw, raw_get, "HTTPS")
+		else
+			ColourNote("white", "blue", "Error on plugin update!")
+		end
+	end
 
-    function raw_get(retval, page, status, headers, full_status, request_url)
-        if status == 200 then
-            raw_version = tonumber(string.match(page, '<plugin version="([0-9%.]+)"'))
-        end
+	function raw_get(retval, page, status, headers, full_status, request_url)
+		if status == 200 then
+			raw_version = tonumber(string.match(page, '<plugin version="([0-9%.]+)"'))
+		end
 
-        if raw_version == PLUGIN_VERSION then
-            ColourNote("white", "blue", PLUGIN_NAME .. " is up-to-date.")
-        elseif raw_version > PLUGIN_VERSION then
-            ColourNote("white", "blue", "Updating from version " .. PLUGIN_VERSION .. " to " .. raw_version .. ". Do not touch anything!")
-            local file = io.open(GetPluginInfo(GetPluginID(), 6), "w")
-            file:write(page)
-            file:close()
+		if raw_version == PLUGIN_VERSION then
+			ColourNote("white", "blue", PLUGIN_NAME .. " is up-to-date.")
+		elseif raw_version > PLUGIN_VERSION then
+			ColourNote("white", "blue", "Updating from version " .. PLUGIN_VERSION .. " to " .. raw_version .. ". Do not touch anything!")
+			local file = io.open(GetPluginInfo(GetPluginID(), 6), "w")
+			file:write(page)
+			file:close()
 
-            if "" == GetAlphaOption("script_prefix") then
-                SetAlphaOption("script_prefix", "\\\\\\")
-            end
+			if "" == GetAlphaOption("script_prefix") then
+				SetAlphaOption("script_prefix", "\\\\\\")
+			end
 
-            Execute(GetAlphaOption("script_prefix") .. "DoAfterSpecial(1, \"ReloadPlugin('" .. GetPluginID() .. "')\", sendto.script)")
-            ColourNote("white", "blue", "Update complete!")
-        end
+			Execute(GetAlphaOption("script_prefix") .. "DoAfterSpecial(1, \"ReloadPlugin('" .. GetPluginID() .. "')\", sendto.script)")
+			ColourNote("white", "blue", "Update complete!")
+		end
 
-        raw_version = nil
-    end -- end Update code
+		raw_version = nil
+	end -- end Update code
+
 ]]>
 </script>
 <triggers>
@@ -4235,7 +4325,7 @@ function goto_number(name, line, wildcards)
 		name="trg_autohunt_next_2" group="AutoHunt"
 		enabled="n" regexp="y" sequence="100" > </trigger>
 
- 	<trigger match="^The trail of \w.+ is confusing, but you\'re reasonably sure .+ headed (?:north|south|east|west|up|down)\.|There are traces of \w.+ having been here\. Perhaps they lead (?:north|south|east|west|up|down)\?|You have no idea what you\'re doing, but maybe \w.+ is (?:north|south|east|west|up|down)\?$"
+	<trigger match="^The trail of \w.+ is confusing, but you\'re reasonably sure .+ headed (?:north|south|east|west|up|down)\.|There are traces of \w.+ having been here\. Perhaps they lead (?:north|south|east|west|up|down)\?|You have no idea what you\'re doing, but maybe \w.+ is (?:north|south|east|west|up|down)\?$"
 		script="auto_hunt_lowskill"	
 		name="trg_autohunt_lowskill" group="AutoHunt"
 		enabled="n" regexp="y" sequence="100" > </trigger>
@@ -4368,8 +4458,8 @@ function goto_number(name, line, wildcards)
 
 <aliases>
 <!-- Plugin Update automatic -->
-    <alias enabled="y" match="snd update" script="update_plugin" sequence="100">
-    </alias>
+	<alias enabled="y" match="snd update" script="update_plugin" sequence="100">
+	</alias>
 <!-- Auto-hunt commands-->
 	<alias	match="^ah (?<arg>\w.+)$"
 			script="auto_hunt"

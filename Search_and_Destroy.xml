@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient> 
-<plugin version="4.51" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="4.53" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -37,10 +37,6 @@
 		* Add a mob database
 		* Add ability to keyword mobs, tie in with mob database
 		* Change way XRT works - if no shortname found, run to best matching area ]]--
-
-	
-	-- total lines of code: 4143	(at start of merge)
-	-- total lines of code: ____	(at end of merge)
     
 	--require "copytable"
 	require "movewindow"
@@ -489,7 +485,7 @@
 		["terra"] 		= { start = "19679" },
 		["terramire"] 	= { start =  "4493" },
 		["thieves"] 	= { start =     "7" },
-		["tilule"]		= { start = "54790"	},
+		["tilule"]		= { start = "39771"	},
 		["times"] 		= { start = "28463" },
 		["tirna"] 		= { start = "20136" },
 		["tol"] 		= { start = "16325" },
@@ -703,7 +699,6 @@
 		["New Thalos"] 							= "newthalos",
 		["Northstar"] 							= "northstar",
 		["Nottingham"] 							= "nottingham",
-		["Olde Worlde Carnivale"] 				= "carnivale",
 		["Onyx Bazaar"] 						= "bazaar",
 		["Ookushka Garrison"] 					= "ooku",
 		["Paradise Lost"] 						= "paradise",
@@ -1518,6 +1513,7 @@
 	
 --	[[ Gquest check functions ]]	
 	function do_gq_check()
+		player_is_on_gq()
 		local time_check = os.clock()					-- prevent double cp checks from different plugins
 		if ((time_check - last_cp_check) < 1.0) then
 			return
@@ -1827,6 +1823,11 @@
 		end
 		if (#list > 0) then
 			ColourNote("#808080", "", string.rep("-", 90))
+			--[[if list[1].link_type == "room" then
+				for _,v in ipairs(list) do
+					if string.match(v.roomName, "^Hiding from") then
+						v.arid = "zz" .. v.arid ]]--
+						
 			for i,v in ipairs (list) do
 				local mob_text = v.mob .. ((v.is_dead == "no") and "" or " [Dead]")
 				local link_text
@@ -2598,8 +2599,7 @@ function goto_number(name, line, wildcards)
 			auto_hunt_abort()
 		else
 			ht_reset()
-			EnableTriggerGroup("AutoHunt", true)
-			auto_hunt_mob = s
+			EnableTriggerGroup("AutoHunt", true)				auto_hunt_mob = s
 			Send("hunt " .. s)
 		end
 	end 
@@ -4049,6 +4049,73 @@ function goto_number(name, line, wildcards)
 		raw_version = nil
 	end -- end Update code
 
+	function showHelp()
+	print([[
+Commands:
+xset win <on|off>             --> Shows or hides the window.
+xset winreset                 --> Resets the window.
+xset fontsize <#>             --> Displays current font size, or changes 
+								> it to argument.
+xset linespace <#>            --> Displays line spacing size, or changes
+								> it to argument.
+xset speed <walk|run>         --> Displays current move speed, or changes
+								> it to argument.
+xset vidblain                 --> Fixes Vidblain's "random drop" so you 
+								> can still run to areas within Vidblain.
+xset mark                     --> Sets current room as "start" for the 
+								> current area.
+xset index areas              --> Indexes areas. Use this if you get a lot
+								> of "red" links but you've mapped the area.
+
+xm rlh <roomID>               --> Displays rooms linking to <roomID> or
+								> current room.
+xmall <room name>             --> Displays rooms across the MUD matching 
+								> the argument.
+xm <room name>                --> Displays rooms in zone matching the
+								> argument.
+xmap move <roomID> <run|walk> --> Move to the room id at default speed, or
+								> walks (without portals) or runs (with 
+								> portals) based on argument.
+roomnote <area|area areakey>  --> Displays roomnotes for current room, 
+								> current area, or area argument.
+
+qw<x> <mobname>               --> Where's the current stored target or
+								> argument. Use 'x' to where exact mob name.
+ht <mob|stop>                 --> Executes the 'hunt trick' for current 
+								> target or argument. Use 'stop' to abort.
+ah<a> <targ>                  --> Autohunts target. Append 'a' with no 
+								> target to abort.
+xset <ak|kk|qk>               --> Sets the 'quick kill' command. All options
+								> are interchangeable.
+<ak|kk|qk>                    --> Executes the 'quick kill' command. All 
+								> options are interchangeable.
+qs                            --> Executes a 'quick scan' for the stored target.
+xq                            --> Reloads the quest info.
+xset noexp <off|#>            --> Displays current setting with no argument.
+								> With argument, toggles noexp off or sets it
+								> to turn on at # exp remaining.
+nx<->                         --> Moves to the next room on the list, or the 
+								> previous room with -.
+go <index>                    --> Runs to the first room in the index, or to 
+								> the index number with argument.
+<xrt|xrun> <area>             --> Runs to the area matching the argument.
+
+<cp|gq> i|info                --> Displays campaign/gquest info.
+<cp|gq> ch|check              --> Displays campaign/gquest check.
+
+xcp <index>                   --> Without argument, goes to top result in
+								> cp/gq check. Otherwise heads to the index
+								> chosen.
+xcp mode <ht|qw|off>          --> Sets whether you use hunt trick or quick 
+								> where upon entering an area on cp/gq. Use 
+								> 'off' to turn off this feature.
+xcp next <on|off>             --> Turns off automatically excecuting xcp upon
+								> death of a cp/gq target.
+
+snd update                    --> Automatically updates Search & Destroy.
+]])
+	end
+
 ]]>
 </script>
 <triggers>
@@ -4460,6 +4527,8 @@ function goto_number(name, line, wildcards)
 <!-- Plugin Update automatic -->
 	<alias enabled="y" match="snd update" script="update_plugin" sequence="100">
 	</alias>
+	<alias enabled="y" match="xhelp" script="showHelp" sequence="100">
+	</alias>
 <!-- Auto-hunt commands-->
 	<alias	match="^ah (?<arg>\w.+)$"
 			script="auto_hunt"
@@ -4542,7 +4611,7 @@ function goto_number(name, line, wildcards)
 			script="quick_kill"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 		
-	<alias	match="^xset (?:kk|qk|qkill)( (?<arg>.+))?$"
+	<alias	match="^xset (?:ak|kk|qk|qkill)( (?<arg>.+))?$"
 			script="xset_quick_kill_command"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 

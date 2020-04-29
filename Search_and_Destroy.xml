@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient> 
-<plugin version="4.56" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="4.57" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -4070,8 +4070,6 @@ xcp <index>                   --> Without argument, goes to top result in
 xcp mode <ht|qw|off>          --> Sets whether you use hunt trick or quick 
                                 > where upon entering an area on cp/gq. Use 
                                 > 'off' to turn off this feature.
-xcp next <on|off>             --> Turns off automatically excecuting xcp upon
-                                > death of a cp/gq target.
 
 snd update                    --> Automatically updates Search & Destroy.
 ]])

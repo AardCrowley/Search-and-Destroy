@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient> 
-<plugin version="4.55" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="4.56" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -43,6 +43,10 @@
 	require "serialize"
 	require "tprint"
 	require "wait"
+
+	function mapFind(query)
+		return CallPlugin("b6eae87ccedd84f510b74714", "map_find_query", query)
+	end
 
 --line 171
 
@@ -699,6 +703,7 @@
 		["New Thalos"] 							= "newthalos",
 		["Northstar"] 							= "northstar",
 		["Nottingham"] 							= "nottingham",
+		["Olde Worlde Carnivale"]				= "carnivale",
 		["Onyx Bazaar"] 						= "bazaar",
 		["Ookushka Garrison"] 					= "ooku",
 		["Paradise Lost"] 						= "paradise",
@@ -1761,7 +1766,7 @@
 						last_mob_sig = mob_sig
 						local area_min_lvl = (area_range_index[row.areaName].min) or 1
 						local area_max_lvl = (area_range_index[row.areaName].max) or 300
-						if (level_taken >= area_min_lvl) and (level_taken <= (area_max_lvl+10)) then	-- limit results to sensible level range.
+						if (level_taken >= area_min_lvl) and (level_taken <= (area_max_lvl+25)) then	-- limit results to sensible level range.
 							table.insert(t, {
 								mob = v.mob,
 								arid = row.arid,
@@ -1775,6 +1780,7 @@
 								link_type = lt,	--((v.is_dead == false) and "room" or "area"),	-- deals with dead mobs when area contains roomnames same as area name e.g. Aardington Estate
 								index = #t+1,
 								ord = v.ord	} )
+								table.sort(t, function (a,b) return a.arid < b.arid end)
 						else	
 							table.insert(ig, {	-- build table of search results for areas out of your level range. 
 								mob = v.mob,	-- Usually invalid, but valid links can wind up here if area's level range is too broad, or wrong.
@@ -1789,6 +1795,7 @@
 								link_type = "ignored",
 								index = #ig+1,
 								ord = v.ord } )
+								table.sort(t, function (a,b) return a.arid > b.arid end)
 						end
 					end
 				end
@@ -1988,52 +1995,6 @@
 			print("")
 	end
 
--- [[  xcp next ]]
-	function xcp_next_cp()
-		if (xcp_next_onoff == "on") then
-			EnableTrigger("trg_xcp_next_cp", false)
-			EnableTrigger("trg_xcp_next_gq", false)
-			wait.make(function ()
-				wait.time (0.5)
-				if (gmcp("char.status.state") == "3") then
-					xcp_noarg()
-				end
-			end)
-		end
-	end
-
-	function xcp_next_gq()
-		if (xcp_next_onoff == "on") then
-			EnableTrigger("trg_xcp_next_cp", false)
-			EnableTrigger("trg_xcp_next_gq", false)
-			wait.make(function ()
-				wait.time (0.5)
-				if (gmcp("char.status.state") == "3") then
-					xcp_noarg()
-				end
-			end)
-		end
-	end
-	
-	function xcp_next_toggle(name, line, wildcards)
-		local opt = wildcards.option or ""
-		local onoff = xcp_next_onoff
-		if (opt == "on") then
-			onoff = "on"
-		elseif (opt == "off") then
-			onoff = "off"
-		else
-			if (onoff == "on") then
-				onoff = "off"
-			elseif (onoff == "off") then
-				onoff = "on"
-			end
-		end
-		xcp_next_onoff = onoff
-		SetVariable("mcvar_xcp_next_onoff", onoff)
-		ColourNote("#FF5000", "", "\n'Xcp next' is now " .. onoff .. ".\n")
-	end
-	
 -- [[  Goto area (xrt), goto room (go), goto next (nx), goto previous (nx-) ]]
 	local xrun_to_sql_uid =  "SELECT r.uid, r.name as room, r.area " .. "FROM rooms r " .. "WHERE r.area like %s " .. "ORDER BY r.name "
 	local xrun_to_sql_name = "SELECT r.uid, r.name as room, r.area " .. "FROM rooms r " .. "INNER JOIN areas a ON a.uid = r.area " .. "WHERE r.area like %s OR a.name like %s " .. "ORDER BY r.name "
@@ -4332,17 +4293,7 @@ snd update                    --> Automatically updates Search & Destroy.
 	<trigger match="^Congratulations, that was one of the GLOBAL QUEST mobs\!$"
 		name="trg_xcp_next_gq_mob_killed" group="trg_auto"
 		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > 
-			<send>	EnableTrigger("trg_xcp_next_gq", true) </send> </trigger>		
-		
-	<trigger match="^You have (?:(?:\d+ day(?:s)?, )?\d+ hour(?:s)? and )?\d+ minute(?:s)? left to finish this campaign\.$"
-		script="xcp_next_cp"
-		name="trg_xcp_next_cp" group="trg_auto"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" > </trigger>
-
-	<trigger match="^You may win [0123] more gquests? at this level\.$"
-		script="xcp_next_gq"
-		name="trg_xcp_next_gq" group="trg_auto"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" > </trigger>	
+			<send>	EnableTrigger("trg_xcp_next_gq", true) </send> </trigger>			
 		
 <!-- QUICK WHERE -->
 	<trigger match="^(?<mobname>\w.{29}) (?<roomname>[^ (0-9].*)$"
@@ -4569,10 +4520,6 @@ snd update                    --> Automatically updates Search & Destroy.
 	<alias	match="^xcp mode(?: (?<option>ht|qw|off))?$"
 			script="xcp_set_action_mode"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-			
-	<alias	match="^xcp next(?: (?<option>on|off))?$"
-			script="xcp_next_toggle"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 					
 <!-- movement: xrunto, go, nx, etc.  -->
 	<alias	match="^(?:xrt|xrun|xrunto) (?<destination>.+)$"
@@ -4611,7 +4558,7 @@ snd update                    --> Automatically updates Search & Destroy.
 			script="quick_kill"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 		
-	<alias	match="^xset (?:ak|kk|qk|qkill)( (?<arg>.+))?$"
+	<alias	match="^xset (?:kk|ak|qk|qkill)( (?<arg>.+))?$"
 			script="xset_quick_kill_command"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 

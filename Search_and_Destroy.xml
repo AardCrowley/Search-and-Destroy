@@ -2419,7 +2419,7 @@ function goto_number(name, line, wildcards)
 	
 	function xset_sortBy(name, line, wildcards)
 		if (not wildcards[1] or wildcards[1] == "") then
-			ColourNote("#FF5000", "", "Search and Destroy: Sort mode currently set to: '" .. sortBy .. "'\\nOptions are: all, area, room, none")
+			ColourNote("#FF5000", "", "Search and Destroy: Sort mode currently set to: '" .. sortBy .. "'\nOptions are: all, area, room, none")
 		else
 			sortBy = wildcards[1]:lower()
 			SetVariable("mcvar_sortBy", sortBy)

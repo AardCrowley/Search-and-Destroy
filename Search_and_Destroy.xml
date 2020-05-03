@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient> 
-<plugin version="4.57" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="4.58" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -57,11 +57,6 @@
 	local plugin_id_gmcp_handler 	= "3e7dedbe37e44942dd46d264"		-- easier to remember the var names than the plugin id's
 	local plugin_id_gmcp_mapper		= "b6eae87ccedd84f510b74714"
 	local plugin_id_z_order 		= "462b665ecb569efbf261422f"
-	 
-	local main_color_table = {	["gr1"] = "#00C040", ["gr2"] = "#90EE90", ["gr3"] = "#006000",
-								["gy1"] = "#808080", ["gy2"] = "#484848", ["gy3"] = "#404040",
-								["or1"] = "#FF8000", ["or2"] = "#FF5000", ["or3"] = "#FF3000",
-								["wh1"] = "#E0E0E0", ["wh2"] = "#F0F0F0", }
 	
 	local plugins_folder = GetPluginInfo(GetPluginID(), 20)
 	local db_file_1
@@ -75,7 +70,9 @@
 	local room_history = { }
 	
 -- [[ player status ]]
-	local current_character_state = "0"		
+	local current_character_state = "0"
+	local silentMode = GetVariable("mcvar_silentMode_command") or "off"
+	local sortBy = GetVariable("mcvar_sortBy") or "all"
 	
 -- [[ Execute in area, room ]]
 	local execute_in_area_tbl = { i=0, j=0, arid="", f="", stat=1 }
@@ -119,7 +116,6 @@
 	
 -- [[ xcp action mode ]]
 	local xcp_action_mode = GetVariable("mcvar_xcp_action_mode") or "qw"
-	local xcp_next_onoff = GetVariable("mcvar_xcp_next_onoff") or "off"
 	
 -- [[ goto/nx data ]]
 	local gotoArea = -1
@@ -466,7 +462,7 @@
 		["scarred"] 	= { start = "34036" },
 		["sendhian"] 	= { start = "20288", vidblain = true },
 		["sennarre"] 	= { start = "15491" },
-		["shadowsend"]	= { start = "53439" },
+		["shadowsend"]	= { start = "40096" },
 		["shouggoth"] 	= { start = "34087" },
 		["siege"] 		= { start = "43265" },
 		["sirens"] 		= { start = "16298" },
@@ -1562,7 +1558,9 @@
 			if (#main_target_list > 1) then
 				if x and (x > 0) then
 					xg_draw_window()
-					print_target_links(main_target_list)
+					if silentMode == "off" then
+						print_target_links(main_target_list)
+					end
 				else
 					qw_reset(false)
 					xcp_retry_stat = 1
@@ -1573,7 +1571,9 @@
 			elseif (#main_target_list == 1) then
 				if x and (x > 0) then
 					xg_draw_window()
-					print_target_links(main_target_list)
+					if silentMode == "off" then
+						print_target_links(main_target_list)
+					end
 				else
 					qw_reset(false)
 					xcp_clear_target(false)
@@ -1677,7 +1677,9 @@
 			print("main_target_list build error - tried to run while on " .. cp_gq .. " but area/room type is 'none'.")
 		end
 		xg_draw_window()
-		print_target_links(main_target_list)
+		if silentMode == "off" then
+			print_target_links(main_target_list)
+		end
 	end
 
 	function build_area_targets(cp_gq, sqla)
@@ -1780,7 +1782,9 @@
 								link_type = lt,	--((v.is_dead == false) and "room" or "area"),	-- deals with dead mobs when area contains roomnames same as area name e.g. Aardington Estate
 								index = #t+1,
 								ord = v.ord	} )
-								table.sort(t, function (a,b) return a.arid < b.arid end)
+								if sortBy == "all" or sortBy == "area" then
+									table.sort(t, function (a,b) return a.arid < b.arid end)
+								end
 						else	
 							table.insert(ig, {	-- build table of search results for areas out of your level range. 
 								mob = v.mob,	-- Usually invalid, but valid links can wind up here if area's level range is too broad, or wrong.
@@ -1795,7 +1799,9 @@
 								link_type = "ignored",
 								index = #ig+1,
 								ord = v.ord } )
-								table.sort(t, function (a,b) return a.arid > b.arid end)
+								if sortBy == "all" or sortBy == "room" then
+									table.sort(t, function (a,b) return a.arid > b.arid end)
+								end
 						end
 					end
 				end
@@ -2399,8 +2405,27 @@ function goto_number(name, line, wildcards)
 			SetVariable("mcvar_quick_kill_command", quick_kill_command)
 			ColourNote("#FF5000", "", "Search and Destroy: Quick-kill command is now set to: '" .. quick_kill_command .. "'")
 		end
+	end
+
+	function xset_silentMode(name, line, wildcards)
+		if (not wildcards[1] or wildcards[1] == "") then
+			ColourNote("#FF5000", "", "Search and Destroy: Silent mode currently set to: '" .. silentMode .. "'")
+		else
+			silentMode = wildcards[1]:lower()
+			SetVariable("mcvar_silentMode_command", silentMode)
+			ColourNote("#FF5000", "", "Search and Destroy: Silent mode is now set to: '" .. silentMode .. "'")
+		end
 	end 
 	
+	function xset_sortBy(name, line, wildcards)
+		if (not wildcards[1] or wildcards[1] == "") then
+			ColourNote("#FF5000", "", "Search and Destroy: Sort mode currently set to: '" .. sortBy .. "'\\nOptions are: all, area, room, none")
+		else
+			sortBy = wildcards[1]:lower()
+			SetVariable("mcvar_sortBy", sortBy)
+			ColourNote("#FF5000", "", "Search and Destroy: Sort mode is now set to: '" .. sortBy .. "'")
+		end
+	end
 -- [[ Room search processes ]]	
 	local search_rooms_sql = 
 		"SELECT r.uid as uid, r.name as name, info, r.area as area, " ..
@@ -4028,6 +4053,12 @@ xset mark                     --> Sets current room as "start" for the
 xset index areas              --> Indexes areas. Use this if you get a lot
                                 > of "red" links but you've mapped the area.
 
+xset silent <on|off>		  --> Toggles displaying target list in main
+							    > MUD window.
+
+xset sort <all|area|room|none>--> Toggles sorting by area name in area
+							    > cps/gqs, room cps/gqs, none, or both.
+
 xm rlh <roomID>               --> Displays rooms linking to <roomID> or
                                 > current room.
 xmall <room name>             --> Displays rooms across the MUD matching 
@@ -4477,6 +4508,12 @@ snd update                    --> Automatically updates Search & Destroy.
 	<alias enabled="y" match="snd update" script="update_plugin" sequence="100">
 	</alias>
 	<alias enabled="y" match="xhelp" script="showHelp" sequence="100">
+	</alias>
+
+	<alias enabled="y" match="xset silent(?: (on|off))?" regexp="y" script="xset_silentMode" sequence="100">
+	</alias>
+
+	<alias enabled="y" match="xset sort(?: (all|room|area|none))?" regexp="y" script="xset_sortBy" sequence="100">
 	</alias>
 <!-- Auto-hunt commands-->
 	<alias	match="^ah (?<arg>\w.+)$"

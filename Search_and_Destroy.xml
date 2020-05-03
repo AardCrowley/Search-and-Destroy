@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient> 
-<plugin version="4.58" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="4.59" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -1558,9 +1558,7 @@
 			if (#main_target_list > 1) then
 				if x and (x > 0) then
 					xg_draw_window()
-					if silentMode == "off" then
-						print_target_links(main_target_list)
-					end
+					print_target_links(main_target_list)
 				else
 					qw_reset(false)
 					xcp_retry_stat = 1
@@ -1571,9 +1569,7 @@
 			elseif (#main_target_list == 1) then
 				if x and (x > 0) then
 					xg_draw_window()
-					if silentMode == "off" then
-						print_target_links(main_target_list)
-					end
+					print_target_links(main_target_list)
 				else
 					qw_reset(false)
 					xcp_clear_target(false)
@@ -1677,9 +1673,7 @@
 			print("main_target_list build error - tried to run while on " .. cp_gq .. " but area/room type is 'none'.")
 		end
 		xg_draw_window()
-		if silentMode == "off" then
-			print_target_links(main_target_list)
-		end
+		print_target_links(main_target_list)
 	end
 
 	function build_area_targets(cp_gq, sqla)
@@ -1834,39 +1828,41 @@
 		if (#room_targets_ignored > 0) then
 			print_room_links_ignored()
 		end
-		if (#list > 0) then
-			ColourNote("#808080", "", string.rep("-", 90))
-			--[[if list[1].link_type == "room" then
-				for _,v in ipairs(list) do
-					if string.match(v.roomName, "^Hiding from") then
-						v.arid = "zz" .. v.arid ]]--
-						
-			for i,v in ipairs (list) do
-				local mob_text = v.mob .. ((v.is_dead == "no") and "" or " [Dead]")
-				local link_text
-				local tooltip
-				local notehelp = "Show notes for item " .. i
-				if (v.link_type == "area") then
-					link_text = string.format(" %2d  %s - %s", padRight(i, 6, " "), padRight(mob_text, 32, " "), padRight(v.arid, 10, " "))
-					tooltip = "Target cp mob " .. i .. " - " .. mob_text .. " (" .. v.arid .. ")"
-					Hyperlink("xcp " .. i, link_text, tooltip, v.color, "", 0)
-					Hyperlink("roomnote area " .. v.arid, "  [notes]", notehelp, ((v.is_dead == "yes") and "#006000" or "lightgreen"), "", 0)
-				elseif (v.link_type == "room") then
-					local roomText = string.format("%5s", v.roomid) .. ": '" .. v.roomName .. "'"
-					link_text = string.format(" %2d  %s - %s  %s", padRight(i, 4, " "), padRight(mob_text, 32, " "), padRight(v.arid, 10, " "), padRight(roomText, 40, " "))
-					tooltip = "Target cp mob " .. i .. " - " .. mob_text .. " (" .. v.arid .. ")"
-					Hyperlink("xcp " .. i, link_text, tooltip, v.color, "", 0)
-				elseif (v.link_type == "unknown") then
-					link_text = string.format(" %2d  %s - unknown: '%s'", padRight(i, 4, " "), padRight(mob_text, 32, " "), v.location)
-					tooltip = "Location not found in mapper database"
-					Hyperlink(" ", link_text, tooltip, v.color, "", 0)
-				end		
-				print("")
-			end
+		if silentMode == "off" then
+			if (#list > 0) then
 				ColourNote("#808080", "", string.rep("-", 90))
-				ColourNote("#808080", "", "Type 'xcp <index>' or click link to go to that target.")
-		else
-			ColourNote("#FF5000", "", "   No target items to show.")
+				--[[if list[1].link_type == "room" then
+					for _,v in ipairs(list) do
+						if string.match(v.roomName, "^Hiding from") then
+							v.arid = "zz" .. v.arid ]]--
+						
+				for i,v in ipairs (list) do
+					local mob_text = v.mob .. ((v.is_dead == "no") and "" or " [Dead]")
+					local link_text
+					local tooltip
+					local notehelp = "Show notes for item " .. i
+					if (v.link_type == "area") then
+						link_text = string.format(" %2d  %s - %s", padRight(i, 6, " "), padRight(mob_text, 32, " "), padRight(v.arid, 10, " "))
+						tooltip = "Target cp mob " .. i .. " - " .. mob_text .. " (" .. v.arid .. ")"
+						Hyperlink("xcp " .. i, link_text, tooltip, v.color, "", 0)
+						Hyperlink("roomnote area " .. v.arid, "  [notes]", notehelp, ((v.is_dead == "yes") and "#006000" or "lightgreen"), "", 0)
+					elseif (v.link_type == "room") then
+						local roomText = string.format("%5s", v.roomid) .. ": '" .. v.roomName .. "'"
+						link_text = string.format(" %2d  %s - %s  %s", padRight(i, 4, " "), padRight(mob_text, 32, " "), padRight(v.arid, 10, " "), padRight(roomText, 40, " "))
+						tooltip = "Target cp mob " .. i .. " - " .. mob_text .. " (" .. v.arid .. ")"
+						Hyperlink("xcp " .. i, link_text, tooltip, v.color, "", 0)
+					elseif (v.link_type == "unknown") then
+						link_text = string.format(" %2d  %s - unknown: '%s'", padRight(i, 4, " "), padRight(mob_text, 32, " "), v.location)
+						tooltip = "Location not found in mapper database"
+						Hyperlink(" ", link_text, tooltip, v.color, "", 0)
+					end		
+					print("")
+				end
+					ColourNote("#808080", "", string.rep("-", 90))
+					ColourNote("#808080", "", "Type 'xcp <index>' or click link to go to that target.")
+			else
+				ColourNote("#FF5000", "", "   No target items to show.")
+			end
 		end
 	end
 

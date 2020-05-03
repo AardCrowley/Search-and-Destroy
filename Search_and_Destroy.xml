@@ -4050,10 +4050,10 @@ xset index areas              --> Indexes areas. Use this if you get a lot
                                 > of "red" links but you've mapped the area.
 
 xset silent <on|off>		  --> Toggles displaying target list in main
-							    > MUD window.
+                                > MUD window.
 
 xset sort <all|area|room|none>--> Toggles sorting by area name in area
-							    > cps/gqs, room cps/gqs, none, or both.
+                                > cps/gqs, room cps/gqs, none, or both.
 
 xm rlh <roomID>               --> Displays rooms linking to <roomID> or
                                 > current room.

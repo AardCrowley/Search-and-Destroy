@@ -22,7 +22,8 @@ First and foremost, you should learn about **xhelp**. That will display, in the 
 Commands:<br>
 **xset win &lt;on|off&gt;**<br>
 	&gt;Shows or hides the window.<br>
-**xset winreset**	&gt;Resets the window.<br>
+**xset winreset**<br>
+	&gt;Resets the window.<br>
 **xset fontsize &lt;#&gt;**<br>
 	&gt; Displays current font size, or changes <br>
 	&gt;it to argument.<br>
@@ -32,11 +33,14 @@ Commands:<br>
 **xset speed &lt;walk|run&gt;**<br>
 	&gt;Displays current move speed, or changes<br>
 	&gt;it to argument.<br>
-**xset vidblain**	&gt;Fixes Vidblain's "random drop" so you <br>
+**xset vidblain**<br>
+	&gt;Fixes Vidblain's "random drop" so you <br>
 	&gt;can still run to areas within Vidblain.<br>
-**xset mark**	&gt;Sets current room as "start" for the <br>
+**xset mark**<br>
+	&gt;Sets current room as "start" for the <br>
 	&gt;current area.<br>
-**xset index areas**	&gt;Indexes areas. Use this if you get a lot<br>
+**xset index areas**<br>
+	&gt;Indexes areas. Use this if you get a lot<br>
 	&gt;of "red" links but you've mapped the area.<br>
 <br>
 **xset silent &lt;on|off&gt;**<br>
@@ -44,7 +48,7 @@ Commands:<br>
 	&gt;MUD window.<br>
 <br>
 **xset sort &lt;all|area|room|none&gt;**<br>
--&gt;Toggles sorting by area name in area<br>
+	&gt;Toggles sorting by area name in area<br>
 	&gt;cps/gqs, room cps/gqs, none, or both. *Currently*<br>
 	&gt;*bugged. Working on a fix.*<br>
 <br>
@@ -58,11 +62,11 @@ Commands:<br>
 	&gt;Displays rooms in zone matching the<br>
 	&gt;argument.<br>
 **xmap move &lt;roomID&gt;&lt;run|walk&gt;**<br>
-&gt;Move to the room id at default speed, or<br>
+	&gt;Move to the room id at default speed, or<br>
 	&gt;walks (without portals) or runs (with <br>
 	&gt;portals) based on argument.<br>
 **roomnote &lt;area|area areakey&gt;**<br>
- &gt;Displays roomnotes for current room, <br>
+ 	&gt;Displays roomnotes for current room, <br>
 	&gt;current area, or area argument.<br>
 <br>
 **qw&lt;x&gt;&lt;mobname&gt;**<br>
@@ -80,8 +84,10 @@ Commands:<br>
 **&lt;ak|kk|qk&gt;**<br>
 	&gt;Executes the 'quick kill' command. All <br>
 	&gt;options are interchangeable.<br>
-**qs**	&gt;Executes a 'quick scan' for the stored target.<br>
-**xq**	&gt;Reloads the quest info.<br>
+**qs**<br>
+	&gt;Executes a 'quick scan' for the stored target.<br>
+**xq**<br>
+	&gt;Reloads the quest info.<br>
 **xset noexp &lt;off|#&gt;**<br>
 	&gt;Displays current setting with no argument.<br>
 	&gt;With argument, toggles noexp off or sets it<br>
@@ -95,8 +101,10 @@ Commands:<br>
 **&lt;xrt|xrun&gt;&lt;area&gt;**<br>
 	&gt;Runs to the area matching the argument.<br>
 <br>
-**&lt;cp|gq&gt;i|info**	&gt;Displays campaign/gquest info.<br>
-**&lt;cp|gq&gt;ch|check**	&gt;Displays campaign/gquest check.<br>
+**&lt;cp|gq&gt;i|info**<br>
+	&gt;Displays campaign/gquest info.<br>
+**&lt;cp|gq&gt;ch|check**<br>
+	&gt;Displays campaign/gquest check.<br>
 <br>
 **xcp &lt;index&gt;**<br>
 	&gt;Without argument, goes to top result in<br>
@@ -107,4 +115,5 @@ Commands:<br>
 	&gt;where upon entering an area on cp/gq. Use <br>
 	&gt;'off' to turn off this feature.<br>
 <br>
-**snd update**	&gt;Automatically updates Search & Destroy.<br>
+**snd update**<br>
+	&gt;Automatically updates Search & Destroy.<br>

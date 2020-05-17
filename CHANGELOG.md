@@ -1,6 +1,6 @@
 # CHANGELOG
 
-**v4.69**<br>
+**v4.60**<br>
 *feature*   : Added changelog per request.<br>
 *update*    : Updated the Readme.<br>
 *change*    : Changed "Send" to "Execute" on kill command. If there are any problems then blame it on someone else!<br>

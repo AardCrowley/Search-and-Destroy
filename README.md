@@ -20,69 +20,69 @@ In short, it can speed up your quests/campaigns/global quests. It is **NOT**, ho
 First and foremost, you should learn about **xhelp**. That will display, in the client, all the commands listed below. Another one you should learn about is **snd update**, which will automatically update the plugin if I make any changes and post about it. See below for all commands.
 
 Commands:<br>
-**xset win &lt;on|off&gt;**             --&gt;Shows or hides the window.<br>
-**xset winreset**                 --&gt;Resets the window.<br>
-**xset fontsize &lt;#&gt;**             --&gt; Displays current font size, or changes <br>
-                                &gt;it to argument.<br>
-**xset linespace &lt;#&gt;**            --&gt;Displays line spacing size, or changes<br>
-                                &gt;it to argument.<br>
-**xset speed &lt;walk|run&gt;**        --&gt;Displays current move speed, or changes<br>
-                                &gt;it to argument.<br>
-**xset vidblain**                 --&gt;Fixes Vidblain's "random drop" so you <br>
-                                &gt;can still run to areas within Vidblain.<br>
-**xset mark**                     --&gt;Sets current room as "start" for the <br>
-                                &gt;current area.<br>
-**xset index areas**              --&gt;Indexes areas. Use this if you get a lot<br>
-                                &gt;of "red" links but you've mapped the area.<br>
+**xset win &lt;on|off&gt;**	--&gt;Shows or hides the window.<br>
+**xset winreset**	--&gt;Resets the window.<br>
+**xset fontsize &lt;#&gt;**	--&gt; Displays current font size, or changes <br>
+	&gt;it to argument.<br>
+**xset linespace &lt;#&gt;**	--&gt;Displays line spacing size, or changes<br>
+	&gt;it to argument.<br>
+**xset speed &lt;walk|run&gt;**	--&gt;Displays current move speed, or changes<br>
+	&gt;it to argument.<br>
+**xset vidblain**	--&gt;Fixes Vidblain's "random drop" so you <br>
+	&gt;can still run to areas within Vidblain.<br>
+**xset mark**	--&gt;Sets current room as "start" for the <br>
+	&gt;current area.<br>
+**xset index areas**	--&gt;Indexes areas. Use this if you get a lot<br>
+	&gt;of "red" links but you've mapped the area.<br>
 <br>
-**xset silent &lt;on|off&gt;**	  --&gt;Toggles displaying target list in main<br>
-                                &gt;MUD window.<br>
+**xset silent &lt;on|off&gt;**	--&gt;Toggles displaying target list in main<br>
+	&gt;MUD window.<br>
 <br>
 **xset sort &lt;all|area|room|none&gt;**-&gt;Toggles sorting by area name in area<br>
-                                &gt;cps/gqs, room cps/gqs, none, or both. *Currently*<br>
-                                &gt;*bugged. Working on a fix.*<br>
+	&gt;cps/gqs, room cps/gqs, none, or both. *Currently*<br>
+	&gt;*bugged. Working on a fix.*<br>
 <br>
-**xm rlh &lt;roomID&gt;**              --&gt;Displays rooms linking to &lt;roomID&gt;or<br>
-                                &gt;current room.<br>
-**xmall &lt;room name&gt;**            --&gt;Displays rooms across the MUD matching <br>
-                                &gt;the argument.<br>
-**xm &lt;room name&gt;**               --&gt;Displays rooms in zone matching the<br>
-                                &gt;argument.<br>
+**xm rlh &lt;roomID&gt;**	--&gt;Displays rooms linking to &lt;roomID&gt;or<br>
+	&gt;current room.<br>
+**xmall &lt;room name&gt;**	--&gt;Displays rooms across the MUD matching <br>
+	&gt;the argument.<br>
+**xm &lt;room name&gt;**	--&gt;Displays rooms in zone matching the<br>
+	&gt;argument.<br>
 **xmap move &lt;roomID&gt;&lt;run|walk&gt;**--&gt;Move to the room id at default speed, or<br>
-                                &gt;walks (without portals) or runs (with <br>
-                                &gt;portals) based on argument.<br>
+	&gt;walks (without portals) or runs (with <br>
+	&gt;portals) based on argument.<br>
 **roomnote &lt;area|area areakey&gt;** --&gt;Displays roomnotes for current room, <br>
-                                &gt;current area, or area argument.<br>
+	&gt;current area, or area argument.<br>
 <br>
-**qw&lt;x&gt;&lt;mobname&gt;**              --&gt;Where's the current stored target or<br>
-                                &gt;argument. Use 'x' to where exact mob name.<br>
-**ht &lt;mob|stop&gt;**                --&gt;Executes the 'hunt trick' for current <br>
-                                &gt;target or argument. Use 'stop' to abort.<br>
-**ah&lt;a&gt;&lt;targ&gt;**                 --&gt;Autohunts target. Append 'a' with no <br>
-                                &gt;target to abort.<br>
-**xset &lt;ak|kk|qk&gt;**              --&gt;Sets the 'quick kill' command. All options<br>
-                                &gt;are interchangeable.<br>
-**&lt;ak|kk|qk&gt;**                   --&gt;Executes the 'quick kill' command. All <br>
-                                &gt;options are interchangeable.<br>
-**qs**                            --&gt;Executes a 'quick scan' for the stored target.<br>
-**xq**                            --&gt;Reloads the quest info.<br>
-**xset noexp &lt;off|#&gt;**           --&gt;Displays current setting with no argument.<br>
-                                &gt;With argument, toggles noexp off or sets it<br>
-                                &gt;to turn on at # exp remaining.<br>
-**nx&lt;-&gt;**                        --&gt;Moves to the next room on the list, or the <br>
-                                &gt;previous room with -.<br>
-**go &lt;index&gt;**                   --&gt;Runs to the first room in the index, or to <br>
-                                &gt;the index number with argument.<br>
-**&lt;xrt|xrun&gt;&lt;area&gt;**            --&gt;Runs to the area matching the argument.<br>
+**qw&lt;x&gt;&lt;mobname&gt;**	--&gt;Where's the current stored target or<br>
+	&gt;argument. Use 'x' to where exact mob name.<br>
+**ht &lt;mob|stop&gt;**	--&gt;Executes the 'hunt trick' for current <br>
+	&gt;target or argument. Use 'stop' to abort.<br>
+**ah&lt;a&gt;&lt;targ&gt;**	--&gt;Autohunts target. Append 'a' with no <br>
+	&gt;target to abort.<br>
+**xset &lt;ak|kk|qk&gt;**	--&gt;Sets the 'quick kill' command. All options<br>
+	&gt;are interchangeable.<br>
+**&lt;ak|kk|qk&gt;**	--&gt;Executes the 'quick kill' command. All <br>
+	&gt;options are interchangeable.<br>
+**qs**	--&gt;Executes a 'quick scan' for the stored target.<br>
+**xq**	--&gt;Reloads the quest info.<br>
+**xset noexp &lt;off|#&gt;**	--&gt;Displays current setting with no argument.<br>
+	&gt;With argument, toggles noexp off or sets it<br>
+	&gt;to turn on at # exp remaining.<br>
+**nx&lt;-&gt;**	--&gt;Moves to the next room on the list, or the <br>
+	&gt;previous room with -.<br>
+**go &lt;index&gt;**	--&gt;Runs to the first room in the index, or to <br>
+	&gt;the index number with argument.<br>
+**&lt;xrt|xrun&gt;&lt;area&gt;**	--&gt;Runs to the area matching the argument.<br>
 <br>
-**&lt;cp|gq&gt;i|info**                --&gt;Displays campaign/gquest info.<br>
-**&lt;cp|gq&gt;ch|check**              --&gt;Displays campaign/gquest check.<br>
+**&lt;cp|gq&gt;i|info**	--&gt;Displays campaign/gquest info.<br>
+**&lt;cp|gq&gt;ch|check**	--&gt;Displays campaign/gquest check.<br>
 <br>
-**xcp &lt;index&gt;**                  --&gt;Without argument, goes to top result in<br>
-                                &gt;cp/gq check. Otherwise heads to the index<br>
-                                &gt;chosen.<br>
-**xcp mode &lt;ht|qw|off&gt;**         --&gt;Sets whether you use hunt trick or quick <br>
-                                &gt;where upon entering an area on cp/gq. Use <br>
-                                &gt;'off' to turn off this feature.<br>
+**xcp &lt;index&gt;**	--&gt;Without argument, goes to top result in<br>
+	&gt;cp/gq check. Otherwise heads to the index<br>
+	&gt;chosen.<br>
+**xcp mode &lt;ht|qw|off&gt;**	--&gt;Sets whether you use hunt trick or quick <br>
+	&gt;where upon entering an area on cp/gq. Use <br>
+	&gt;'off' to turn off this feature.<br>
 <br>
-**snd update**                    --&gt;Automatically updates Search & Destroy.<br>
+**snd update**	--&gt;Automatically updates Search & Destroy.<br>

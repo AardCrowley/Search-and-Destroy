@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
-<muclient> 
-<plugin version="4.60" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<muclient>
+<plugin version="4.61" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -11,17 +11,17 @@
 <timers>
 	<timer name="tim_init_plugin"
 		second="0.5" active_closed="y"
-		script="init_plugin" 
+		script="init_plugin"
 		enabled="y" send_to="12" > </timer>
-		
+
 	<timer name="execute_in_area_timer"
-		second="0.1" 
+		second="0.1"
 		script=""
 		enabled="n" send_to="12">
 			<send>	execute_in_area_tick() </send> </timer>
-		
+
 	<timer name="vidblain_nav_timer"
-		second="0.1" 
+		second="0.1"
 		script=""
 		enabled="n" send_to="12">
 			<send>	vidblain_nav_tick() </send> </timer>
@@ -37,7 +37,7 @@
 		* Add a mob database
 		* Add ability to keyword mobs, tie in with mob database
 		* Change way XRT works - if no shortname found, run to best matching area ]]--
-    
+
 	--require "copytable"
 	require "movewindow"
 	require "serialize"
@@ -52,12 +52,12 @@
 
 	PLUGIN_VERSION  = GetPluginInfo(GetPluginID(), 19)
 	PLUGIN_NAME 	= GetPluginInfo(GetPluginID(), 1)
-	
+
 	local current_sd_version 		= "Search & Destroy v" .. PLUGIN_VERSION
 	local plugin_id_gmcp_handler 	= "3e7dedbe37e44942dd46d264"		-- easier to remember the var names than the plugin id's
 	local plugin_id_gmcp_mapper		= "b6eae87ccedd84f510b74714"
 	local plugin_id_z_order 		= "462b665ecb569efbf261422f"
-	
+
 	local plugins_folder = GetPluginInfo(GetPluginID(), 20)
 	local db_file_1
 	local db_file_2
@@ -68,33 +68,33 @@
 	local current_room  = { rmid = "-1", arid = "-1", maze = "no", exits = {} }
 	local previous_room = { rmid = "-2", arid = "-2", maze = "no", exits = {} }
 	local room_history = { }
-	
+
 -- [[ player status ]]
 	local current_character_state = "0"
 	local silentMode = GetVariable("mcvar_silentMode_command") or "off"
 	local sortBy = GetVariable("mcvar_sortBy") or "all"
-	
+
 -- [[ Execute in area, room ]]
 	local execute_in_area_tbl = { i=0, j=0, arid="", f="", stat=1 }
 	local execute_in_room_tbl = { i=0, j=0, rmid="", f="", stat=1 }
 	local vidblain_nav_tbl    = { i=0, j=0, rmid="", f="", stat=1 }
-	
+
 -- [[ main target data / current activity type ]]
 	local main_target_list = {}
 	local room_targets_ignored = {}
 	local area_room_type = "init"
 	local current_activity = "init"	-- valid: cp, gq, init, none = "init"
-	
+
 -- [[ campaign data (cpmd) ]]
 	local cp_info_level = tonumber(GetVariable("mcvar_cp_level_taken")) or 0
 	local cp_info_list = {}
 	local cp_check_list = {}
 	local last_cp_check = os.clock()
-	
--- [[cp status, etc. ]]	
+
+-- [[cp status, etc. ]]
 	local can_get_new_cp = "no"
 	local player_on_cp = "no"
-	
+
 -- [[ gquest data ]]
 	local gqid_declared = GetVariable("mcvar_gqid_declared") or "-1"
 	local gqid_joined = GetVariable("mcvar_gqid_joined") or "-1"
@@ -103,7 +103,7 @@
 	local player_on_gq = "no"
 	local gq_info_list = {}
 	local gq_check_list = {}
-	local last_gq_check = os.clock()	
+	local last_gq_check = os.clock()
 	local gq_info_minlvl = tonumber(GetVariable("mcvar_gq_info_minlvl")) or 0
 	local gq_info_maxlvl = tonumber(GetVariable("mcvar_gq_info_maxlvl")) or 0
 	local gq_info_efflvl = tonumber(GetVariable("mcvar_gq_info_efflvl")) or 0
@@ -113,10 +113,10 @@
 	local quest_target = {}	-- {qmob = "", area = "", room = "", keyword="", status="0"}
 	local short_mob_name = -1
 	local full_mob_name = -1
-	
+
 -- [[ xcp action mode ]]
 	local xcp_action_mode = GetVariable("mcvar_xcp_action_mode") or "qw"
-	
+
 -- [[ goto/nx data ]]
 	local gotoArea = -1
 	local gotoIndex = 0
@@ -127,25 +127,25 @@
 	local auto_hunt_dir = ""
 	local auto_hunt_mob = ""
 	local autoHuntData = {}
-	
+
 -- [[ hunt trick ]]
 	local ht = { index = 1 }
-	
+
 -- [[ quick where ]]
 	local qw = { index = 1 }
 
 -- [[ quick kill ]]
 	local quick_kill_command = GetVariable("mcvar_quick_kill_command") or "k"
-	
+
 -- [[ automatic noexp ]]
 	local anex_tnl_cutoff = tonumber(GetVariable("mcvar_anex_tnl_cutoff")) or 0
 	local noexp_onoff = "off"
 	local anex_automatic_onoff = GetVariable("mcvar_anex_automatic_onoff") or "on"
-	
+
 -- [[ Vidblain navigation ]]
 	local xset_vidblain_level = tonumber(GetVariable("mcvar_xset_vidblain_level")) or 300
 	local xset_vidblain_onoff = GetVariable("mcvar_xset_vidblain_onoff") or "off"
-	
+
 -- [[ Variables from old Mapper Extender ]]
 	local area_range_index = {}
 	local area_start_rooms = {}
@@ -153,12 +153,12 @@
 	local mapper_area_index = 0
 	local speed = "run"
 	local start_room_type
-	
+
 -- [[ Variables from old Search and Destroy ]]
 	local dir_map = { north = "n", south = "s", east = "e", west = "w", up = "u", down = "d" }
 
 -- [[ game time data ]]
-	local gCycle 
+	local gCycle
 	local gYear
 	local gYearName
 	local gSeason
@@ -172,7 +172,7 @@
 	local logplayer_stats
 	local logplayer_qp
 	local logplayer_timestamp
-	local logplayer_datestamp 
+	local logplayer_datestamp
 
 -- [[ S&D window data ]]
 	local win = "sd_window_" .. GetPluginID()
@@ -196,7 +196,7 @@
 
 -- [[ S&D window color data]]
 	local win_bgcolor = 0x000000
-	
+
 --	[[ Plugin broadcast/receive process ]]
 	function OnPluginBroadcast(msg, id, name, text)
 		if (id == plugin_id_gmcp_handler) then
@@ -225,7 +225,7 @@
 			end
 		end
 	end
-	
+
 -- [[ Plugin installation ]]
 	function OnPluginInstall()
 		ColourNote("#808080", "", "\n+=================================================================+")
@@ -248,7 +248,7 @@
 	--	end
 	--	db:close()
 	end
-	
+
 	local init_called = 0
 	function init_plugin()
 		if not IsConnected() then return end
@@ -267,7 +267,7 @@
 	end
 
 -- [[ Lookup table:  Area start room, noquest true/false, vidblain areas ]]
-	local areaDefaultStartRooms = {			
+	local areaDefaultStartRooms = {
 		["abend"] 		= { start = "24909", ct = "3" },		-- Continents
 		["alagh"] 		= { start =  "3224", ct = "4", noquest = true },
 		["gelidus"] 	= { start = "18780", ct = "2", noquest = true },
@@ -275,7 +275,7 @@
 		["southern"] 	= { start =  "5192", ct = "1", noquest = true },
 		["uncharted"] 	= { start =  "7701", ct = "5", noquest = true },
 		["vidblain"] 	= { start = "33570", ct = "6", noquest = true, vidblain = true },
-	
+
 		["aardington"] 	= { start = "47509" },		-- A --
 		["academy"] 	= { start = "35233" },
 		["adaldar"] 	= { start = "34400" },
@@ -287,8 +287,8 @@
 		["amusement"] 	= { start = "29282" },
 		["andarin"] 	= { start =  "2399" },
 		["annwn"] 		= { start = "28963" },
-		["anthrox"] 	= { start =  "3993" }, 
-		["arboretum"] 	= { start = "39100" }, 
+		["anthrox"] 	= { start =  "3993" },
+		["arboretum"] 	= { start = "39100" },
 		["arena"] 		= { start = "25768" },
 		["arisian"] 	= { start = "28144" },
 		["ascent"] 		= { start = "43150" },
@@ -530,11 +530,11 @@
 		["blackclaw"]	= { start = "   -1", noquest = true }, -- epic areas
 		["geniewish"] 	= { start = "38464", noquest = true },
 		["icefall"] 	= { start = "38701", noquest = true },
-		["inferno"]		= { start =    "-1", noquest = true },		
-		["oradrin"] 	= { start = "25436", noquest = true }, 
+		["inferno"]		= { start =    "-1", noquest = true },
+		["oradrin"] 	= { start = "25436", noquest = true },
 		["titan"] 		= { start = "38234", noquest = true },
 		["winds"] 		= { start = "39900", noquest = true },
-		
+
 		["badtrip"] 	= { start = "32877", noquest = true },		-- Other no-quest areas
 		["birthday"]	= { start = "10920", noquest = true },
 		["lowlands"] 	= { start = "28044", noquest = true },
@@ -568,14 +568,14 @@
 		["twinlobe"] 	= { start = "15575", noquest = true },
 		["vanir"] 		= { start =   "878", noquest = true },
 		["watchmen"] 	= { start = "32342", noquest = true },
-		
+
 		["baal"] 		= { start =    "-1", noquest = true },		-- Closed clan halls
 		["hook"] 		= { start =    "-1", noquest = true },
 		["retri"] 		= { start =    "-1", noquest = true },
 		["rhabdo"] 		= { start =    "-1", noquest = true },
 		["rogues"] 		= { start =    "-1", noquest = true },
 		["xunti"] 		= { start =    "-1", noquest = true },
-		
+
 		["challenge"]	= { start =    "-1", noquest = true },		-- Normally inaccessible areas, or which lack a sensible starting room.
 		["immhomes"]	= { start =    "-1", noquest = true },
 		["lasertwo"]	= { start =    "-1", noquest = true },
@@ -589,7 +589,7 @@
 		["vault"]		= { start =    "-1", noquest = true },
 		["warzone"]		= { start =    "-1", noquest = true },
 		["wolfmaze"]	= { start =    "-1", noquest = true } }
-	
+
 	local vidblain_area_list = {
 		["darklight"] 	= { },
 		["imperial"] 	= { },
@@ -853,9 +853,9 @@
 		["Yggdrasil: The World Tree"] 			= "ygg",
 		["Zangar's Demonic Grotto"] 			= "zangar" }
 
--- 	[[ Lookup table: Game calendar data]]		
-	local gCalendar = { }	
-		
+-- 	[[ Lookup table: Game calendar data]]
+	local gCalendar = { }
+
 --	[[ Load saved table data ]]
 	function load_saved_table_data()
 		load_area_start_rooms()
@@ -863,59 +863,59 @@
 	end
 
 	function load_area_start_rooms()
-		if (GetVariable("mcvar_areaStartRooms") ~= nil) then			
+		if (GetVariable("mcvar_areaStartRooms") ~= nil) then
 			code = "obj = " .. GetVariable("mcvar_areaStartRooms")
-			assert (loadstring (code or "")) ()		
+			assert (loadstring (code or "")) ()
 			area_start_rooms = obj
-		end	
+		end
 	end
 
 	function load_area_range_index()
 		send_gmcp_packet("request room")
 		if (GetVariable("mcvar_area_range") ~= nil) then
 			code = "obj = " .. GetVariable("mcvar_area_range")
-			assert(loadstring (code or "")) ()		
+			assert(loadstring (code or "")) ()
 			area_range_index = obj
 			do_cp_info()
 		else
 			area_index_process()
-		end	
+		end
 	end
-	
---	[[ Area index process ]]	
+
+--	[[ Area index process ]]
 	function area_index_process()
 		Execute("xset suspend page size")
 		DoAfterSpecial(0.1, [[ SendNoEcho("areas 1 300 keyword") ]], sendto.script)
 	end
-	
+
 	function area_index_start()		-- called by trigger for "Showing areas from 0 to 300" line at start of areas list.
 		area_range_index = {}
 		ColourNote("#FF5000", "", "*** Indexing area levels")
 	end
-	
+
 	function area_index_line(name, line, wildcards)			-- called by trigger reacting to the output lines from the areas list.
 		local areaName = Trim(wildcards.areaName)
 		local arid = Trim(wildcards.arid)
 		local minLvl = tonumber(Trim(wildcards.min)) or 1
 		local maxLvl = tonumber(Trim(wildcards.max)) or 201
 		--local levelLock = tonumber(Trim(wildcards.lock)) or 0
-		if areaDefaultStartRooms[arid] then		     
+		if areaDefaultStartRooms[arid] then
 			if (areaDefaultStartRooms[arid].noquest == true) then
 				-- do nothing, we don't want to add noquest areas to the index
 			else
 				if     (arid == "sahuagin") then areaName = "The Abyssal Caverns of Sahuagin"
 				elseif (arid == "darkside") then areaName = "The Darkside of the Fractured Lands"
 				elseif (arid == "academy") then maxLvl = 10
-				elseif (arid == "sohtwo") then minLvL = 170 
+				elseif (arid == "sohtwo") then minLvL = 170
 				end
 				area_range_index[areaName] = { arid = arid, min = minLvl, max = maxLvl }	-- lock = levelLock }
-				
+
 			end
 		else
 			ColourNote("#802800", "", "*** Missing default start room - " .. areaName)
 		end
 	end
-	
+
 	function area_index_end(name, line, wildcards)
 		SetVariable("mcvar_area_range", serialize.save_simple(area_range_index))
 		ColourNote("#FF5000", "", "\n*** Area levels indexed!")
@@ -927,81 +927,81 @@
 	local gmkw_omit = {	["a"] = "",	["an"] = "", ["and"] = "", ["of"] = "", ["or"] = "", ["some"] = "", ["the"] = "" }
 	local gmkw_area_filters = {
 		["adaldar"]		= { { f= "^.*(el)vish (%a*%s?%a+)$",			g="%1 %2" 	}, },
-		
+
 		["bonds"]		= { { f= "^(.*[bgry]%a+) dragon$",				g="%1"		}, },
-		
+
 		["citadel"]   	= {	{ f= "^([bgjlmsv]%a+) ([ap]r%a+[el]) .+$",	g="%1 %2"	}, },
-							
-		["elemental"]   = {	{ f= "^(%a+)%'(%a+) (%a+)$",				g="%1%2 %3"	}, 
+
+		["elemental"]   = {	{ f= "^(%a+)%'(%a+) (%a+)$",				g="%1%2 %3"	},
 							{ f= "^wandering (%a+)%'(%a+) (%a+)$",		g="%1%2 %3"	}, },
-	
+
 		["hatchling"] 	= {	{ f= "^(%a+) dragon (egg)$", 				g="%1 %2"	},
 							{ f= "^(%a+) dragon (hatchling)$", 			g="%1 %2"	},
 							{ f= "^(%a+ %a+) dragon whelp$", 			g="%1"		},
 							{ f= "^(%a+) dragon (whelp)$", 				g="%1 %2"	}, },
-							
+
 		["sirens"] 		= {	{ f= "^miss ([%a']+)%s?(%a*).*%a$", 		g="%1 %2"	}, },
-		
+
 		["sohtwo"]		= { { f= "^(evil) %a+",							g="%1"		},
 							{ f= "^(good) %a+",							g="%1"		}, },
-		
+
 		["verume"]		= {	{ f= "^lizardman (temple %a+)$", 			g="%1"		}, },
-		
+
 		["wooble"]		= {	{ f= "^sea (%a+)$", 						g="%1"		},
 							{ f= "^sea (%a+ %a+)$", 					g="%1"		}, }, }
 
 	local gmkw_exceptions = {
 		["aardington"]	= { ["a very large portrait"]				= { kw="large port"			}, },
-		
+
 		["anthrox"]		= { ["the little white rabbit"]				= { kw="rabb"				}, },
-		
+
 		["ddoom"]		= { ["a dangerous scorpion"]				= { kw="scorp"				},
 							["Lwji, the Sunrise great warrior"]		= { kw="lwji"				},
-							["Taji, the Sunset leader"]				= { kw="taji lead"			}, 
+							["Taji, the Sunset leader"]				= { kw="taji lead"			},
 							["Taji's personal advisor"]				= { kw="pers advi"			},
 							["Tjac, the Sunrise leader"]			= { kw="tjac lead"			},
 							["Tjac's personal advisor"]				= { kw="sunr advis"			},
 							["Yki, the great Sunset warrior"]		= { kw="yki"				}, },
-		
+
 		["deneria"]		= { ["High Priest of Miad'Bir"] 			= { kw="high miad" 			}, },
-		
+
 		["desert"]		= { ["a village citizen"] 					= { kw="citi" 				}, },
-							
+
 		["fields"]		= { ["a mutated goat"] 						= { kw="goat" 				}, },
-		
+
 		["fortress"]	= { ["a grizzled goblin dressed in skins"]	= { kw="grizz gobl"		 	},
 							["Blood Silk, Collector of souls, Queen of the spiders"] = { kw="silk queen" }, },
-		
-		["illoria"]		= { ["the King and Queen's Guard"]			= { kw="pers guard"			}, }, 
-		
+
+		["illoria"]		= { ["the King and Queen's Guard"]			= { kw="pers guard"			}, },
+
 		["landofoz"]	= { ["one of Dorothy's uncles"] 			= { kw="doroth uncle"		}, },
-		
+
 		["laym"]		= { ["an elite guard of the church"]		= { kw="elit guar"			}, },
-		
+
 		["livingmine"]	= { ["a member of the 'Cal tribe"]			= { kw="memb cal"			},
 							["a member of the 'Sorr tribe"]			= { kw="memb sorr"			},
 							["a member of the 'Tai tribe"]			= { kw="memb tai"			},
 							["Dak'tai's shaman"]					= { kw="dakt shama"			},
 							["the 'Tai chieftain"]					= { kw="tai chief"			}, },
-							
+
 		["longnight"]	= { ["Mr. Roberge"]							= { kw="car rober"			}, },
-		
+
 		["losttime"]	= { ["T-Rex"]								= { kw="T-rex"				}, },
-		
-		["manor"]		= { ["Aremata-Popua"] 						= { kw="aremata-pop"	 	}, 
+
+		["manor"]		= { ["Aremata-Popua"] 						= { kw="aremata-pop"	 	},
 							["Aremata-Rorua"] 						= { kw="aremata-ror" 		}, },
-							
+
 		["masq"]		= { ["a gentleman on the way to the ball"]	= { kw="gentl"				},
 							["a very attractive woman"]				= { kw="attr woman"			}, },
-		
+
 		["necro"] 		= { ["the head necromancer's assistant"]	= { kw="old mage assist" 	}, },
-		
+
 		["northstar"]	= { ["a Blood Ring elite warrior"]			= { kw="elit warr"			},
 							["Daryoon, a priest of nature"]			= { kw="dary pries"			},
 							["Tristam, the Prince of the Orcs"]		= { kw="trist orc"			}, },
-		
+
 		["sanctity"]	= { ["a half-converted human"]				= { kw="human"				}, },
-		
+
 		["siege"]		= { ["a kobold eating lunch"]				= { kw="kobold eating"		},
 							["a large mole"]						= { kw="mole"				},
 							["a very large firefly"]				= { kw="larg firef"			},
@@ -1086,26 +1086,26 @@
 							["Warsnail Anaristos"]                  = { kw="warsnail"             },
 							["Cuddlebear Koala"]                    = { kw="cuddlebear"           },
 							["(Helper) Fenix"]                      = { kw="helper"               },},
-		
+
 		["snuckles"]	= {	["Sarah, the grieving snuckle"]			= { kw="sarah griev"		}, },
 
 		["stone"]		= { ["a Citadel of Stone Cityguard"]		= { kw="cit guar"			,} },
-		
+
 		["talsa"]		= { ["a dwarven mercenary"]					= { kw="dwar merc"			}, },
-		
+
 		["wooble"]		= { ["the Sea Snake Master-at-Arms"] 		= { kw="snake mast" 		}, },
 
 		["yarr"]		= {	["a pirate sorting the treasure"]		= { kw="pirat sort"			},
-							["a pirate stealing some treasure"]		= { kw="pirat steal"		}, }, 
-							
+							["a pirate stealing some treasure"]		= { kw="pirat steal"		}, },
+
 		["zoo"]			= { ["a black-footed pine marten"]			= { kw="pine marte"			}, }, }
-	
+
 	function gmkw(s, a)	-- guess mob keywords
 		if not s then return "" end
 		local ri = current_room
 		local ar = a or ri.zone
 		local guess
-		if gmkw_exceptions[ar] then			-- Is the mob listed as a keyword exception?  if so, look up keywords from the exception table instead of guessing. 
+		if gmkw_exceptions[ar] then			-- Is the mob listed as a keyword exception?  if so, look up keywords from the exception table instead of guessing.
 			if gmkw_exceptions[ar][s] then
 				guess = gmkw_exceptions[ar][s].kw	-- Special thanks to Redryn for being obtuse and aggravating me enough that I added this.  Dick.
 				return guess
@@ -1132,7 +1132,7 @@
 			else
 				s2 = (s2 == nil) and v or s2 .. " " .. v
 			end
-		end	
+		end
 
 		local s3
 		if gmkw_area_filters[ar] then
@@ -1146,8 +1146,8 @@
 			s3 = s2
 		end
 		s3 = string.gsub(s3, "-", " ")
-		
-		local s4 = {}	
+
+		local s4 = {}
 		for w in string.gmatch(s3, "[^ ]+") do
 			table.insert(s4, w)
 		end
@@ -1165,7 +1165,7 @@
 		return guess
 	end
 
---	[[ Detect campaign (or gquest) type - area or room ]]	
+--	[[ Detect campaign (or gquest) type - area or room ]]
 	function area_room_type_check(list)
 		local areaCount = 0
 		local roomCount = 0
@@ -1217,7 +1217,7 @@
 			SetVariable("mcvar_qt_areaName", qt.areaName)
 			SetVariable("mcvar_qt_room", qt.room)
 			if (bool == true) then
-				ColourNote("#FF5000", "", "\nYour quest mob is: \n") 
+				ColourNote("#FF5000", "", "\nYour quest mob is: \n")
 				ColourNote("#FF5000", "", "mob : ",
 						"#00C040", "", qt.mob.." ")
 				ColourNote("#FF5000", "", "area: ",
@@ -1235,7 +1235,7 @@
 			target_quest_mob(true)
 		elseif (q.action == "status" and q.targ and q.timer) then		-- on quest, qmob not yet killed
 			quest_target = { qstat="2", mob = q.targ, areaName = q.area, arid = areaNameXref[q.area], room = (string.gsub(q.room, "@[bcgmrwyBCDGMRWY]", "")) }
-			target_quest_mob(true)			
+			target_quest_mob(true)
 		else
 			if (q.action == "killed") then	-- you've just killed the target
 				quest_target.qstat = "3"
@@ -1246,16 +1246,16 @@
 				quest_target = { qstat="1"}
 				xcp_clear_target(false)
 				qw_reset(false)
-			elseif (q.action == "ready") or (q.action == "timeout") then -- can take new quest immediately		
+			elseif (q.action == "ready") or (q.action == "timeout") then -- can take new quest immediately
 				quest_target = { qstat="0"}
-			
+
 			-- in all of these, the action is "status"
 			elseif (q.action == "status" and q.target == "killed") then		-- on quest, qmob has been killed (do not confuse q.target with q.targ above!)
 				quest_target.qstat = "3"
 				ColourNote("#FF5000", "", "\nSearch and Destroy: You have already killed your quest target!\n")
 			--elseif (q.action == "status" and q.targ and q.timer) then		-- on quest, qmob not yet killed
 			--	quest_target = { qstat="2", mob = q.targ, areaName = q.area, arid = areaNameXref[q.area], room = (string.gsub(q.room, "@[bcgmrwyBCDGMRWY]", "")) }
-			--	target_quest_mob(true)			
+			--	target_quest_mob(true)
 			elseif (q.action == "status" and (q.wait)) then					-- off quest, must wait before requesting new
 				quest_target = { qstat="1"}
 				ColourNote("#FF5000", "", "\nSearch and Destroy: Not on quest - must wait before requesting new.\n")
@@ -1269,7 +1269,7 @@
 			SetVariable("mcvar_qt_room", "")
 		end
 	end
-	
+
 --	[[ "cp info" process path ]]
 	function do_cp_info()
 		cp_info_list = {}
@@ -1281,13 +1281,13 @@
 		SendNoEcho("cp info")
 		xg_draw_window()	-- redraw window during latency period between sending the command and receiving a response, which would otherwise be 'dead' time.
 	end
-	
+
 	function cp_info_level_taken(name, line, wildcards)
 		local x = tonumber(wildcards.level)
 		cp_info_level = x
 		SetVariable("mcvar_cp_level_taken", x)
 	end
-	
+
 	function cp_info_line(name, line, wildcards)
 		local t = cp_info_list
 		local mob = wildcards.mob
@@ -1295,7 +1295,7 @@
 		local ord = #t+1
 		table.insert(t, { mob=mob, loc=loc, ord=ord } )
 	end
-	
+
 	function cp_info_end()
 		player_on_cp = "yes"
 		current_activity = "cp"
@@ -1306,7 +1306,7 @@
 		DoAfterSpecial(0.1, [[ do_cp_check() ]], sendto.script)
 	end
 
---	[[ "cp check" process path ]]	
+--	[[ "cp check" process path ]]
 	function do_cp_check()
 		local time_check = os.clock()					-- prevent double cp checks from different plugins
 		if ((time_check - last_cp_check) < 1.0) then
@@ -1317,7 +1317,7 @@
 		EnableTrigger("trg_cp_check_line", true)
 		SendNoEcho("cp ch")
 	end
-	
+
 	function cp_check_line(name, line, wildcards)
 		local t = cp_check_list
 		local mob = wildcards.mob
@@ -1328,7 +1328,7 @@
 		local ord = #t + 1
 		table.insert(t, { mob=mob, qty=qty, loc=loc, is_dead=is_dead, ord=ord })
 	end
-	
+
 	function cp_check_end(name, line, wildcards)
 		player_on_cp = "yes"
 		current_activity = "cp"
@@ -1342,7 +1342,7 @@
 				xcp_arg("", "", {index=xcp_index}) 			-- do xcp again (with or without arg), which works normally now that
 			end												-- table data is available.
 		end
-		xcp_retry_stat = 0				--Execute("xcp " .. xcp_index)				
+		xcp_retry_stat = 0				--Execute("xcp " .. xcp_index)
 	end
 
 --	[[ general cp status functions ]]
@@ -1358,8 +1358,8 @@
 			anex_set_noexp("off")
 		end
 		do_cp_info()
-	end  
-	
+	end
+
 	function cp_mob_killed()
 		if (player_on_gq == "no") then
 			xcp_retry_stat = 1
@@ -1371,20 +1371,20 @@
 			DoAfterSpecial(0.1, "do_cp_check()", 12)
 		end
 	end
-		
+
 	function player_level_up()
 		can_get_new_cp = "yes"
 		xg_draw_window()
 	end
-	
+
 	function player_is_on_cp()
 		player_on_cp = "yes"
 	end
 
-	function do_cp_complete(name, line, wildcards) 
+	function do_cp_complete(name, line, wildcards)
 		player_not_on_cp()
 	end
-		
+
 	function player_not_on_cp()
 		player_on_cp = "no"
 		EnableTriggerGroup ("trg_campaign", false)
@@ -1403,19 +1403,19 @@
 			xg_draw_window()
 		end
 	end
- 	
+
 	function cp_check_can_get_new_cp()
 		can_get_new_cp = "yes"
 		anex_can_get_new_cp()
 		xg_draw_window()
 	end
-	
+
 	function cp_check_cannot_get_new_cp()
 		can_get_new_cp = "no"
 		anex_must_level_new_cp()
 		xg_draw_window()
-	end	
-	
+	end
+
 	function can_player_get_new_cp()
 		return (can_get_new_cp == "yes") and true or false
 	end
@@ -1431,7 +1431,7 @@
 		gqid_extended = "-1"
 			SetVariable("mcvar_gqid_extended", "-1")
 	end
-	
+
 	function gqmsg_joined(name, line, wildcards)
 		gqid_joined = wildcards.gq_id
 		SetVariable("mcvar_gqid_joined", gqid_joined)
@@ -1439,8 +1439,8 @@
 			EnableTriggerGroup("trg_gqmsg_2", true)
 			do_gq_info()
 		end
-	end	
-	
+	end
+
 	function gqmsg_started(name, line, wildcards)
 		gqid_started = wildcards.gq_id
 		SetVariable("mcvar_gqid_started", gqid_started)
@@ -1450,7 +1450,7 @@
 		end
 	end
 
---	[[ Gquest info functions ]]	
+--	[[ Gquest info functions ]]
 	function do_gq_info()
 		if (gqid_joined ~= "-1") then
 			xcp_clear_target(false)
@@ -1474,7 +1474,7 @@
 			print("gq info name fail")
 		end
 	end
-	
+
 	function gq_info_quest_status(name, line, wildcards)
 		local status = wildcards.status
 		if (status == "Active") or (status == "Extended") then
@@ -1493,7 +1493,7 @@
 		gq_info_efflvl = eff
 			SetVariable("mcvar_gq_info_efflvl", eff)
 	end
-	
+
 	function gq_info_line(name, line, wildcards)
 		local t = gq_info_list
 		local mob = wildcards.mob
@@ -1502,7 +1502,7 @@
 		local ord = #t+1
 		table.insert(t, { mob=mob, qty=qty, loc=loc, ord=ord } )
 	end
-	
+
 	function gq_info_end()
 		player_is_on_gq()	-- more redundancy.  gq's are a pain
 		area_room_type = area_room_type_check(gq_info_list)
@@ -1511,8 +1511,8 @@
 		xg_draw_window()
 		DoAfterSpecial(0.1, "do_gq_check()", sendto.script)
 	end
-	
---	[[ Gquest check functions ]]	
+
+--	[[ Gquest check functions ]]
 	function do_gq_check()
 		player_is_on_gq()
 		local time_check = os.clock()					-- prevent double cp checks from different plugins
@@ -1524,7 +1524,7 @@
 		EnableTrigger("trg_gq_check_line", true)
 		DoAfterSpecial(0.1, 'SendNoEcho("gq ch")', sendto.script)
 	end
-	
+
 	function gq_check_line(name, line, wildcards)
 		local t = gq_check_list
 		local mob = wildcards.mob
@@ -1534,12 +1534,12 @@
 		local ord = #t+1
 		table.insert(t, { mob=mob, qty=qty, loc=loc, is_dead=is_dead, ord=ord })
 	end
-	
+
 	function gq_check_end()
 		player_is_on_gq()
 		build_main_target_list("gq", area_room_type)
 		if (xcp_retry_stat == 2) then						-- About xcp_retry_stat:
-			if (xcp_index == 0) or (xcp_index == 1) then	
+			if (xcp_index == 0) or (xcp_index == 1) then
 				xcp_retry_stat = 0							-- after killing gq mob, it's possible to 'xcp' after tables are cleared,
 				xcp_noarg()									-- but before they're refreshed, which would cause 'xcp' to fail with the
 			else											-- message "no data yet".  Instead, gq_mob_killed sets a flag that does
@@ -1550,7 +1550,7 @@
 		xcp_retry_stat = 0
 	end
 
---	[[ Gquest general status functions ]]	
+--	[[ Gquest general status functions ]]
 	function gq_mob_killed()
 		if main_target_list[xcp_index] then
 			local x = tonumber(main_target_list[xcp_index].qty) - 1
@@ -1613,12 +1613,12 @@
 			player_not_on_gq()
 		end
 	end
-	
+
 	function gq_check_not_yet_started(name, line, wildcards)
 		gqid_started = "-1"
 			SetVariable("mcvar_gqid_started", "-1")
-	end	
-	
+	end
+
 	function player_is_on_gq()
 		player_on_gq = "yes"
 		current_activity = "gq"
@@ -1635,7 +1635,7 @@
 		gq_check_list = {}
 		main_target_list = {}
 		room_targets_ignored = {}
-		
+
 		gqid_declared = "-1"
 			SetVariable("mcvar_gqid_declared", gqid_declared)
 		gqid_joined = "-1"
@@ -1644,29 +1644,29 @@
 			SetVariable("mcvar_gqid_started", gqid_started)
 		gqid_extended = "-1"
 			SetVariable("mcvar_gqid_extended", gqid_extended)
-		
+
 		gq_info_minlvl = "-1"
 			SetVariable("mcvar_gq_info_minlvl", gq_info_minlvl)
 		gq_info_maxlvl = "-1"
 			SetVariable("mcvar_gq_info_maxlvl", gq_info_maxlvl)
-		
+
 		xcp_clear_target(true)
-		
+
 		if (player_on_cp == "yes") then
 			DoAfterSpecial(0.4, [[ ColourNote("#FF5000", "#000000", "Reloading your cp targets....")
 								do_cp_info() ]], sendto.script)
 		end
 	end
-	
+
 --	[[ Build main target list process path ]]
 	function build_main_target_list(cp_or_gq, area_or_room)
 		local cp_gq = cp_or_gq
 		local ar_rm = area_or_room
-		
+
 		local sqla = " SELECT uid as arid, name as areaName " .. "FROM areas " .. "WHERE name = %s " .. "ORDER BY arid ASC "
 		local sqlr = " SELECT r.uid as roomid, r.name as roomName, a.uid as arid, a.name as areaName, 'room' as link_type " .. "FROM rooms r " .. "INNER JOIN areas a ON r.area = a.uid " .. "WHERE r.name = %s " .. "ORDER BY arid ASC "
 		if (ar_rm == "area") then
-			main_target_list = build_area_targets(cp_gq, sqla)	
+			main_target_list = build_area_targets(cp_gq, sqla)
 		elseif (ar_rm == "room") then
 			main_target_list, room_targets_ignored = build_room_targets(cp_gq, sqlr, sqla)
 		elseif (ar_rm == "none") then	-- should never be called but who knows
@@ -1710,10 +1710,10 @@
 					ord = v.ord } )
 			end
 			if (results_found == false) then
-				table.insert(t, 
+				table.insert(t,
 				{	mob = v.mob,
-					location = v.loc, 
-					arid = "-1", 
+					location = v.loc,
+					arid = "-1",
 					qty = v.qty,
 					is_dead = dead,
 					color = cy,
@@ -1728,7 +1728,7 @@
 		end
 		return t
 	end
-	
+
 	function build_room_targets(cp_gq, sqlr, sqla)
 		local t, ig, list = {}, {}, {}
 		local level_taken
@@ -1779,8 +1779,8 @@
 								if sortBy == "all" or sortBy == "area" then
 									table.sort(t, function (a,b) return a.arid < b.arid end)
 								end
-						else	
-							table.insert(ig, {	-- build table of search results for areas out of your level range. 
+						else
+							table.insert(ig, {	-- build table of search results for areas out of your level range.
 								mob = v.mob,	-- Usually invalid, but valid links can wind up here if area's level range is too broad, or wrong.
 								arid = row.arid,
 								roomid = row.roomid,
@@ -1822,7 +1822,7 @@
 		end
 		return t, ig
 	end
-	
+
 --	[[ Display target links in MUD window ]]
 	function print_target_links(list)
 		if (#room_targets_ignored > 0) then
@@ -1835,7 +1835,7 @@
 					for _,v in ipairs(list) do
 						if string.match(v.roomName, "^Hiding from") then
 							v.arid = "zz" .. v.arid ]]--
-						
+
 				for i,v in ipairs (list) do
 					local mob_text = v.mob .. ((v.is_dead == "no") and "" or " [Dead]")
 					local link_text
@@ -1855,7 +1855,7 @@
 						link_text = string.format(" %2d  %s - unknown: '%s'", padRight(i, 4, " "), padRight(mob_text, 32, " "), v.location)
 						tooltip = "Location not found in mapper database"
 						Hyperlink(" ", link_text, tooltip, v.color, "", 0)
-					end		
+					end
 					print("")
 				end
 					ColourNote("#808080", "", string.rep("-", 90))
@@ -1869,14 +1869,14 @@
 	function print_room_links_ignored()
 		local ig = room_targets_ignored
 		ColourNote("#808080", "", string.rep("-", 90))
-		for i,v in ipairs (ig) do			
+		for i,v in ipairs (ig) do
 			local link = string.format(" ** Ignoring due to level: %s - %5s '%s' (%s) [%s-%s]", v.mob, v.roomid, v.roomName, v.arid, v.minlvl, v.maxlvl)
 			Hyperlink("xmapper move " .. v.roomid, link, "Move to room " .. v.roomid, "#002460", "", 0)
 			print("")
 		end
 	end
 
-	
+
 -- [[ "xcp" command ]]
 	function xcp_noarg()	-- xcp with no argument given, so find the first available mob (alive, location known) and go to it.
 		local t = main_target_list
@@ -1900,7 +1900,7 @@
 			end
 		end
 	end
-	
+
 	function xcp_arg(name, line, wildcards)
 		local index = tonumber(wildcards.index)
 		local cp_list = main_target_list
@@ -1928,7 +1928,7 @@
 			end
 		end
 	end
-	
+
 	function xcp_goto_target(index)
 		if (xcp_retry_stat == 0) then
 			local t = main_target_list[index]
@@ -1943,7 +1943,7 @@
 				if (t.link_type == "area") then	-- Area cp links - "xcp" goes to target area, then runs Hunt Trick to get target room.
 					if (action == "qw") then
 						local func = function() qw_exact(t.kw) end
-						execute_in_area(t.arid, func)					
+						execute_in_area(t.arid, func)
 					elseif (action == "ht") then		-- do hunt trick or quick where after arriving in area.
 						local func = function() Execute("ht " .. t.kw) end
 						execute_in_area(t.arid, func)
@@ -1964,7 +1964,7 @@
 			xcp_retry_stat = 2
 		end
 	end
-	
+
 	function xcp_clear_target(bool)
 		short_mob_name = -1
 		full_mob_name = -1
@@ -1976,7 +1976,7 @@
 			xg_draw_window()
 		end
 	end
-	
+
 	function xcp_set_action_mode(name, line, wildcards)
 			local opt = wildcards.option or ""
 			local options = {
@@ -2012,9 +2012,9 @@
 		else
 			ColourNote("#FF5000", "", "X-runto: " .. arid .. ", room ID: " .. rmid .. " (" .. start_room_type .. ")\n")
 			goto_room_id(rmid, arid)
-		end	
+		end
 	end
-	
+
 	function goto_room_id(rmid, arid)	-- go to specific room id (do not confuse with goto_number, see below)
 		local ri = current_room
 		local rmid = rmid
@@ -2054,7 +2054,7 @@ function goto_number(name, line, wildcards)
 			ColourNote("#FF5000", "", "\nGoto room result (go):  Can't do that now - you must be standing and ready.")
 		end
 	end
-	
+
 	function goto_next(name, line, wildcards)
 		local ch_state = current_character_state
 		if (ch_state == "3") then
@@ -2080,8 +2080,8 @@ function goto_number(name, line, wildcards)
 		else
 			ColourNote("#FF5000", "", "\nGoto next room (nx):  Can't do that now - you must be standing and ready.")
 		end
-	end	
-	
+	end
+
 	function goto_previous(name, line, wildcards)
 		local ch_state = current_character_state
 		if (ch_state == "3") then
@@ -2107,8 +2107,8 @@ function goto_number(name, line, wildcards)
 		else
 			ColourNote("#FF5000", "", "\nGoto previous room (nx-):  Can't do that now - you must be standing and ready.")
 		end
-	end	
-	
+	end
+
 --	[[ Vidblain navigation ]]
 	function vidblain_nav(rmid, arid)
 		local ch_state = current_character_state
@@ -2117,7 +2117,7 @@ function goto_number(name, line, wildcards)
 		EnableTimer("vidblain_nav_timer", true)
 		Execute("mapper goto 11910") -- move to vidblain and enter the portal
 		Execute("enter hole")
-	end 
+	end
 
 	function vidblain_nav_tick()
 		local ri = current_room
@@ -2134,7 +2134,7 @@ function goto_number(name, line, wildcards)
 					vidblain_nav_tbl = { i=0, j=0, rmid="", arid="", stat=1 }
 				end
 			else  -- arrived in vidblain proper
-				if (ch_state == "3") and (ch_state == vnt.stat) then  -- monitor char state for 3 ticks, if stable, start EIA timer and run to target area 
+				if (ch_state == "3") and (ch_state == vnt.stat) then  -- monitor char state for 3 ticks, if stable, start EIA timer and run to target area
 					vnt.j = vnt.j + 1
 					if (vnt.j > 3) then
 						EnableTimer("vidblain_nav_timer", false) -- stop vidblain timer
@@ -2148,8 +2148,8 @@ function goto_number(name, line, wildcards)
 			end
 		end
 	end
-	
---	[[ Execute in Area ]]	
+
+--	[[ Execute in Area ]]
 	function execute_in_area(arid, func)	-- id is the process or function calling this one.
 		local ri = current_room
 		local ch_state = current_character_state
@@ -2170,7 +2170,7 @@ function goto_number(name, line, wildcards)
 			EnableTimer("execute_in_area_timer", true)
 		end
 	end
-	
+
 	function execute_in_area_tick()
 		local ri = current_room
 		local ch_state = current_character_state
@@ -2202,15 +2202,15 @@ function goto_number(name, line, wildcards)
 			end
 		end
 	end
-	
+
 	function execute_in_room(rmid, func)
-	
+
 	end
-	
+
 	function execute_in_room_tick()
-	
+
 	end
-	
+
 --	[[ quick where ]]
 	function qw_reset(bool)
 		EnableTrigger("trg_quick_where_match", false)
@@ -2221,7 +2221,7 @@ function goto_number(name, line, wildcards)
 			qw = { index = 1, exact = false }
 		end
 	end
-	
+
 	function qw_noarg()
 		local ix = qw.index or 1
 		local s = short_mob_name or -1
@@ -2236,7 +2236,7 @@ function goto_number(name, line, wildcards)
 			end
 		end
 	end
-	
+
 	function qw_arg(name, line, wildcards)
 		local t = main_target_list
 		local s = wildcards.mob
@@ -2246,7 +2246,7 @@ function goto_number(name, line, wildcards)
 		qw.exact = false
 		do_quick_where(ix, s)
 	end
-	
+
 	function qw_exact()  -- called from code, e.g. xcp function
 		local t = main_target_list[xcp_index]
 		if (t) then
@@ -2263,7 +2263,7 @@ function goto_number(name, line, wildcards)
 					else
 						p2 = (p2 == nil) and v or p2 .. " " .. v
 					end
-				end	
+				end
 			qw.exact = true
 			qw.match = p2
 			do_quick_where(ix, s)
@@ -2271,7 +2271,7 @@ function goto_number(name, line, wildcards)
 			print("\nqw exact: You have no 'xcp' target.")
 		end
 	end
-		
+
 	function do_quick_where(ix, s)
 		EnableTrigger("trg_quick_where_match", true)
 		EnableTrigger("trg_quick_where_no_match", true)
@@ -2316,17 +2316,17 @@ function goto_number(name, line, wildcards)
 		local cmd = "xm { } " .. room
 		Execute(cmd)
 	end
-		
+
 	function qw_no_match()	-- responds to "There is no <mob name> around here."
 		qw_reset(qw.exact)
 	end
-		
+
 --	[[ Hunt trick ]]
 	function ht_reset()
 		EnableTriggerGroup("HuntTrick", false)
 		ht = { index = 1 }
 	end
-	
+
 	function ht_noarg()
 		local s = short_mob_name or -1
 		local ix = ht.index or 1
@@ -2336,15 +2336,15 @@ function goto_number(name, line, wildcards)
 			return
 		end
 		do_hunt_trick(ix, s)
-	end	
-	
+	end
+
 	function ht_arg(name, line, wildcards)
 		local s = wildcards.mob
 		local ix = tonumber(wildcards.index) or 1
 		short_mob_name = s
 		do_hunt_trick(ix, s)
-	end 
-	
+	end
+
 	function do_hunt_trick(ix, s)
 		ht.index = ix or 1
 		EnableTriggerGroup("AutoHunt", false)
@@ -2355,13 +2355,13 @@ function goto_number(name, line, wildcards)
 			Send(string.format("hunt %s.%s", ix, s))
 		end
 	end
-	
+
 	function ht_continue()
 		local s = short_mob_name
 		local ix = (ht.index + 1) or 1
 		do_hunt_trick(ix, s)
 	end
-	
+
 	function ht_complete(name, line, wildcards)
 		EnableTriggerGroup("AutoHunt", false)
 		local s = short_mob_name
@@ -2369,14 +2369,14 @@ function goto_number(name, line, wildcards)
 		qw_arg("", "", {index=ix, mob=s})
 		ht_reset()
 	end
-	
+
 	function ht_abort(name, line, wildcards)
 		EnableTriggerGroup("HuntTrick", false)
 		ht = {}
 		ColourNote("#FF5000", "", "Search and Destroy:  Hunt trick cancelled.")
 	end
 
--- [[ quick scan, quick kill ("kk") ]]	
+-- [[ quick scan, quick kill ("kk") ]]
 	function quick_scan()
 		if (short_mob_name == nil) or (short_mob_name == "") then
 			SendNoEcho("scan")
@@ -2384,7 +2384,7 @@ function goto_number(name, line, wildcards)
 			SendNoEcho(string.format("scan %s", short_mob_name))
 		end
 	end
-	
+
 	function quick_kill(name, line, wildcards)
 		if (short_mob_name == nil) or (short_mob_name == "") or (short_mob_name == "-1") then
 			ColourNote("#FF5000", "", "\nSearch and Destroy: 'Quick-kill' has no target.  Use 'ht', 'qw', or 'xcp' to select a target.\n")
@@ -2392,7 +2392,7 @@ function goto_number(name, line, wildcards)
 			Execute(quick_kill_command .. " '" .. short_mob_name .. "'")
 		end
 	end
-	
+
 	function xset_quick_kill_command(name, line, wildcards)		-- user-defined attack to use with qk/kk
 		if (wildcards.arg == "") then
 			ColourNote("#FF5000", "", "Search and Destroy: Quick-kill command currently set to: '" .. quick_kill_command .. "'")
@@ -2411,8 +2411,8 @@ function goto_number(name, line, wildcards)
 			SetVariable("mcvar_silentMode_command", silentMode)
 			ColourNote("#FF5000", "", "Search and Destroy: Silent mode is now set to: '" .. silentMode .. "'")
 		end
-	end 
-	
+	end
+
 	function xset_sortBy(name, line, wildcards)
 		if (not wildcards[1] or wildcards[1] == "") then
 			ColourNote("#FF5000", "", "Search and Destroy: Sort mode currently set to: '" .. sortBy .. "'\nOptions are: all, area, room, none")
@@ -2422,24 +2422,24 @@ function goto_number(name, line, wildcards)
 			ColourNote("#FF5000", "", "Search and Destroy: Sort mode is now set to: '" .. sortBy .. "'")
 		end
 	end
--- [[ Room search processes ]]	
-	local search_rooms_sql = 
+-- [[ Room search processes ]]
+	local search_rooms_sql =
 		"SELECT r.uid as uid, r.name as name, info, r.area as area, " ..
-		"ifnull(a.name, r.area) as area_name, 1 as DisplayOrder " .. 
+		"ifnull(a.name, r.area) as area_name, 1 as DisplayOrder " ..
 		"FROM rooms r " ..
 		"LEFT OUTER JOIN areas a ON r.area = a.uid " ..
 		"WHERE r.name = %s " .. -- room
 		"AND (%s = 'all' OR (a.name = %s OR r.area = %s)) " .. -- area_id x3
 		"UNION " ..
 		"SELECT r.uid, r.name, info, r.area, " ..
-		"ifnull(a.name, r.area) as area_name, 0 as DisplayOrder " .. 
+		"ifnull(a.name, r.area) as area_name, 0 as DisplayOrder " ..
 		"FROM rooms r " ..
 		"LEFT OUTER JOIN areas a ON r.area = a.uid " ..
 		"WHERE r.name <> %s " ..	-- room
 		"AND r.name LIKE %s " .. 	-- like
 		"AND (%s = 'all' OR (a.name = %s OR r.area = %s)) " .. -- area_id x3
 		"ORDER BY area, DisplayOrder DESC "
-			
+
 	function search_rooms(room_name, searchType, fullMobName)
 		if (room_name == nil) or (room_name == "") then
 			Note("map_area() error : room name isn't known")
@@ -2467,32 +2467,32 @@ function goto_number(name, line, wildcards)
 			--if string.sub(room,1,1) == "\"" and string.sub(room,-1) == "\"" then
 			--	like = string.sub(room,2,-2)
 			--end
-			local select = string.format(search_rooms_sql,	fixsql(room), 
-															fixsql(arid), fixsql(arid), fixsql(arid), 
-															fixsql(room), 
-															fixsql(like), 
+			local select = string.format(search_rooms_sql,	fixsql(room),
+															fixsql(arid), fixsql(arid), fixsql(arid),
+															fixsql(room),
+															fixsql(like),
 															fixsql(arid), fixsql(arid), fixsql(arid))
 			local db = assert(sqlite3.open(mapper_db_file))
 			local results = {}
 			local roomid_list = {}
 			for row in db:nrows(select) do
 				local id = (tonumber(row.uid) or -1) -- sanitize text room ids for "unmappable" (nomap) rooms that are now being mapped
-				results[#results + 1] = { 
-					rmid = id, 
+				results[#results + 1] = {
+					rmid = id,
 					name = row.name,
 					info = row.info,
 					area = row.area_name,
-					arid = row.area } --or row.area_name } -- make safe against bad dbs			
+					arid = row.area } --or row.area_name } -- make safe against bad dbs
 				if (id > 0) then	-- make a list of room ids
 					roomid_list[#roomid_list + 1] = id
 				end
-				
+
 			end   -- finding rooms
 			db:close_vm()
 			search_rooms_results(results)
 		end
 	end
-	
+
 	function search_rooms_results(results)	-- Display list of 'go' links from hunt-trick, quick-where, etc.
 		gotoArea = -1
 		gotoIndex = 1
@@ -2512,9 +2512,9 @@ function goto_number(name, line, wildcards)
 				else
 					local areaLine = string.format("~~~   %s", v.arid)
 					Hyperlink("xrt " .. v.arid, areaLine, "go to area " .. v.arid, "silver", "", 0)
-				end				
+				end
 				print("")
-				last_area = v.arid				
+				last_area = v.arid
 			end
 			local line1 = string.format("~~~ %2d   ", mapper_area_index)
 			Hyperlink("go " .. mapper_area_index, line1, "go to item " .. mapper_area_index, "lightblue", "", 0)
@@ -2525,17 +2525,17 @@ function goto_number(name, line, wildcards)
 			print("")
 			mapper_area_index = mapper_area_index + 1
 		end
-		if (mapper_area_index == 0) then 
+		if (mapper_area_index == 0) then
 			ColourNote("#FF5000", "", "No matching rooms found.")
 		end
 		ColourNote("#808080", "", string.rep("-", 67))
 		ColourNote("#808080", "", "Type 'go <index>' or click link to go to that room.\n")
 	end
-	
+
 	function map_area(name, line, wildcards)
 		search_rooms(wildcards.loc, 'area', wildcards.mob)
 	end
-	
+
 	function map_area_all(name, line, wildcards)
 		search_rooms(wildcards.loc .. "|all", 'all', wildcards.mob)
 	end
@@ -2573,7 +2573,7 @@ function goto_number(name, line, wildcards)
 			ColourNote("#FF1000", "", "Search and Destroy: 'xwhere' data entry problem!")
 		end
 	end
-	
+
 --	[[ Autohunt ]]
 	function auto_hunt(name, line, wildcards)
 		local s = string.lower(wildcards.arg)
@@ -2584,18 +2584,18 @@ function goto_number(name, line, wildcards)
 			EnableTriggerGroup("AutoHunt", true)				auto_hunt_mob = s
 			Send("hunt " .. s)
 		end
-	end 
-	
+	end
+
 	function auto_hunt_abort()
 		auto_hunt_reset()
 		ColourNote("#FF5000", "", "Search and Destroy:  Auto-hunt cancelled.\n")
-	end 
+	end
 
 	function auto_hunt_complete()
 		auto_hunt_reset()
 		ColourNote("#00C040", "", "Search and Destroy: Auto-hunt complete.\n")
 	end
-	
+
 	function auto_hunt_lowskill()
 		ColourNote("#FF5000", "", "\nSearch and Destroy:  Autohunt not available - hunt skill is too low.")
 		ColourNote("#FF5000", "", "                     If hunt skill is available, practice it to 85% or higher.")
@@ -2608,18 +2608,18 @@ function goto_number(name, line, wildcards)
 		auto_hunt_direction = dir
 		if (ri) then	-- don't know our gmcp exits, so just go with it
 			if (ri.exits[dir] == nil ) then	-- exit is visible in gmcp
-				Send("open " .. dir)	
-			end		
+				Send("open " .. dir)
+			end
 		end
 		Send(dir)
 	end
-			
+
 	function auto_hunt_next(name, line, wildcards)
 		local dir = wildcards.dir
 		auto_hunt_move(dir)
 		Send("hunt " .. auto_hunt_mob)
 	end
-	
+
 	function auto_hunt_door()
 		EnableTrigger("trg_autohunt_next_1", false)
 		EnableTrigger("trg_autohunt_next_2", false)
@@ -2632,12 +2632,12 @@ function goto_number(name, line, wildcards)
 		Send(auto_hunt_direction)
 		Send("hunt " .. auto_hunt_mob)
 	end
-	
+
 	function auto_hunt_portal()
 		ColourNote("#00C040", "", "\nSearch and Destroy: Auto-hunt through portals not working yet.  Enter portal manually and then autohunt again.")
 		auto_hunt_reset()
 	end
-			
+
 	function auto_hunt_reset()
 		EnableTriggerGroup("AutoHunt", false)
 		auto_hunt_mob = ""
@@ -2672,7 +2672,7 @@ function goto_number(name, line, wildcards)
 		end
 		xg_draw_window()
 	end
-	
+
 	function anex_set_noexp(x)
 		if (anex_automatic_onoff) == "on" then
 			if (x == "on") or (x == "off") then
@@ -2685,7 +2685,7 @@ function goto_number(name, line, wildcards)
 		end
 		xg_draw_window()
 	end
-	
+
 	function anex_can_get_new_cp()		-- called by line 'You may take campaign this level.' in 'cp check'
 		if (anex_automatic_onoff == "on") then
 			if (anex_tnl_cutoff > 0) then	-- if anex_tnl_cutoff > 0 then auto-noexp is on.
@@ -2711,13 +2711,13 @@ function goto_number(name, line, wildcards)
 			end
 		end
 	end
-	
+
 	function anex_must_level_new_cp()	-- called by trigger:  You must level to get a new campaign
 		if anex_automatic_onoff == "on" then
 			if (anex_tnl_cutoff > 0) then
 				local level = tonumber(gmcp("char.status.level"))
-				if (level < 200) then	
-					if (noexp_onoff == "on") and (player_on_cp == "yes") then			
+				if (level < 200) then
+					if (noexp_onoff == "on") and (player_on_cp == "yes") then
 						ColourNote("#FF5000", "", "Search and Destroy: Turning noexp OFF (must level to get new cp)")
 						anex_set_noexp("off")
 					end
@@ -2730,7 +2730,7 @@ function goto_number(name, line, wildcards)
 			end
 		end
 	end
-	
+
 	function anex_mobdeath_xp1(name, line, wildcards)	-- called when mob kill awards xp
 		if (anex_automatic_onoff == "on") then
 			local level = tonumber(gmcp("char.status.level"))
@@ -2747,7 +2747,7 @@ function goto_number(name, line, wildcards)
 			end
 		end
 	end
-	
+
 	function anex_mobdeath_xp2()	-- called via timer set by function anex_mobdeath_xp1
 		if (anex_automatic_onoff == "on") then
 		local tnl = tonumber(gmcp("char.status.tnl"))
@@ -2771,7 +2771,7 @@ function goto_number(name, line, wildcards)
 		end
 		end
 	end
-	
+
 	function anex_check_tnl_silent()	-- used by the window's clickable TNL cutoff changer
 		local tnl = tonumber(gmcp("char.status.tnl"))
 		if (can_get_new_cp == "yes") then
@@ -2790,33 +2790,33 @@ function goto_number(name, line, wildcards)
 			end
 		end
 	end
-	
+
 	function anex_automatic_on()	-- Noexp will toggle automatically according to the TNL setting.
 		anex_automatic_onoff = "on"
 		noexp_onoff = "off"
 		SetVariable("mcvar_anex_automatic_onoff", "on")
 		xg_draw_window()
 	end
-	
+
 	function anex_automatic_off()	-- Manually turns off experience and disables automatic toggling.  Typing noexp again turns the automatics back on.
 		anex_automatic_onoff = "off"
 		noexp_onoff = "on"
 		SetVariable("mcvar_anex_automatic_onoff", "off")
 		xg_draw_window()
 	end
-	
+
 --	[[ ****** WHERE TRICK FUNCTIONS ***** ]]
-	--[[local wt = { index = 1, name = "", match = "" }	
-		function wt_continue(name, line, wildcards)	
+	--[[local wt = { index = 1, name = "", match = "" }
+		function wt_continue(name, line, wildcards)
 			wt.index = wt.index + 1
 			Send("wt " .. wt.index .. "." .. wt.name)
-		end	
-		function wt_fail(name, line, wildcards)	
+		end
+		function wt_fail(name, line, wildcards)
 			EnableTriggerGroup("wt", false)
 			Note("Search and Destroy: Aborting where trick...")
 		end	]]
 
- 	
+
 	function xset_to_mark(name, line, wildcards)
 		local ri = current_room
 		area_start_rooms[ri.arid] = {}
@@ -2830,30 +2830,30 @@ function goto_number(name, line, wildcards)
 				"#00C040", "", ri.arid,
 				"#FF5000", "", ".\n")
 	end
- 	
+
 	function get_start_room(area_id)
-		local arid = string.lower(area_id)		
+		local arid = string.lower(area_id)
 		start_room_type = "xset mark"					-- If 'xset mark' was set, xrunto will go there.
 		if (area_start_rooms[arid] ~= nil) then 			-- Function exits as soon as any 'return' statement is encountered.
 			return area_start_rooms[arid].roomid			-- Exact match on area id
 		end
-		for k,v in pairs (area_start_rooms) do			
-			if (string.match(string.lower(k), arid) ~= nil) then 				
+		for k,v in pairs (area_start_rooms) do
+			if (string.match(string.lower(k), arid) ~= nil) then
 				return v.roomid	-- string match on key
 			end
 		end
 		start_room_type = "default"						-- If 'xset mark' isn't set, look up start room from the table areaDefaultStartRooms.
-		if (areaDefaultStartRooms[arid] ~= nil) then 	-- Note, Upper/Lower Planes have the same default room.  More development needed here.	
+		if (areaDefaultStartRooms[arid] ~= nil) then 	-- Note, Upper/Lower Planes have the same default room.  More development needed here.
 			return areaDefaultStartRooms[arid].start		-- exact match on area id
 		end
 		for k,v in pairs (areaDefaultStartRooms) do
-			if (string.match(string.lower(k), arid) ~= nil) then 				
+			if (string.match(string.lower(k), arid) ~= nil) then
 				return v.start	-- string match on key
 			end
-		end		
+		end
 		return "-1"
 	end
- 	
+
 --	[[ "xset vidblain" ]]
 	function xset_vidblain(name, line, wildcards)
 		local x = xset_vidblain_onoff
@@ -2863,7 +2863,7 @@ function goto_number(name, line, wildcards)
 		ColourTell ("#FF5000", "", "\nVidblain navigation is now ",
 					"#00C040", "", string.upper(x) .. "\n")
 	end
- 	
+
 	function xset_vidblain_setlevel(name, line, wildcards)
 		local x = tonumber(wildcards.level) or "check"
 		if (x == "check") then
@@ -2872,13 +2872,13 @@ function goto_number(name, line, wildcards)
 		else
 			xset_vidblain_level = x
 			SetVariable("mcvar_xset_vidblain_level", x)
-			ColourTell ("#FF5000", "", "\n'xset vidblain' portal level set to ", 
+			ColourTell ("#FF5000", "", "\n'xset vidblain' portal level set to ",
 						"#00C040", "", x .. "\n")
 		end
 	end
-	
+
 	local is_vidblain_area_sql = "SELECT area " .. "FROM rooms " .. "WHERE uid = %s "
-	
+
 	function is_vidblain_area(roomid)
 		local level = tier_level()--tonumber(gmcp("char.status.level")) + 10 * tonumber(gmcp("char.base.tier"))
 		if (xset_vidblain_onoff == "on") and (level < xset_vidblain_level) then
@@ -2894,13 +2894,13 @@ function goto_number(name, line, wildcards)
 			if (vidblain_area_list[ar]) then
 				return true
 			else
-				return false	
+				return false
 			end
 		else
 			return false
 		end
 	end
-	
+
 --	[[ Simulate cp ]]
 	local cp_simulate_toggle = "0"
 	function simulate_cp(name, line, wildcards)
@@ -2918,7 +2918,7 @@ function goto_number(name, line, wildcards)
 		last_cp_check = time_check
 		cp_check_list = {}
 		EnableTrigger("trg_cp_check_line", true)
-		Simulate("\n")	
+		Simulate("\n")
 		if (cp_simulate_toggle == "0") then
 			Simulate("You still have to kill * A test mob (A Cold Path)\n")	--dead
 			Simulate("You still have to kill * the head necromancer's assistant (Necromancers' Guild)\n")
@@ -2953,9 +2953,9 @@ function goto_number(name, line, wildcards)
 		Simulate("\n")
 		Simulate("You have 6 days, 23 hours and 56 minutes left to finish this campaign.\n")
 		Simulate("\n")
-		
+
 	end
-	
+
 -- [[ Room notes ]]
 	function room_note_area(name, line, wildcards)
 		if (wildcards.arid == "") then
@@ -2965,12 +2965,12 @@ function goto_number(name, line, wildcards)
 			get_notes(wildcards.arid, nil)
 		end
 	end
-	
+
 	function room_note(name, line, wildcards)
 		--get_notes(nil, current_room.rmid)
 		get_notes(nil, gmcp("room.info.num"))
 	end
-	
+
 	function get_notes(arid, roomid, text_only)
 		--local worldPath = GetInfo(66)..Trim(sanitize_filename(WorldName()))
 		--local db = assert(sqlite3.open(worldPath .. ".db"))
@@ -2992,19 +2992,19 @@ function goto_number(name, line, wildcards)
 			index = index + 1
 			if (text_only == true) then
 				local line = string.format("    note:'%s'", row.notes)
-				Hyperlink("xmapper move " .. row.uid, line, "go to room " .. row.uid, "lightblue", "black", 0)		
+				Hyperlink("xmapper move " .. row.uid, line, "go to room " .. row.uid, "lightblue", "black", 0)
 			else
 				local line = string.format("    (%s) %s", row.uid, row.notes)
 				Hyperlink("xmapper move " .. row.uid, line, "go to room " .. row.uid, "lightblue", "black", 0)
 				print("")
-			end		
+			end
 		end
 		db:close_vm()
 		if (arid ~= nil and index == 0 and text_only ~= true) then
 			Simulate("\tNo notes.\n")
 		end
 	end
-	
+
 	function getAreaIdFromName(name)
 		local db = assert(sqlite3.open(mapper_db_file))
 		local sql =  "SELECT uid FROM areas WHERE name = %s"
@@ -3015,7 +3015,7 @@ function goto_number(name, line, wildcards)
 		db:close_vm()
 		return name
 	end
-	
+
 	function getAreaNameFromId(arid)
 		local db = assert(sqlite3.open(mapper_db_file))
 		local sql =  "SELECT name FROM areas WHERE uid = %s"
@@ -3037,7 +3037,7 @@ function goto_number(name, line, wildcards)
 		db:close_vm()
 		return room_id
 	end
-	
+
 	function getAreaUid(name)
 		local db = assert(sqlite3.open(mapper_db_file))
 		local sql =  "SELECT uid FROM areas WHERE name = %s order by uid "
@@ -3050,7 +3050,7 @@ function goto_number(name, line, wildcards)
 		db:close_vm()
 		return areas
 	end
-	
+
 --	[[ SQL execution ]]
 	function RunSql(name, line, wildcards)
 		local worldPath = GetInfo(66) .. "/worlds/plugins/"
@@ -3066,7 +3066,7 @@ function goto_number(name, line, wildcards)
 		end
 		db:close_vm()
 	end
-	
+
 	function ExecSql (name, line, wildcards)
 		local db = assert(sqlite3.open(mapper_db_file))
 		Note("executing " .. wildcards.sql)
@@ -3075,19 +3075,19 @@ function goto_number(name, line, wildcards)
 		db:close_vm()
 		Note("ok")
 	end
-	
-	
+
+
 --	[[ page size functions ]]
 	local page_size = 0
 	local page_size_suspended = false
-	
+
 	function capture_page_size(name, line, wildcards)
 		EnableTrigger("trg_capture_page_size", false)
 		local size = tonumber(wildcards[1])
 		page_size = size or 0
 		SendNoEcho("pagesize 0")
 	end
-	
+
 	function suspend_page_size(name, line, wildcards)
 		if (page_size_suspended == false) then
 			page_size_suspended = true
@@ -3096,8 +3096,8 @@ function goto_number(name, line, wildcards)
 			EnableTrigger("trg_pagesize_gag_1", true)
 			SendNoEcho("pagesize")
 		end
-	end	 
-	
+	end
+
 	function resume_page_size(name, line, wildcards)
 		ColourNote("#FF3030", "", "\nSearch and Destroy: Area index complete. Pagesize re-enabled (if >0)\n")
 		EnableTrigger("trg_capture_page_size", false)
@@ -3105,8 +3105,8 @@ function goto_number(name, line, wildcards)
 			SendNoEcho("pagesize " .. page_size)
 		end
 		page_size_suspended = false
-	end	
-	
+	end
+
 	function xmapper_move(name, line, wildcards)
 		local r = wildcards.roomid
 		local s = wildcards.speed
@@ -3114,9 +3114,9 @@ function goto_number(name, line, wildcards)
 			ColourNote("#FF5000", "", "\nSearch and Destroy:  Can't go to room id -1 (nomap room)\n")
 		elseif (r ~= "") then
 			do_mapper_goto(r, s)
-		end	
-	end 
-	
+		end
+	end
+
 	function do_mapper_goto(r, s)
 		if (s == nil or s == "") then
 			s = speed
@@ -3128,7 +3128,7 @@ function goto_number(name, line, wildcards)
 			Execute("mapper goto " .. r)
 		end
 	end
-	
+
 --	[[ Former plugin - S&D GUI ]]
 	local window_fonts = {
 		["title"]	= { f="Consolas",				 s=10, 				b=false, 	i=false, 	u=false },
@@ -3141,7 +3141,7 @@ function goto_number(name, line, wildcards)
 		["noexp2"]	= { f="Consolas",				 s= 9, 				b=false, 	i=false, 	u=false },
 		["cplist_area"] = { f="Lucida Sans Unicode", s=win_font_size, 	b=false, 	i=false, 	u=false },
 		["cplist_room"] = { f="Segoe", 				 s=win_font_size, 	b=false, 	i=false, 	u=false } }
-	
+
 	function xg_create_window()
 		if (win_init == false) then
 			win_init = true
@@ -3151,14 +3151,14 @@ function goto_number(name, line, wildcards)
 			for k,v in pairs (window_fonts) do
 				WindowFont(win, k, v.f, v.s, v.b, v.i, v.u, false)
 			end
-			WindowShow(win, true)  -- show it 
+			WindowShow(win, true)  -- show it
 			if (win_state == "min") then
 				mouseup_drag(0, "hsMinimize")
-			end		
+			end
 			if (IsPluginInstalled(plugin_id_z_order) and GetPluginInfo(plugin_id_z_order, 17)) then
 				CallPlugin(plugin_id_z_order, "registerMiniwindow", win)
-			end		
-			xg_draw_window()	
+			end
+			xg_draw_window()
 		end
 	end
 
@@ -3179,7 +3179,7 @@ function goto_number(name, line, wildcards)
 						"Left click = Drag title bar to move\nRight click = Send window to front/back", miniwin.cursor_arrow, 0)
 			WindowDragHandler(win, "hsDrag1", "dragmove", "dragrelease", 0)
 		end
-		
+
 		draw_b1_action_buttons(47, 20)	-- draw xcp, go, etc. buttons
 		draw_circle_readout(5, 20)		-- add circle text/level readout
 		draw_noexp_readout(206, 22)	-- add noexp on/off and TNL indicator
@@ -3187,24 +3187,24 @@ function goto_number(name, line, wildcards)
 		xg_show_target_links()
 		Redraw()
 	end
-	
+
 	local button_1_list = {
 --[[ 1 ]]	["hsXCP"] = { L=  0, text="xcp", tdx=3, tdy=3, exec1=     "xcp", exec2=   "xcp 0", tooltip="Left click = get target\nRight click = clear target" },
 --[[ 2 ]]	["hsGO"]  = { L= 31, text= "go", tdx=7, tdy=3, exec1=      "go", exec2=    "go 0", tooltip="Left click = Go to room 1\nRight click = Go to area start" },
---[[ 3 ]]	["hsKK"]  = { L= 62, text= "kk", tdx=8, tdy=3, exec1=      "kk", exec2=      "kk", tooltip="Left click = 'kill' target mob\nRight click = kill with special" },			
+--[[ 3 ]]	["hsKK"]  = { L= 62, text= "kk", tdx=8, tdy=3, exec1=      "kk", exec2=      "kk", tooltip="Left click = 'kill' target mob\nRight click = kill with special" },
 --[[ 4 ]]	["hsNX"]  = { L= 93, text= "nx", tdx=7, tdy=3, exec1=      "nx", exec2=     "nx-", tooltip="Left click = goto next\nRight click = goto prev" },
 --[[ 5 ]]	["hsQS"]  = { L=124, text= "qs", tdx=8, tdy=3, exec1=      "qs", exec2=      "qs", tooltip="Quick-scan for current target (cp, quest, ht, qw)" },
 --[[ 6 ]]	["hsQW"]  = { L=219, text= "qw", tdx=5, tdy=3, exec1=      "qw", exec2=     "qwx", tooltip="Left click = Quick-where\nRight click = Quick-where exact" },
 --[[ 7 ]]	["hsHT"]  = { L=248, text= "ht", tdx=9, tdy=3, exec1=      "ht", exec2=     "hta", tooltip="Left click = Do hunt trick\nRight click = Cancel hunt trick" },
 --[[ 8 ]]	["hsREF"] = { L=277, text="ref", tdx=6, tdy=3, exec1="xgui ref", exec2="xgui rel", tooltip="Left click = Refresh target list - cp (gq) check\nRight click = Reload target data - cp (gq) info" } }
-	
+
 	function draw_b1_action_buttons(left, top)
 		local b1 = button_1_list
 		for hs,b in pairs (b1) do
 			draw_button_1_A(left+b.L, top, b.text, hs, b.tooltip, b.tdx, b.tdy)
 		end
 	end
-	
+
 	function draw_button_1_A(L, T, text, hsName, tooltip, tdx, tdy)
 		local x,y,w,z = L, T, L+30, T+25
 		local tx,ty = (x+tdx), (y+tdy)	-- x and y values for text location
@@ -3220,7 +3220,7 @@ function goto_number(name, line, wildcards)
 				"" .. (tooltip or text), miniwin.cursor_arrow, 0)											-- Tooltip text, cursor shape (hand)
 		end
 	end
-	
+
 	function draw_button_1_B(L, T, text, hsName, tooltip, tdx, tdy)
 		local x,y,w,z = L, T, L+30, T+25											-- x and y values for button boundaries
 		local tx,ty = (x+tdx), (y+tdy)	-- x and y values for text location
@@ -3235,20 +3235,20 @@ function goto_number(name, line, wildcards)
 			--	"" .. (tooltip or text), miniwin.cursor_arrow, 0)	-- Tooltip text, cursor shape (hand)
 	end
 
-		
 
-		
+
+
 	local win_circle_readout_vars = {
-			["cp"] 	 = { cc, cc1="r", cc2y="", tc1="", tc2="", tdx="", tdy="", text="" }, 
+			["cp"] 	 = { cc, cc1="r", cc2y="", tc1="", tc2="", tdx="", tdy="", text="" },
 			["gq"] 	 = { cc1n="", cc2n="", cc1y="", cc2y="", tc1="", tc2="", tdx="", tdy="", text="" },
 			["init"] = { cc1n="", cc2n="", cc1y="", cc2y="", tc1="", tc2="", tdx="", tdy="", text="" },
 			["none"] = { cc1n="", cc2n="", cc1y="", cc2y="", tc1="", tc2="", tdx="", tdy="", text="" }, }
-			
-	
+
+
 	--local win_circle_readout_colors = { g1=0x30C000, g2=0x004000, r1=0x0040F0, r2=0x000080, u1=0xC08800, u2=0x403000, v1=0xC000C0, v2=0x400040 }
 	local win_circle_border_colors = { g={0x30C000,0x004000}, r={0x0040F0,0x000080}, u={0xC08800,0x403000}, v={0xC000C0,0x400040} }
 	local win_circle_text_colors
-	
+
 	function draw_circle_readout(left, top)
 		local level, ar_rm, get_new = cp_info_level, area_room_type, can_get_new_cp
 		local activity = current_activity
@@ -3268,22 +3268,22 @@ function goto_number(name, line, wildcards)
 			elseif (llen == 1) then tdx = 14
 			end
 		elseif (activity == "none") then
-			circle_color_1 = (get_new == "yes") and g1 or r1; circle_color_2 = (get_new == "yes") and g2 or r2			
+			circle_color_1 = (get_new == "yes") and g1 or r1; circle_color_2 = (get_new == "yes") and g2 or r2
 			text_color_1 = (get_new == "yes") and 0x0050FF or 0x0070FF; text_color_2 = 0x000040
 			text = "off"
 		elseif (activity == "gq") then
 			circle_color_1 = v1; circle_color_2 = v2
 			text_color_1 = 0xA0FFFF; text_color_2 = 0x0C1830
 			text = "gq"
-			tdx = 10; tdy = 6			
+			tdx = 10; tdy = 6
 		elseif (activity == "init") then
 			circle_color_1 = u1; circle_color_2 = u2
 			text_color_1 = 0xB0B0B0; text_color_2 = 0x080808
 			text = "init"
 			font = "circ2"
-			tdx = 4; tdy = 10	
+			tdx = 4; tdy = 10
 		end
-		
+
 		--if (ar_rm == "none") then	-- player not on cp
 		--	circle_color_1 = (get_new == "yes") and g1 or r1
 		--	circle_color_2 = (get_new == "yes") and g2 or r2
@@ -3325,7 +3325,7 @@ function goto_number(name, line, wildcards)
 	--				text = "err"
 	--			end
 	--		end
-	--	end 
+	--	end
 		WindowCircleOp(win, 1, cx1+1, cy1+1, cx2-1, cy2-1, circle_color_2, 0, 2, win_bgcolor, 1)	-- inner circle (dark)
 		WindowCircleOp(win, 1, cx1-1, cy1-1, cx2+1, cy2+1, circle_color_2, 0, 2, win_bgcolor, 1)	-- outer circle (dark)
 		WindowCircleOp(win, 1, cx1, cy1, cx2, cy2, circle_color_1, 0, 2, win_bgcolor, 1)			-- main circle (bright)
@@ -3334,7 +3334,7 @@ function goto_number(name, line, wildcards)
 		WindowText(win, font, string.format("%s", text), tx1+2, ty1+1, tx2+2, ty2+1, text_color_2, false)	-- text shadow effect
 		WindowText(win, font, string.format("%s", text), tx1, ty1, tx2, ty2, text_color_1, false)			-- actual text and color
 	end
-	
+
 	function draw_noexp_readout(left, top)
 		WindowDeleteHotspot(win, "hs_noexp")
 		local symbol = {
@@ -3354,7 +3354,7 @@ function goto_number(name, line, wildcards)
 		if (anex_automatic_onoff == "on") then
 			WindowText(win, "noexp", string.format("%s", anex_tnl_cutoff), left+18, top+4, left+62, top+21, text_color_2, false)
 			WindowText(win, "noexp", string.format("%s", anex_tnl_cutoff), left+17, top+4, left+61, top+20, text_color_2, false)
-			WindowText(win, "noexp", string.format("%s", anex_tnl_cutoff), left+16, top+3, left+60, top+20, text_color_1, false)			
+			WindowText(win, "noexp", string.format("%s", anex_tnl_cutoff), left+16, top+3, left+60, top+20, text_color_1, false)
 			--if (win_hotspots["hs_noexp"] == nil) then																-- Make button clickable by defining a hotspot
 				win_hotspots["hs_noexp"] = WindowAddHotspot(win, "hs_noexp", left, top, left+55, top+25,							-- Hotspot name and location info
 					"", "", "", "", "mouseup_noexp",				-- Mouse actions
@@ -3363,7 +3363,7 @@ function goto_number(name, line, wildcards)
 		else
 			WindowText(win, "noexp2", string.format("%s", "manual"), left+17, top+4, left+61, top+21, text_color_2, false)
 			WindowText(win, "noexp2", string.format("%s", "manual"), left+16, top+4, left+60, top+20, text_color_2, false)
-			WindowText(win, "noexp2", string.format("%s", "manual"), left+15, top+3, left+59, top+20, text_color_1, false)			
+			WindowText(win, "noexp2", string.format("%s", "manual"), left+15, top+3, left+59, top+20, text_color_1, false)
 			--if (win_hotspots["hs_noexp"] == nil) then																-- Make button clickable by defining a hotspot
 				win_hotspots["hs_noexp"] = WindowAddHotspot(win, "hs_noexp", left, top, left+55, top+25,							-- Hotspot name and location info
 					"", "", "", "", "mouseup_noexp",				-- Mouse actions
@@ -3371,7 +3371,7 @@ function goto_number(name, line, wildcards)
 			--end
 		end
 	end
-	
+
 	function draw_resize_tag()
 		local w = win_width
 		local h = win_height
@@ -3392,7 +3392,7 @@ function goto_number(name, line, wildcards)
 	end
 
 
-	
+
 	function xg_show_target_links()
 		for i,v in ipairs (win_target_hotspots) do
 			WindowDeleteHotspot(win, v)
@@ -3414,7 +3414,7 @@ function goto_number(name, line, wildcards)
 			local location
 			local eventHandler = "win_mouseup_target_link"
 			if (ct == "area") then
-				location = string.format("%s", ar)	
+				location = string.format("%s", ar)
 			elseif (ct == "room") then
 				location = string.format("'%s' (%s)", v.roomName, ar)
 			elseif (ct == "unknown") then
@@ -3424,22 +3424,22 @@ function goto_number(name, line, wildcards)
 			local qty = ((player_on_gq == "yes") and v.qty .. "* " or "")
 			local link = string.format("%s)  %s%s - %s", index, qty, mob, location)
 			local color = ((index == xcp_index) and "0x0040FF" or convert_color_format(v.color))
-			
+
 			local font_height = WindowFontInfo (win, font, 1) -- WindowFontInfo (win, font, 4)
 			local hs_left = (index < 10) and 13 or 6
 			local hs_top = (targ_list_top + ((index-1) * win_line_space))
 			local hs_right = (hs_left + WindowTextWidth(win, font, link))
 			local hs_bottom = (hs_top + font_height + 1) --(hs_top + win_line_space )
-			
+
 			if (hs_right > win_width - 5) then hs_right = (win_width - 5) end
 			WindowText(win, font, link, hs_left, hs_top, 0, 0, color, false)
 			if (hs_bottom > win_height - resize_tag) then		-- Prevent list item's hotspot from overlapping with the resize tag
-				if (hs_right > win_width - resize_tag - 5) then 
+				if (hs_right > win_width - resize_tag - 5) then
 					hs_right = win_width - resize_tag - 5
 				end
-			end 
+			end
 			win_target_hotspots[#win_target_hotspots+1] = index
-			--WindowRectOp (win, 1, 
+			--WindowRectOp (win, 1,
 			--				hs_left-1, hs_top+2, hs_right+2, hs_bottom, 0x000080, 15)
 			WindowAddHotspot(win, index,
 							hs_left-1, hs_top+2, hs_right+2, hs_bottom,		-- hotspot boundary rectangle
@@ -3458,8 +3458,8 @@ function goto_number(name, line, wildcards)
 		Redraw()
 		Execute(((click == "L") and b.exec1 or b.exec2))
 	end
-	
-	function mousedown_b1(flags, hotspot_id)	-- when mouse button is pressed:  
+
+	function mousedown_b1(flags, hotspot_id)	-- when mouse button is pressed:
 		local b = button_1_list[hotspot_id]
 		local click = ((bit.band(flags, 0x20) == 0) and "L" or "R")
 		local left = WindowHotspotInfo(win, hotspot_id, 1)
@@ -3467,7 +3467,7 @@ function goto_number(name, line, wildcards)
 		draw_button_1_B(left, top, b.text, hotspot_id.."2", "", b.tdx, b.tdy)
 		Redraw()
 	end
-	
+
 	function cancelmousedown_b1(flags, hotspot_id)
 		local b = button_1_list[hotspot_id]
 		local click = ((bit.band(flags, 0x20) == 0) and "L" or "R")
@@ -3476,13 +3476,13 @@ function goto_number(name, line, wildcards)
 		draw_button_1_A(left, top, b.text, hotspot_id, b.tooltip, b.tdx, b.tdy)
 		Redraw()
 	end
-	
+
 	function mousedown_resize_window(flags, hotspot_id)
 	if (hotspot_id == "hsResize") then
 		startx, starty = WindowInfo (win, 17), WindowInfo (win, 18)
 	end
-	end	
-	
+	end
+
 	function mouseup_noexp(flags)
 		local f = flags
 		local hs = "hs_noexp"
@@ -3502,12 +3502,12 @@ function goto_number(name, line, wildcards)
 			xg_draw_window()
 		end
 	end
-	
+
 	function mousedown_drag(flags, hotspot_id)
 		win_dragmove_start_x = WindowInfo(win, 14)
 		win_dragmove_start_y = WindowInfo (win, 15)
 	end
-	
+
 	function mouseup_drag(flags, hotspot_id)
 		local f = flags
 		local click = ((bit.band(f, 0x20) == 0) and "L" or "R")
@@ -3517,7 +3517,7 @@ function goto_number(name, line, wildcards)
 			end
 		end
 	end
-	
+
 	function win_mouseup_target_link(flags, hotspot_id)
 		if (tonumber(hotspot_id) ~= nil) then
 			xcp_arg("", "", {index=hotspot_id})
@@ -3533,14 +3533,14 @@ function goto_number(name, line, wildcards)
 			local delta_y = win_pos_y - win_dragmove_start_y
 			local max_x = GetInfo(281) - 100
 			local max_y = GetInfo(280) - 60
-			if (delta_x <= 1) then 			-- Prevents window from leaving the screen.  The bug that got me started on all this.  
+			if (delta_x <= 1) then 			-- Prevents window from leaving the screen.  The bug that got me started on all this.
 				delta_x = 1
-			elseif (delta_x >= max_x) then 	
+			elseif (delta_x >= max_x) then
 				delta_x = max_x
 			end
-			if (delta_y <= 1) then 			
+			if (delta_y <= 1) then
 				delta_y = 1
-			elseif (delta_y >= max_y) then 	
+			elseif (delta_y >= max_y) then
 				delta_y = max_y
 			end
 			WindowPosition(win, delta_x, delta_y, miniwin.pos_stretch_to_view, miniwin.create_absolute_location) -- move window to new location
@@ -3555,9 +3555,9 @@ function goto_number(name, line, wildcards)
 	end
 
 --	[[ Window resize functions ]]
-	
+
 	local lastRefresh = 0
-	
+
 	function ResizeMoveCallback()
 		local screen_width = GetInfo(281) - 100
 		local screen_height = GetInfo(280) - 60
@@ -3591,7 +3591,7 @@ function goto_number(name, line, wildcards)
 			lastRefresh = t
 		end
 	end
-	
+
 	function ResizeReleaseCallback()
 		win_state = "max"
 		w = win_width
@@ -3599,7 +3599,7 @@ function goto_number(name, line, wildcards)
 		WindowDeleteHotspot(win, "hsDrag1")
 		win_hotspots["hsDrag1"] = WindowAddHotspot(win, "hsDrag1", 0, 0, w-1, 16, -- hotspot id, rectangle (left, top, right, bottom)
 					"", "", "mousedown_drag", "", "mouseup_drag", --mouseover, cancelmouseover, mousedown_drag, cancelmousedown, mouseup_drag
-					"Left click = Drag title bar to move\nRight click = Send window to front/back", miniwin.cursor_arrow, 0)	
+					"Left click = Drag title bar to move\nRight click = Send window to front/back", miniwin.cursor_arrow, 0)
 		WindowDragHandler(win, "hsDrag1", "dragmove", "dragrelease", 0)
 		xg_draw_window()
 	end
@@ -3620,7 +3620,7 @@ function goto_number(name, line, wildcards)
 			win_height = win_height_min
 			WindowResize(win, win_width, win_height, ColourNameToRGB("black"))
 			xg_draw_window()
-			Redraw()	
+			Redraw()
 		elseif (result == "Expand Window") then
 			win_state = "max"
 			win_height = win_height_max
@@ -3628,7 +3628,7 @@ function goto_number(name, line, wildcards)
 			xg_draw_window()
 		end
 	end
-	
+
 	function xgui_RefreshLinks()
 		if current_activity == "gq" then
 			do_gq_check()
@@ -3637,14 +3637,14 @@ function goto_number(name, line, wildcards)
 		end
 		mouseup_drag(0, "hsMaximize")
 	end
-	
+
 	function xgui_ReloadLinks()
 		if current_activity == "gq" then
 			do_gq_info()
 		else
 			do_cp_info()
 		end
-		mouseup_drag(0, "hsMaximize")	
+		mouseup_drag(0, "hsMaximize")
 	end
 
 	function xset_ToggleWindowDisplay(name, line, wildcards)
@@ -3657,7 +3657,7 @@ function goto_number(name, line, wildcards)
 			SetVariable("mcvar_xgui_window_onoff", "off")
 		end
 	end
-	
+
 	function xset_font_size(name, line, wildcards)
 		if (wildcards.size == "") then
 			print("Cp list font size = " .. win_font_size .. "\n")
@@ -3670,21 +3670,21 @@ function goto_number(name, line, wildcards)
 			xg_draw_window()
 		end
 	end
-	
+
 	function xset_line_space(name, line, wildcards)
 		local x = tonumber(wildcards.space)
 		local line_space = win_line_space
 		if (wildcards.space == "") then
 			print("Cp list line spacing = " .. line_space .. "\n")
 		else
-			
+
 			print("Cp list line spacing set to " .. x .. ".\n")
 			win_line_space = x
 			SetVariable("mcvar_window_line_space", x)
 			xg_draw_window()
 		end
 	end
-	
+
 	function OnPluginSaveState()
 		movewindow.save_state(win)	-- save window location
 		if WindowInfo(win, 3) and WindowInfo(win, 4) then
@@ -3699,12 +3699,12 @@ function goto_number(name, line, wildcards)
 		SetVariable("mcvar_window_width_max", win_width_max)
 		SetVariable("mcvar_window_height_max", win_height_max)
 	end
-	
+
 	function OnPluginClose()
 		OnPluginSaveState()
 		WindowShow(win, false) 			-- hide window, refresh screen
-	end 
-	
+	end
+
 	function set_speed(name, line, wildcards)
 		if (wildcards.speed ~= "") then
 			speed = wildcards.speed
@@ -3717,7 +3717,7 @@ function goto_number(name, line, wildcards)
 		end
 		ColourNote("#FF5000", "", "Move speed:" .. speed)
 	end
-	
+
 -- Internal Utilities
 	function convert_color_format(s)	-- convert color format from #FF8800 (used by colournote, etc.) to 0x0088FF (used for window text)
 		local con = "0x"
@@ -3726,20 +3726,20 @@ function goto_number(name, line, wildcards)
 		end
 		return con
 	end
-	
+
 	--function copytable(t)
 	--	local new_t = {}
-	--	table.foreachi(t, 
-	--		function (k, v) 
-	--			table.insert (new_t, v) 
+	--	table.foreachi(t,
+	--		function (k, v)
+	--			table.insert (new_t, v)
 	--		end)
 	--	return new_t
 	--end
-	
+
 	function cprint(c1, txt)		-- colournote abbreviation
 		ColourNote(c1, "", txt)
 	end
-	
+
 	function dbcheck(code, query)
 		if (code ~= sqlite3.OK) and    -- no error
 		(code ~= sqlite3.ROW) and   -- completed OK with another row of data
@@ -3750,7 +3750,7 @@ function goto_number(name, line, wildcards)
 			error (err, 2)            -- show error in caller's context
 		end
 	end
-	
+
 	function fixbool(b)
 		if b then
 			return 1
@@ -3758,7 +3758,7 @@ function goto_number(name, line, wildcards)
 			return 0
 		end
 	end
-	
+
 	function fixsql(s)
 		if s then
 			return "'" .. (string.gsub (s, "'", "''")) .. "'" -- replace single quotes with two lots of single quotes
@@ -3776,7 +3776,7 @@ function goto_number(name, line, wildcards)
 	function send_gmcp_packet(s)
 	CallPlugin(plugin_id_gmcp_handler, "GMCP_send", s)
 	end
-		
+
 	function int(n)
 		if not tonumber(n) then
 			return
@@ -3784,22 +3784,22 @@ function goto_number(name, line, wildcards)
 			return math.floor(n)
 		end
 	end
-	
+
 	function md5(s)
 		local hash = utils.tohex(utils.md5(tostring(s)))
 		return hash
 	end
-	
+
 	function padRight(text, length, padChar)
 		local padding = length - string.len(text)
 		text = text .. string.rep(padChar, padding)
 		return text
-	end	
-	
+	end
+
 	function quote(text)
 		return "\""..text.."\""
 	end
-	
+
 	function round_banker(x)		-- round normally, but when number ends in exactly .5 round to nearest even value.
 	if (x == 0) then return 0 end	-- prevent returning -0
 	if (x + 0.5) % 2 == 0 then
@@ -3808,13 +3808,13 @@ function goto_number(name, line, wildcards)
 		return math.ceil(x - 0.5)
 	end
 	end
-	
+
 	function rtrim(s)
 		local n = #s
 		while n > 0 and s:find("^%s", n) do n = n - 1 end
 		return s:sub(1, n)
 	end
-	
+
 	function sanitize_filename(str)
 		str = string.gsub(str, "[^%w%s()_-]", "")
 		return str
@@ -3822,7 +3822,7 @@ function goto_number(name, line, wildcards)
 
 	function spairs(t, f)
 		local tbl = {}
-		for n in pairs(t) do 
+		for n in pairs(t) do
 			table.insert(tbl, n)
 		end
 		table.sort(tbl, f)
@@ -3837,7 +3837,7 @@ function goto_number(name, line, wildcards)
 		end
 		return iter
 	end
- 	
+
 	function split(line, delim)
 		local result = {}
 		local index = 1
@@ -3847,11 +3847,11 @@ function goto_number(name, line, wildcards)
 		end
 		return result
 	end
- 	
+
 	function trim(s)
 		return s:match'^()%s*$' and '' or s:match'^%s*(.*%S)'
 	end
-	
+
 	function tier_level()
 		local l = tonumber(gmcp("char.status.level"))
 		local t = tonumber(gmcp("char.base.tier"))
@@ -3859,15 +3859,15 @@ function goto_number(name, line, wildcards)
 	end
 
 
--- [[ Random stuff that doesn't fit anywhere else (?) ]]	
+-- [[ Random stuff that doesn't fit anywhere else (?) ]]
 	function xtest_roomhist()
-		ColourNote("#00FFFF", "", "\ni: 0    r: " .. string.format("%-5s", room_history[0].rmid) .. "  a: " .. room_history[0].arid)	
+		ColourNote("#00FFFF", "", "\ni: 0    r: " .. string.format("%-5s", room_history[0].rmid) .. "  a: " .. room_history[0].arid)
 		for i,v in ipairs (room_history) do
 			print("i: " .. string.format("%-3s", i) .. "  r: " .. string.format("%-5s", v.rmid) .. "  a: " .. string.format("%-10s", v.arid))
 		end
 		print("")
 	end
-	
+
 	function xtest_areadata()
 		local db = assert(sqlite3.open(mapper_db_file))
 		local sql = "SELECT uid, name FROM areas"
@@ -3896,7 +3896,7 @@ function goto_number(name, line, wildcards)
 				v.minlvl = alr[an].min
 				v.maxlvl = alr[an].max
 			end
-		end		
+		end
 		--	if (dasr[v.arid].noquest == true) then
 		--		v.questable = "0"
 		--	else
@@ -3907,12 +3907,12 @@ function goto_number(name, line, wildcards)
 		--tprint(area_start_rooms)
 		--tprint(alr)
 	end
-	
+
 	function xtest_mcvars()
 		local t = GetVariableList()
 		tprint(t)
 	end
-	
+
 	function xmap_rooms_linking_here(name, line, wildcards)
 		local room_id = tonumber(wildcards.room_id) or tonumber(current_room.rmid) or -1
 		local r1 = {}
@@ -3937,7 +3937,7 @@ function goto_number(name, line, wildcards)
 		end
 		print("")
 	end
-	
+
 	function xtest_loadroom(name, line, wildcards)
 		local ri = current_room
 		local room_id = tonumber(wildcards.room_id) or tonumber(ri.rmid) or -1
@@ -3972,7 +3972,7 @@ function goto_number(name, line, wildcards)
 			end -- for each ex
 		end
 		db:close_vm()
-		
+
 		if not (roomdata.roomid) then
 			roomdata = {
 				roomid = tostring(room_id),
@@ -3992,9 +3992,9 @@ function goto_number(name, line, wildcards)
 	end
 
 	function xtest_popmsg(name, line, wildcards)
-	
+
 	end
-	
+
 	function update_plugin()
 		raw = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/Search_and_Destroy.xml"
 
@@ -4036,15 +4036,15 @@ function goto_number(name, line, wildcards)
 Commands:
 xset win <on|off>             --> Shows or hides the window.
 xset winreset                 --> Resets the window.
-xset fontsize <#>             --> Displays current font size, or changes 
+xset fontsize <#>             --> Displays current font size, or changes
                                 > it to argument.
 xset linespace <#>            --> Displays line spacing size, or changes
                                 > it to argument.
 xset speed <walk|run>         --> Displays current move speed, or changes
                                 > it to argument.
-xset vidblain                 --> Fixes Vidblain's "random drop" so you 
+xset vidblain                 --> Fixes Vidblain's "random drop" so you
                                 > can still run to areas within Vidblain.
-xset mark                     --> Sets current room as "start" for the 
+xset mark                     --> Sets current room as "start" for the
                                 > current area.
 xset index areas              --> Indexes areas. Use this if you get a lot
                                 > of "red" links but you've mapped the area.
@@ -4057,34 +4057,34 @@ xset sort <all|area|room|none>--> Toggles sorting by area name in area
 
 xm rlh <roomID>               --> Displays rooms linking to <roomID> or
                                 > current room.
-xmall <room name>             --> Displays rooms across the MUD matching 
+xmall <room name>             --> Displays rooms across the MUD matching
                                 > the argument.
 xm <room name>                --> Displays rooms in zone matching the
                                 > argument.
 xmap move <roomID> <run|walk> --> Move to the room id at default speed, or
-                                > walks (without portals) or runs (with 
+                                > walks (without portals) or runs (with
                                 > portals) based on argument.
-roomnote <area|area areakey>  --> Displays roomnotes for current room, 
+roomnote <area|area areakey>  --> Displays roomnotes for current room,
                                 > current area, or area argument.
 
 qw<x> <mobname>               --> Where's the current stored target or
                                 > argument. Use 'x' to where exact mob name.
-ht <mob|stop>                 --> Executes the 'hunt trick' for current 
+ht <mob|stop>                 --> Executes the 'hunt trick' for current
                                 > target or argument. Use 'stop' to abort.
-ah<a> <targ>                  --> Autohunts target. Append 'a' with no 
+ah<a> <targ>                  --> Autohunts target. Append 'a' with no
                                 > target to abort.
 xset <ak|kk|qk>               --> Sets the 'quick kill' command. All options
                                 > are interchangeable.
-<ak|kk|qk>                    --> Executes the 'quick kill' command. All 
+<ak|kk|qk>                    --> Executes the 'quick kill' command. All
                                 > options are interchangeable.
 qs                            --> Executes a 'quick scan' for the stored target.
 xq                            --> Reloads the quest info.
 xset noexp <off|#>            --> Displays current setting with no argument.
                                 > With argument, toggles noexp off or sets it
                                 > to turn on at # exp remaining.
-nx<->                         --> Moves to the next room on the list, or the 
+nx<->                         --> Moves to the next room on the list, or the
                                 > previous room with -.
-go <index>                    --> Runs to the first room in the index, or to 
+go <index>                    --> Runs to the first room in the index, or to
                                 > the index number with argument.
 <xrt|xrun> <area>             --> Runs to the area matching the argument.
 
@@ -4094,8 +4094,8 @@ go <index>                    --> Runs to the first room in the index, or to
 xcp <index>                   --> Without argument, goes to top result in
                                 > cp/gq check. Otherwise heads to the index
                                 > chosen.
-xcp mode <ht|qw|off>          --> Sets whether you use hunt trick or quick 
-                                > where upon entering an area on cp/gq. Use 
+xcp mode <ht|qw|off>          --> Sets whether you use hunt trick or quick
+                                > where upon entering an area on cp/gq. Use
                                 > 'off' to turn off this feature.
 
 snd update                    --> Automatically updates Search & Destroy.
@@ -4112,28 +4112,28 @@ snd update                    --> Automatically updates Search & Destroy.
 		name="trg_gq_info_quest_name" 		group="trg_gq"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
 			<send>	EnableTrigger("trg_gq_info_quest_name", false) </send> </trigger>
-			
+
 	<trigger match="^Quest Status\.\.\.\.\.\.\.: \[ (?<status>\w+) \]$"
 		script="gq_info_quest_status"
 		name="trg_gq_info_quest_status" 	group="trg_gq"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
-			<send>	EnableTrigger("trg_gq_info_quest_status", false) </send> </trigger>	
+			<send>	EnableTrigger("trg_gq_info_quest_status", false) </send> </trigger>
 
 	<trigger match="^Level range\.\.\.\.\.\.\.\.: \[\s+(?<minlvl>\d{1,3}) \] - \[\s+(?<maxlvl>\d{1,3}) \]$"
 		script="gq_info_level_range"
 		name="trg_gq_info_level_range" 		group="trg_gq"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
-			<send>	EnableTrigger("trg_gq_info_level_range", false) 
+			<send>	EnableTrigger("trg_gq_info_level_range", false)
 					EnableTrigger("trg_gq_info_target_header", true) </send> </trigger>
-			
+
 	<trigger match="^To complete this quest, you must:$"
 		name="trg_gq_info_target_header" 	group="trg_gq"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
 			<send>	EnableTrigger("trg_gq_info_target_header", false)
 					EnableTrigger("trg_gq_info_line", true)
-					EnableTrigger("trg_gq_info_end", true) 
+					EnableTrigger("trg_gq_info_end", true)
 					EnableTriggerGroup("trg_gqmsg_2", true) </send> </trigger>
-	
+
 	<trigger match="^Kill at least (?<qty>[1-3]) \* (?<mob>\w[^(]+) \((?<loc>\S.+)\)\.$"
 		script="gq_info_line"
 		name="trg_gq_info_line" 			group="trg_gq"
@@ -4144,38 +4144,38 @@ snd update                    --> Automatically updates Search & Destroy.
 		name="trg_gq_info_end" 				group="trg_gq"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
 			<send>	EnableTrigger("trg_gq_info_line", false)
-					EnableTrigger("trg_gq_info_end", false) </send> </trigger>		
+					EnableTrigger("trg_gq_info_end", false) </send> </trigger>
 
 	<trigger match="^You still have to kill (?<qty>[1-3]) \* (?<mob>\w[^(]+) \((?<loc>\S.+?)(?<isdead> - Dead)?\)$"
 		script="gq_check_line"
 		name="trg_gq_check_line" 			group="trg_gq"
-		enabled="n"	regexp="y" sequence="500" keep_evaluating="y" omit_from_output="y" send_to="12" > 
+		enabled="n"	regexp="y" sequence="500" keep_evaluating="y" omit_from_output="y" send_to="12" >
 			<send>	EnableTrigger("trg_gq_check_end", true) </send> </trigger>
 
-	<trigger match="^(?!You still have to kill [1-3] \* \w[^(]+ \(\S.+?(?: - Dead)?\))$" 
+	<trigger match="^(?!You still have to kill [1-3] \* \w[^(]+ \(\S.+?(?: - Dead)?\))$"
 		script="gq_check_end"
 		name="trg_gq_check_end" 			group="trg_gq"
 		enabled="n"	regexp="y" sequence="500" keep_evaluating="y" omit_from_output="n" send_to="12" >
 			<send>	EnableTrigger("trg_gq_check_line", false)
 					EnableTrigger("trg_gq_check_end", false) </send> </trigger>
 
-	<!-- group: trg_gqmsg_1 -->				
+	<!-- group: trg_gqmsg_1 -->
 	<trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,4}) has been declared for levels (?<min_lvl>\d{1,3}) to (?<max_lvl>\d{1,3}) (?:- (?:200|10) or fewer wins only)?\.$"
 		script="gqmsg_declared"
 		name="trg_gqmsg_declared" 			group="trg_gqmsg_1"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>	
+		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
 	<trigger match="^You have now joined Global Quest # (?<gq_id>\d{1,4})\. See 'help gquest' for available commands\.$"
 		script="gqmsg_joined"
 		name="trg_gqmsg_joined" 			group="trg_gqmsg_1"
 		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-		
+
 	<trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,4}) for levels (?<min_lvl>\d{1,3}) to (?<max_lvl>\d{1,3})(?: - (?:200|10) or fewer wins only)? has now started\.$"
 		script="gqmsg_started"
 		name="trg_gqmsg_started" 			group="trg_gqmsg_1"
 		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
-	<!-- group: trg_gqmsg_2 -->		
+	<!-- group: trg_gqmsg_2 -->
 	<trigger match="^You have finished this global quest\.$"
 		script="player_not_on_gq"
 		name="trg_gq_finished_extended" 	group="trg_gqmsg_2"
@@ -4185,7 +4185,7 @@ snd update                    --> Automatically updates Search & Destroy.
 		script="gqmsg_winner"
 		name="trg_gqmsg_winner" 			group="trg_gqmsg_2"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-	
+
 	<trigger match="^Global Quest: Global Quest # (?<gq_id>\d{1,4}) will go into extended time for 5 more minutes\.$"
 		script="gqmsg_extended_time"
 		name="trg_gqmsg_extended_time" 		group="trg_gqmsg_ext"
@@ -4195,17 +4195,17 @@ snd update                    --> Automatically updates Search & Destroy.
 		script="player_not_on_gq"
 		name="trg_gqmsg_extended_end" 		group="trg_gqmsg_2"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-		
+
 	<trigger match="^You are no longer part of Global Quest # (?<gq_id>\d{1,4}) and will be unable to rejoin\.$"
 		script="player_not_on_gq"
 		name="trg_gqmsg_quit" 				group="trg_gqmsg_2"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-		
+
 	<trigger match="^Congratulations, that was one of the GLOBAL QUEST mobs\!$"
 		script="gq_mob_killed"
-		name="trg_gq_mob_killed" 			group="trg_gq_status" 
+		name="trg_gq_mob_killed" 			group="trg_gq_status"
 		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-		
+
 	<trigger match="^You are not in a global quest\.$"
 		script="player_not_on_gq"
 		name="trg_player_not_on_gq" 		group="trg_gq_status"
@@ -4227,7 +4227,7 @@ snd update                    --> Automatically updates Search & Destroy.
 		name="trg_cp_info_level_taken" group="trg_campaign"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
 			<send>	EnableTrigger("trg_cp_info_level_taken", false) </send> </trigger>
-	
+
 	<trigger match="^The targets for this campaign are:$"
 		script=""
 		name="trg_cp_info_targets" group="trg_campaign"
@@ -4235,7 +4235,7 @@ snd update                    --> Automatically updates Search & Destroy.
 			<send>	EnableTrigger("trg_cp_info_targets", false)
 					EnableTrigger("trg_cp_info_line", true)
 					EnableTrigger("trg_cp_info_end", true) </send> </trigger>
-	
+
 	<trigger match="^Find and kill 1 \* (?<mob>\w[^(]+) \((?<loc>\S.+)\)$"
 		script="cp_info_line"
 		name="trg_cp_info_line" group="trg_campaign"
@@ -4247,27 +4247,27 @@ snd update                    --> Automatically updates Search & Destroy.
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
 			<send>	EnableTrigger("trg_cp_info_line", false)
 					EnableTrigger("trg_cp_info_end", false) </send> </trigger>
-		
+
 	<trigger match="^You still have to kill \* (?<mob>\w[^(]+) \((?<loc>\S.+?)(?<isdead> - Dead)?\)$"
 		script="cp_check_line"
 		name="trg_cp_check_line" group="trg_campaign"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12" > 
+		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12" >
 			<send>	EnableTrigger("trg_cp_check_end", true)</send> </trigger>
 
-		
-	<trigger match="^(?!You still have to kill \* \w[^(]+ \(\S.+?(?: - Dead)?\))$" 
+
+	<trigger match="^(?!You still have to kill \* \w[^(]+ \(\S.+?(?: - Dead)?\))$"
 		script="cp_check_end"
 		name="trg_cp_check_end" group="trg_campaign"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12" >
 			<send>	EnableTrigger("trg_cp_check_gag_dead", true)
 					EnableTrigger("trg_cp_check_line", false)
-					EnableTrigger("trg_cp_check_end", false) </send> </trigger>	
+					EnableTrigger("trg_cp_check_end", false) </send> </trigger>
 
 	<trigger match="^Note: Dead means that the target is dead, not that you have killed it\.$"
 		name="trg_cp_check_gag_dead" group="trg_campaign"
 		enabled="y" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12" >
 			<send>	EnableTrigger("trg_cp_check_gag_dead", false) </send> </trigger>
-			
+
 <!-- CAMPAIGN STATUS TRACKING -->
 	<trigger match="^Congratulations, that was one of your CAMPAIGN mobs\!$"
 		script="cp_mob_killed"
@@ -4278,18 +4278,18 @@ snd update                    --> Automatically updates Search & Destroy.
 		script="do_cp_complete"
 		name="trg_cp_complete" 		group="trg_cp_2"
 		enabled="y" regexp="y" sequence="100" keep_evaluating="y"> </trigger>
-	
+
 	<trigger match="^Campaign cleared\.$"
 		script="player_not_on_cp"
 		name="trg_cp_quit" 			group="trg_cp_2"
 		enabled="y" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
-		
+
 	<trigger match="^\w.+ tells you 'Good luck in your campaign\!'$"
 		script="player_start_new_cp"
 		name="trg_cp_request" 		group="trg_cp_2"
 		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-		
-	<trigger match="^You are not currently on a campaign\.$" 
+
+	<trigger match="^You are not currently on a campaign\.$"
 		script="player_not_on_cp"
 		name="trg_player_not_on_cp" group="trg_cp_2"
 		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
@@ -4302,8 +4302,8 @@ snd update                    --> Automatically updates Search & Destroy.
 	<trigger match="^You (?:will have to level before you can go on another campaign|cannot take another campaign for (?:(?:\d+ hours?, )?\d+ minutes? and )?\d+ seconds?)\.$"
 		name="trg_cannot_get_new_cp" group="trg_cp_2"
 		script="cp_check_cannot_get_new_cp"
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y" > </trigger>		
-	
+		enabled="y" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+
 	<trigger match="^You use a daily blessing campaign reset token to reset your campaign\.$"
 		name="trg_cp_reset_token" group="trg_cp_2"
 		script=""
@@ -4314,18 +4314,18 @@ snd update                    --> Automatically updates Search & Destroy.
 		name="trg_xcp_next_cp_mob_killed" group="trg_auto"
 		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
 			<send>	EnableTrigger("trg_xcp_next_cp", true) </send> </trigger>
-					
+
 	<trigger match="^Congratulations, that was one of the GLOBAL QUEST mobs\!$"
 		name="trg_xcp_next_gq_mob_killed" group="trg_auto"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > 
-			<send>	EnableTrigger("trg_xcp_next_gq", true) </send> </trigger>			
-		
+		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
+			<send>	EnableTrigger("trg_xcp_next_gq", true) </send> </trigger>
+
 <!-- QUICK WHERE -->
 	<trigger match="^(?<mobname>\w.{29}) (?<roomname>[^ (0-9].*)$"
 		script="qw_match"
 		name="trg_quick_where_match" group="QuickWhere"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-	
+
 	<trigger match="^There is no \w.+ around here\.$"
 		script="qw_no_match"
 		name="trg_quick_where_no_match" group="QuickWhere"
@@ -4341,14 +4341,14 @@ snd update                    --> Automatically updates Search & Destroy.
 		script="ht_continue"
 		name="trg_hunt_trick_continue_portal" group="HuntTrick"
 		enabled="n" regexp="y" sequence="100" > </trigger>
-	
+
 	<trigger match="^You seem unable to hunt that target for some reason\.$"
 		script="ht_complete"
 		name="trg_hunt_trick_complete" group="HuntTrick"
 		enabled="n" regexp="y" sequence="100" > </trigger>
-	
+
 	<trigger match="^\w.+ is here\!$"
-		name="trg_hunt_trick_continue_2" group="HuntTrick"		
+		name="trg_hunt_trick_continue_2" group="HuntTrick"
 		script="ht_continue"
 		enabled="n" regexp="y" sequence="100" > </trigger>
 
@@ -4369,7 +4369,7 @@ snd update                    --> Automatically updates Search & Destroy.
 		enabled="n" regexp="y" sequence="100" > </trigger>
 
 	<trigger match="^The trail of \w.+ is confusing, but you\'re reasonably sure .+ headed (?:north|south|east|west|up|down)\.|There are traces of \w.+ having been here\. Perhaps they lead (?:north|south|east|west|up|down)\?|You have no idea what you\'re doing, but maybe \w.+ is (?:north|south|east|west|up|down)\?$"
-		script="auto_hunt_lowskill"	
+		script="auto_hunt_lowskill"
 		name="trg_autohunt_lowskill" group="AutoHunt"
 		enabled="n" regexp="y" sequence="100" > </trigger>
 
@@ -4387,39 +4387,39 @@ snd update                    --> Automatically updates Search & Destroy.
 		script="auto_hunt_abort"
 		name="trg_hunt_trick" group="AutoHunt"
 		enabled="n" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
-	
+
 	<trigger match="^\w.+ is here\!$"
 		script="auto_hunt_complete"
 		name="trg_autohunt_complete" group="AutoHunt"
-		enabled="n" regexp="y" sequence="100" keep_evaluating="y" > </trigger> 
-		
+		enabled="n" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+
 	<trigger match="^Magical wards around \w.+ bounce you back\.$"
 		name="trg_autohunt_nopass" group="AutoHunt"
 		script="auto_hunt_door"
 		enabled="n" regexp="y" sequence="100" > </trigger>
-		
+
 	<trigger match="^The \w.+ is closed\.$"
 		name="trg_autohunt_door" group="AutoHunt"
 		script="auto_hunt_door"
 		enabled="n" regexp="y" sequence="100" > </trigger>
-		
+
 	<trigger match="^You do not have a key for \w.+\.$"
 		name="trg_autohunt_no_key" group="AutoHunt"
 		script="auto_hunt_abort"
-		enabled="n" regexp="y" sequence="100" > </trigger> 
-		
+		enabled="n" regexp="y" sequence="100" > </trigger>
+
 	<trigger match="^You open \w.+\.$"
 		name="trg_autohunt_door_open" group="AutoHunt"
 		script="auto_hunt_door_open"
 		enabled="n" regexp="y" sequence="100" > </trigger>
-		
-	auto_hunt_door_open	
+
+	auto_hunt_door_open
 <!-- AUTO SET NOEXP -->
 	<trigger match="^You will no longer receive experience\. Happy questing\!$"
 		script="anex_automatic_off"
 		name="trg_anex_automatic_off"
 		enabled="y" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
-	
+
 	<trigger match="^You will now receive experience\. Happy leveling\!$"
 		script="anex_automatic_on"
 		name="trg_anex_automatic_on"
@@ -4450,7 +4450,7 @@ snd update                    --> Automatically updates Search & Destroy.
 		name="trg_area_index_gag_headers" group="AreaIndex"
 		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" >
 			<send>	EnableTrigger("trg_area_index_gag_headers", false) </send> </trigger>
-	
+
 	<trigger match="^---- ---- ----  ---------------  ------------------------------$"
 		name="trg_area_index_gag_header_lines" group="AreaIndex"
 		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" >
@@ -4472,13 +4472,13 @@ snd update                    --> Automatically updates Search & Destroy.
 		enabled="n" regexp="y" sequence="100" omit_from_output="y" keep_evaluating="y" send_to="12" >
 			<send>	EnableTrigger("trg_area_index_line", false)
 					EnableTrigger("trg_area_index_end", false) </send> </trigger>
-	
+
 <!-- PAGE SIZE -->
 	<trigger match="^You currently display ([0-9]+) lines per page\.|You do not page long messages\.$"
 		script="capture_page_size"
 		name="trg_capture_page_size"
 		enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output = "y" > </trigger>
-	
+
 	<trigger match="^Use 'pagesize \<lines\>' to change, or 'pagesize 0' to disable paging\.$"
 		script=""
 		name="trg_pagesize_gag_1"
@@ -4519,44 +4519,44 @@ snd update                    --> Automatically updates Search & Destroy.
 	<alias	match="^(?:aha|ah0)$"
 			script="auto_hunt_abort"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-			
+
 <!-- campaign data input: cp info, check -->
 	<alias	match="^cp (?:i|info)$"
 			script="do_cp_info"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-					
+
 	<alias	match="^cp (?:ch|check)$"
 			script="do_cp_check"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-			
+
 <!-- gquest data input: gq info, check -->
 	<alias	match="^gq (?:i|info)$"
 			script="do_gq_info"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" >
 				<send>	EnableTriggerGroup("trg_gq", false) </send>	</alias>
-					
+
 	<alias	match="^(?:gq (?:c|ch|check)|gg|qq)$"
 			script="do_gq_check"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-			
+
 <!-- xcp commands  -->
 	<alias	match="^xcp$"
 			script="xcp_noarg"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-			
+
 	<alias	match="^xcp (?<index>[0-9]+)$"
 			script="xcp_arg"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-		
+
 	<alias	match="^xcp mode(?: (?<option>ht|qw|off))?$"
 			script="xcp_set_action_mode"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-					
+
 <!-- movement: xrunto, go, nx, etc.  -->
 	<alias	match="^(?:xrt|xrun|xrunto) (?<destination>.+)$"
 			script="xrun_to"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-		
+
 	<alias	match="^(?:go|goto)( (?<index>[0-9]+))?$"
 			script="goto_number"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" keep_evaluating="y" > </alias>
@@ -4564,7 +4564,7 @@ snd update                    --> Automatically updates Search & Destroy.
 	<alias	match="^nx$"
 			script="goto_next"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-		
+
 	<alias	match="^nx-$"
 			script="goto_previous"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
@@ -4583,12 +4583,12 @@ snd update                    --> Automatically updates Search & Destroy.
 	<alias	match="^qs$"
 			script="quick_scan"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-		
+
 <!-- Quick-kill commands: qk, ak, kk, xset attack -->
 	<alias	match="^(?:quick kill|ak|kk|qk)$"
 			script="quick_kill"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-		
+
 	<alias	match="^xset (?:kk|ak|qk|qkill)( (?<arg>.+))?$"
 			script="xset_quick_kill_command"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
@@ -4596,29 +4596,29 @@ snd update                    --> Automatically updates Search & Destroy.
 <!-- Hunt trick -->
 	<alias	match="^ht$"
 			script="ht_noarg"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>		
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 	<alias	match="^ht (?:(?<index>\d+)\.)?(?<mob>.+)?$"
 			script="ht_arg"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-			
+
 	<alias	match="^ht(?:a|0| abort| stop)$"
 			script="ht_abort"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>	
-			
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
 <!-- Quick where -->
 	<alias	match="^qw$"
 			script="qw_noarg"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-			
+
 	<alias	match="^qw (?:(?<index>\d+)\.)?(?<mob>.+)?$"
 			script="qw_arg"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-	
+
 	<alias	match="^qwx$"
 			script="qw_exact"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias> 
-				
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
 <!-- roomnotes -->
 	<alias	match="^(?:roomnote|rn)$"
 			script="room_note"
@@ -4641,7 +4641,7 @@ snd update                    --> Automatically updates Search & Destroy.
 	<alias	match="^(?:xmap|xmapper) move (?<roomid>\d+|-1)(?: (?<speed>run|walk))?$"
 			script="xmapper_move"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-		
+
 	<alias	match="^xm(?:\ {(?<mob>[^\}]+)\})? (?<loc>.+)$"
 			script="map_area"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
@@ -4649,7 +4649,7 @@ snd update                    --> Automatically updates Search & Destroy.
 	<alias	match="^xmall(?:\ {(?<mob>[^\}]+)\})? (?<loc>.+)$"
 			script="map_area_all"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-	
+
 	<alias	match="^(?:xm|xmap|xmapper) rlh(?: (?<room_id>\d+))?$"
 			script="xmap_rooms_linking_here"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
@@ -4658,7 +4658,7 @@ snd update                    --> Automatically updates Search & Destroy.
 	<alias  match="^xset (?:index areas|area index)$"
 			script="area_index_process"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-			
+
 	<alias	match="^xset (?:mark|start)$"
 			script="xset_to_mark"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
@@ -4666,7 +4666,7 @@ snd update                    --> Automatically updates Search & Destroy.
 	<alias  match="^xset vidblain$"
 			script="xset_vidblain"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-			
+
 	<alias  match="^xset vidblain level(?: (?<level>\d{1,3}))?$"
 			script="xset_vidblain_setlevel"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
@@ -4675,7 +4675,7 @@ snd update                    --> Automatically updates Search & Destroy.
 			script="set_speed"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
-	<alias	match="^xset sendecho$"		
+	<alias	match="^xset sendecho$"
 			script=""
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
@@ -4683,20 +4683,20 @@ snd update                    --> Automatically updates Search & Destroy.
 	<alias	match="^xset fontsize( (?<size>[0-9]+))?$"
 			script="xset_font_size"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-		
+
 	<alias	match="^xset linespace( (?<space>[0-9]+))?$"
 			script="xset_line_space"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-		
+
 	<alias	match="^xset winreset$"
 			script="xg_create_window"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" >
 				<send>	win_init = false	</send> </alias>
-					
+
 	<alias	match="^xset (?:window|win) (?<onoff>on|off|show|hide|0|1|true|false)$"
 			script="xset_ToggleWindowDisplay"
 			enabled="y" regexp="y" sequence="100" > </alias>
-		
+
 	<alias	match="^(?:xw|xwh|xwhere)( (?<n1>\d+))?( (?<n2>\d+))?( (?<mob>.+))?$"
 			script="do_xwhere"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
@@ -4704,11 +4704,11 @@ snd update                    --> Automatically updates Search & Destroy.
 	<alias	match="^(?:xg|xgui) (?:ref|refresh)$"
 			script="xgui_RefreshLinks"
 			enabled="y" regexp="y" sequence="100" > </alias>
-			
+
 	<alias	match="^(?:xg|xgui) (?:rel|reload)$"
 			script="xgui_ReloadLinks"
 			enabled="y" regexp="y" sequence="100" > </alias>
-	
+
 <!-- xset page size (area index process) -->
 	<alias	match="^xset suspend page size$"
 			script="suspend_page_size"
@@ -4717,7 +4717,7 @@ snd update                    --> Automatically updates Search & Destroy.
 	<alias	match="^xset resume page size$"
 			script="resume_page_size"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-			
+
 <!-- xtest commands -->
 	<alias  match="^xtest areadata$"
 			script="xtest_areadata"
@@ -4729,19 +4729,19 @@ snd update                    --> Automatically updates Search & Destroy.
 
 	<alias	match="^xtest roomhist$"
 			script="xtest_roomhist"
-			enabled="y" regexp="y" sequence="100" > </alias>	
-		
+			enabled="y" regexp="y" sequence="100" > </alias>
+
 	<alias	match="^xtest simulate cp(?: (?<type>ar?e?a?|ro?o?m?))?$"
 			script="simulate_cp"
-			enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12" > </alias>	
-			
+			enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12" > </alias>
+
 	<alias	match="^xtest loadroom(?: (?<room_id>\d+))?$"
 			script="xtest_loadroom"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-			
+
 	<alias	match="^xtest popmsg$"
 			script="xtest_popmsg"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>			
-		
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
 </aliases>
 </muclient>

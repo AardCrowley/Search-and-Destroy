@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.1" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="5.2" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -212,6 +212,9 @@
 		if (id == plugin_id_gmcp_handler) then
 			if (text == "char.status") then		-- character status
 				current_character_state = gmcp("char.status.state")
+                if not stopUpdate then
+                    targetMob = gmcp("char.status.enemy")
+                end
 			elseif (text == "room.info") then	-- current/previous room info
 				local ri = gmcp("room.info")
 				ri.maze = (string.match(ri.details, "maze") == "maze") and 1 or 0
@@ -903,8 +906,8 @@
 		ColourNote("#FF5000", "", "*** Indexing area levels")
 	end
 
-function createNew()
-    SnDdb = sqlite3.open(GetInfo(66) .. "databases/SnDdb.db")
+function createNew() -- Line 1027
+    SnDdb = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
 
     SnDdb:exec([[CREATE TABLE "area" (
 	            "name"	text NOT NULL,
@@ -931,52 +934,60 @@ function createNew()
     SnDdb:close()
 end
 
-function area_index_line(name, line, wildcards)
-	SnDdb = sqlite3.open(GetInfo(66) .. "databases/SnDdb.db")
-    local sqlQuery = "INSERT INTO area VALUES (\"%s\", \"%s\", \"%d\", \"%d\", \"%d\", \"%d\", \"%s\", \"%s\", \"%s\")"
+function area_index_line(name, line, wildcards) -- 1055
+    local file_found = io.open(GetInfo(66) .. "/SnDdb.db", "r")
 
-	local areaName = Trim(wildcards.areaName)
-    local arid = Trim(wildcards.arid)
-    local minLvl = tonumber(Trim(wildcards.min)) or 1
-    local maxLvl = tonumber(Trim(wildcards.max)) or 201
-    local levelLock = tonumber(Trim(wildcards.lock)) or 0
-    local noQuest = (areaDefaultStartRooms[arid].noquest == true and "true") or "false"
-    local vidblain = (tostring(areaDefaultStartRooms[arid].vidblain) == true and "true") or "false"
+    if not file_found then
+        createNew()
+    else
+	    SnDdb = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
+        local sqlQuery = "INSERT INTO area VALUES (\"%s\", \"%s\", \"%d\", \"%d\", \"%d\", \"%d\", \"%s\", \"%s\", \"%s\")"
 
-    if arid == "sahuagin" then
-        areaName = "The Abyssal Caverns of Sahuagin"
-    elseif arid == "darkside" then
-        areaName = "The Darkside of the Fractured Lands"
-    elseif arid == "academy" or arid == "lowlands" then
-        maxLvl = 10
-    elseif arid == "sohtwo" then
-        minLvl = 170
+	    local areaName = Trim(wildcards.areaName)
+        local arid = Trim(wildcards.arid)
+        local minLvl = tonumber(Trim(wildcards.min)) or 1
+        local maxLvl = tonumber(Trim(wildcards.max)) or 201
+        local levelLock = tonumber(Trim(wildcards.lock)) or 0
+        local noQuest = (areaDefaultStartRooms[arid].noquest == true and "true") or "false"
+        local vidblain = (tostring(areaDefaultStartRooms[arid].vidblain) == true and "true") or "false"
+
+        if arid == "sahuagin" then
+            areaName = "The Abyssal Caverns of Sahuagin"
+        elseif arid == "darkside" then
+            areaName = "The Darkside of the Fractured Lands"
+        elseif arid == "academy" or arid == "lowlands" then
+            maxLvl = 10
+        elseif arid == "sohtwo" then
+            minLvl = 170
+        end
+
+        area_range_index[areaName] = { arid = arid, min = minLvl, max = maxLvl }	-- lock = levelLock }
+
+	    local queryExists = "SELECT * FROM area WHERE name LIKE '%s'"
+
+	    local areaExists = false
+
+	    for a in SnDdb:rows(queryExists:format(areaName:gsub("'", "''"))) do
+		    if a[1] then
+			    areaExists = true
+    			break
+	    	end
+	    end
+
+	    if not areaExists then
+		    if areaDefaultStartRooms[arid] then
+       		    sqlQuery = sqlQuery:format(areaName, arid, minLvl, maxLvl, levelLock, areaDefaultStartRooms[arid].start, noQuest, vidblain, arid)
+   		    else
+       		    sqlQuery = sqlQuery:format(areaName, arid, minLvl, maxLvl, levelLock, -1, noQuest, vidblain, arid)
+       		    ColourNote("#002800", "", "*** Missing default start room - " .. areaName)
+       		    ColourNote("#002800", "", "*** Please update by manually running to the area and using 'xset mark'.")
+   		    end
+
+		    SnDdb:exec(sqlQuery)
+	    end
+
+        SnDdb:close()
     end
-
-	local queryExists = "SELECT * FROM area WHERE name LIKE '%s'"
-
-	local areaExists = false
-
-	for a in SnDdb:rows(queryExists:format(areaName:gsub("'", "''"))) do
-		if a[1] then
-			areaExists = true
-			break
-		end
-	end
-
-	if not areaExists then
-		if areaDefaultStartRooms[arid] then
-       		sqlQuery = sqlQuery:format(areaName, arid, minLvl, maxLvl, levelLock, areaDefaultStartRooms[arid].start, noQuest, vidblain, arid)
-   		else
-       		sqlQuery = sqlQuery:format(areaName, arid, minLvl, maxLvl, levelLock, -1, noQuest, vidblain, arid)
-       		ColourNote("#002800", "", "*** Missing default start room - " .. areaName)
-       		ColourNote("#002800", "", "*** Please update by manually running to the area and using 'xset mark'.")
-   		end
-
-		SnDdb:exec(sqlQuery)
-	end
-
-    SnDdb:close()
 end
 
 	function area_index_end(name, line, wildcards)
@@ -1314,6 +1325,8 @@ end
 
 			-- in all of these, the action is "status"
 			elseif (q.action == "status" and q.target == "killed") then		-- on quest, qmob has been killed (do not confuse q.target with q.targ above!)
+                stopUpdate = true
+                findMobs(targetMob, tonumber(gmcp("room.info.num")))
 				quest_target.qstat = "3"
 				ColourNote("#FF5000", "", "\nSearch and Destroy: You have already killed your quest target!\n")
 			--elseif (q.action == "status" and q.targ and q.timer) then		-- on quest, qmob not yet killed
@@ -1424,6 +1437,9 @@ end
 	end
 
 	function cp_mob_killed()
+        stopUpdate = true
+        findMobs(targetMob, tonumber(gmcp("room.info.num")))
+
 		if (player_on_gq == "no") then
 			xcp_retry_stat = 1
 			qw_reset(false)
@@ -2459,7 +2475,7 @@ function goto_number(name, line, wildcards)
 		if (short_mob_name == nil) or (short_mob_name == "") or (short_mob_name == "-1") then
 			ColourNote("#FF5000", "", "\nSearch and Destroy: 'Quick-kill' has no target.  Use 'ht', 'qw', or 'xcp' to select a target.\n")
 		else
-			for command in quick_kill_command:gmatch("%a[^;]") do
+			for command in quick_kill_command:gmatch("%a+[^;]") do
 				Execute(command .. " '" .. short_mob_name .. "'")
 			end
 			--Execute(quick_kill_command .. " '" .. short_mob_name .. "'")
@@ -4068,6 +4084,8 @@ function goto_number(name, line, wildcards)
 
 	end
 
+-- [[ New code ]]
+
 	function update_plugin()
 		raw = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/Search_and_Destroy.xml"
 
@@ -4123,7 +4141,7 @@ function goto_number(name, line, wildcards)
 
 	function onHelp(name, line, wildcards)
 		local str = wildcards[1]
-	    local helpFiles = {"mergePwar", "win", "fontsize", "linespace", "speed", "vidblain", "mark", "index areas", "silent", "sort", "xm", "xmap", "roomnote", "qw", "ht", "ah", "ak|kk|qk", "qs", "xq", "noexp", "nx", "go", "xrt|xrun", "cp|gq", "xcp", "xcp mode", "ms|msearch", "snd update", "snd reload"}
+	    local helpFiles = {"win", "fontsize", "linespace", "speed", "vidblain", "mark", "index areas", "silent", "sort", "xm", "xmap", "roomnote", "qw", "ht", "ah", "ak|kk|qk", "qs", "xq", "noexp", "nx", "go", "xrt|xrun", "cp|gq", "xcp", "xcp mode", "ms|msearch", "mgo|mgoto", "snd migrate|mergePwar", "snd update", "snd reload"}
 
     	local headers = {"cyan", "", string.rep("-", 76) .. "\n", "darkcyan", "", "Help keywords", "antiquewhite", "", " : " .. str .. "\n", "cyan", "", string.rep("-", 76) .. "\n"}
 
@@ -4154,11 +4172,6 @@ function goto_number(name, line, wildcards)
         	Note()
         	ColourNote("limegreen", "", "xset winreset:")
         	ColourNote("antiquewhite", "", unpack({helpWrap("If, for any reason, the window goes missing and the previous command does not restore it, this command will reset the window to a default location on top of your windows.")}))
-
-		elseif str == "mergePwar" then
-			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": mergePwar")
-			Note()
-			ColourNote("antiquewhite", "", unpack({helpWrap("This command should be used if you are migrating from Pwar's version of Search and Destroy. Depending on how large your database is, this may take a few moments and WILL potentially lock up your MUSHclient while it is merging. Do not worry, for it will return to normal after the merge. Please be advised that you MUST have WinkleGold_Database.db located in your plugins folder for this to work.")}))
 
     	elseif str == "fontsize" then
         	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset fontsize <#>")
@@ -4245,9 +4258,9 @@ function goto_number(name, line, wildcards)
         	ColourNote("antiquewhite", "", unpack({helpWrap("Automatically sends the 'hunt' command and executes the direction hunt leads you. Append 'a' in order to abort autohunting. This is useful for tracking quest mobs through mazes, or if you really want to, hunting players. However, you must have hunt practiced for it to work.")}))
 
     	elseif str == "ak" or str == "kk" or str == "qk" then
-	        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <xset> <ak|kk|qk>")
+	        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <xset> <ak|kk|qk> <commands>")
         	Note()
-        	ColourNote("antiquewhite", "", unpack({helpWrap("With the 'xset' argument, sets the interchangable command of 'ak', 'kk', and 'qk' to the command supplied. Without the 'xset' argument, executes the 'quick kill' command. If you wish to stack multiple commands, you must separate each command with a semicolon. For example, 'xset kick;bash' will kick the target, then bash the target.")}))
+        	ColourNote("antiquewhite", "", unpack({helpWrap("With the 'xset' argument, sets the interchangable command of 'ak', 'kk', and 'qk' to the command supplied. Without the 'xset' argument, executes the 'quick kill' command. If you wish to stack multiple commands, you must separate each command with a double semicolon (or a single semicolon if you start the line with a semicolon). For example, 'xset kick;;bash;;slap' (or ';xset kick;bash;slap')  will kick the target, then bash the target, then slap the target.")}))
 
     	elseif str == "qs" then
         	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": qs")
@@ -4304,12 +4317,17 @@ function goto_number(name, line, wildcards)
         	Note()
         	ColourNote("antiquewhite", "", unpack({helpWrap("This command will search the mob database for the mob name supplied based on the area supplied (here, [area key], defaults to 'all' with no argument), returning the rooms the mob has been found, the area, and the times it has been found in that room.")}))
 
+        elseif str == "mgo" or str == "mgoto" then
+            ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": mgo<to> <idx>")
+            Note()
+            ColourNote("antiquewhite", "", unpack({helpWrap("This command is used after searching for a mob and will go to the room provided by the index number.")}))
+
     	elseif str == "snd reload" then
         	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd reload")
         	Note()
         	ColourNote("antiquewhite", "", unpack({helpWrap("If, for any reason, Search & Destroy stops functioning correctly, this theoretically should fix it. In some cases, it may be necessary to open up your plugins (Ctrl+Shift+P) and reinstall Search & Destroy.")}))
 
-    	elseif str == "snd migrate" then
+    	elseif str == "snd migrate" or str == "mergePwar" then
         	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd migrate")
         	Note()
         	ColourNote("antiquewhite", "", unpack({helpWrap("This command is for previous users of Pwar's Search & Destroy. In an effort to not lose a previously built mob database, this command will migrate all data to this version of SnD.")}))
@@ -4342,7 +4360,7 @@ function goto_number(name, line, wildcards)
 	        f:close()
     	    PwarDb = sqlite3.open(GetInfo(60) .. "/WinkleGold_Database.db")
 	        mapperDb = sqlite3.open(GetInfo(66) .. "Aardwolf.db")
-        	SnDdb = sqlite3.open(GetInfo(66) .. "databases/SnDdb.db")
+        	SnDdb = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
         	migrateTable = {}
 
         	ColourNote("cyan", "", "Now copying data from Pwar's database. Go make a sandwich or something while this completes the process. It may take a few minutes. Your client will likely freeze during this operation. You have 10 seconds to get to somewhere safe first!")
@@ -4403,7 +4421,7 @@ function goto_number(name, line, wildcards)
             	updateAppend = "in zone " .. span
         	end
 
-        	SnDdb = sqlite3.open(GetInfo(66) .. "databases/SnDdb.db")
+        	SnDdb = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
 
     	    local sqlQuery = "UPDATE mobs SET keyword = '" .. keyword .. "' WHERE mob LIKE '" .. short .. "'" .. sqlAppend
 
@@ -4417,7 +4435,7 @@ function goto_number(name, line, wildcards)
 	end
 
 	function mobLookup (name, location, level, exact)
-	    SnDdb = sqlite3.open(GetInfo(66) .. "databases/SnDdb.db")
+	    SnDdb = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
 
 	    if exact ~= "" or exact ~= nil then exact = false end
 
@@ -4459,8 +4477,6 @@ function goto_number(name, line, wildcards)
 
 	    searchQuery = searchQuery .. " and area.noquest LIKE 'false' and mobs.zone = area.key ORDER BY mobs.zone, mobs.Count DESC"
 
-		print(searchQuery)
-
     	SnDdb:close()
 
 	    showResults(searchQuery, searchMsg)
@@ -4468,7 +4484,7 @@ function goto_number(name, line, wildcards)
 
 	function showResults(query, msg)
 
-	    SnDdb = sqlite3.open(GetInfo(66) .. "databases/SnDdb.db")
+	    SnDdb = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
 	    mshow = {}
 	    local searchMsg, failure = msg, "No matches found!"
 
@@ -4538,7 +4554,7 @@ function goto_number(name, line, wildcards)
 
 	function mobGo(name, line, args)
     	if #mshow ~= 0 then
-        	Execute("mapper goto " .. mshow[tonumber(args[1])][4])
+        	Execute("mapper goto " .. mshow[tonumber(args[1])][3])
     	else
         	ColourNote("orange", "", "No results loaded. Try searching for your mob first.")
     	end
@@ -4576,6 +4592,44 @@ function goto_number(name, line, wildcards)
                 ColourNote("#802800", "", "*** Syntax error! Use: ", "green", "", "msearch <areakey|here|all> <mob>")
             end
         end
+    end
+
+    function strip_colours (s)
+        s = s:gsub("@@", "\0")  -- change @@ to 0x00
+        s = s:gsub("@%-", "~")    -- fix tildes (historical)
+        s = s:gsub("@x%d?%d?%d?", "") -- strip valid and invalid xterm color codes
+        s = s:gsub("@.([^@]*)", "%1") -- strip normal color codes and hidden garbage
+        return (s:gsub("%z", "@")) -- put @ back (has parentheses on purpose)
+    end
+
+
+    function findMobs(name, room)
+        SnDdb = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
+
+        name = name:gsub("'", "''")
+
+
+        local rname, zname = strip_colours(gmcp("room.info.name")), gmcp("room.info.zone")
+        local sqlQuery = "SELECT * FROM mobs WHERE mob LIKE '" .. name:gsub("'", "''") .. "' AND roomid = " .. room
+        local sqlUpdate = "UPDATE mobs SET Count = Count + 1 WHERE mob LIKE '" .. name:gsub("'", "''") .. "' AND roomid = " .. room
+        local sqlInsert = "INSERT INTO mobs VALUES ('" .. name:gsub("'", "''") .. "','" .. rname:gsub("'", "''") .. "'," .. room .. ",'" .. zname .. "',1,'" .. gmkw(name) .. "')"
+
+        local mobFound = false
+
+        for m in SnDdb:rows(sqlQuery) do
+            if m[1] then
+                mobFound = true
+            end
+        end
+
+        if mobFound then
+            SnDdb:exec(sqlUpdate)
+        else
+            SnDdb:exec(sqlInsert)
+        end
+
+        SnDdb:close_vm()
+        stopUpdate = false
     end
 
 ]]>
@@ -4973,6 +5027,17 @@ function goto_number(name, line, wildcards)
 	<trigger match="^[\s\S]*$"
 		name="trg_gag_everything"
 		enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="y" > </trigger>
+
+    <trigger
+        enabled="y"
+        keep_evaluating="y"
+        match="^(?:You assassinate |You catch |You attempt to bury .* deep into |You lunge at)(.*)(?: with cold efficiency\.| completely off-guard and inflict massive damage on .*\.|'s? back!|with a .*!)$"
+        regexp="y"
+        send_to="12"
+        sequence="100"
+    >
+    <send>targetMob = "%1"</send>
+  </trigger>
 </triggers>
 
 <aliases>
@@ -5061,7 +5126,7 @@ function goto_number(name, line, wildcards)
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 <!-- Quick-kill commands: qk, ak, kk, xset attack -->
-	<alias	match="^(?:quick kill|kk|qk)$"
+	<alias	match="^(?:quick kill|ak|kk|qk)$"
 			script="quick_kill"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
@@ -5247,8 +5312,9 @@ function goto_number(name, line, wildcards)
   </alias>
 
   <alias
-	match="mergePwar"
+	match="^(snd migrate|mergePwar)$"
 	enabled="y"
+    regexp="y"
 	script="copyPwarDB"
 	sequence="100"
   >

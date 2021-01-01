@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="4.61" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="5.0" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -36,7 +36,11 @@
 		* Move 'hiding' mobs further down the list
 		* Add a mob database
 		* Add ability to keyword mobs, tie in with mob database
-		* Change way XRT works - if no shortname found, run to best matching area ]]--
+		* Change way XRT works - if no shortname found, run to best matching area
+
+		Fix gq: You are no longer part of Global Quest # 4683 and will be unable to rejoin. -- gq quit
+			    "You have now joined Global Quest # 4685. See 'help gquest' for available commands.", "You may win 2 more gquests at this level.", "You can be rewarded for 50 more kills this level."
+		]]--
 
 	--require "copytable"
 	require "movewindow"
@@ -50,6 +54,10 @@
 
 --line 171
 
+	mshow                           = {}
+	showStr                         = "@W%s @wis found in @Y%s @win/around @G%s @w(@Cmapper goto %s@w)"
+	targetMob                       = ""
+
 	PLUGIN_VERSION  = GetPluginInfo(GetPluginID(), 19)
 	PLUGIN_NAME 	= GetPluginInfo(GetPluginID(), 1)
 
@@ -57,6 +65,8 @@
 	local plugin_id_gmcp_handler 	= "3e7dedbe37e44942dd46d264"		-- easier to remember the var names than the plugin id's
 	local plugin_id_gmcp_mapper		= "b6eae87ccedd84f510b74714"
 	local plugin_id_z_order 		= "462b665ecb569efbf261422f"
+
+	gqCheckPass = false
 
 	local plugins_folder = GetPluginInfo(GetPluginID(), 20)
 	local db_file_1
@@ -216,7 +226,7 @@
 					table.insert(room_history, 1, room_history[0])
 					room_history[0] = { rmid = current_room.rmid, arid=current_room.arid }
 				end
-				--ColourNote("#808080", "", "room: " .. current_room.rmid .. ", prev: " .. previous_room.rmid .. "  ", ((ri.maze==1) and "#FF0000" or "#808080"), "", "maze: " .. current_room.maze)
+
 			elseif (text == "comm.quest") then	-- quest info
 				local q = gmcp("comm.quest")
 				quest_status_gmcp(q)
@@ -269,12 +279,12 @@
 -- [[ Lookup table:  Area start room, noquest true/false, vidblain areas ]]
 	local areaDefaultStartRooms = {
 		["abend"] 		= { start = "24909", ct = "3" },		-- Continents
-		["alagh"] 		= { start =  "3224", ct = "4", noquest = true },
-		["gelidus"] 	= { start = "18780", ct = "2", noquest = true },
-		["mesolar"] 	= { start = "12664", ct = "0", noquest = true },
-		["southern"] 	= { start =  "5192", ct = "1", noquest = true },
-		["uncharted"] 	= { start =  "7701", ct = "5", noquest = true },
-		["vidblain"] 	= { start = "33570", ct = "6", noquest = true, vidblain = true },
+		["alagh"] 		= { start =  "3224", ct = "4" },
+		["gelidus"] 	= { start = "18780", ct = "2" },
+		["mesolar"] 	= { start = "12664", ct = "0" },
+		["southern"] 	= { start =  "5192", ct = "1" },
+		["uncharted"] 	= { start =  "7701", ct = "5" },
+		["vidblain"] 	= { start = "33570", ct = "6", vidblain = true },
 
 		["aardington"] 	= { start = "47509" },		-- A --
 		["academy"] 	= { start = "35233" },
@@ -410,6 +420,7 @@
 		["livingmine"] 	= { start = "37008" },
 		["longnight"] 	= { start = "26367" },
 		["losttime"] 	= { start = "28584" },
+		["lowlands"] 	= { start = "28044" },
 		["lplanes"] 	= { start = "29364" },
 		["maelstrom"] 	= { start = "38058" },		-- M --
 		["manor"] 		= { start = "10621" },
@@ -488,6 +499,7 @@
 		["tilule"]		= { start = "39771"	},
 		["times"] 		= { start = "28463" },
 		["tirna"] 		= { start = "20136" },
+		["titan"] 		= { start = "38234" },
 		["tol"] 		= { start = "16325" },
 		["tombs"] 		= { start = "15385" },
 		["umari"] 		= { start = "36601" },		-- U --
@@ -532,12 +544,10 @@
 		["icefall"] 	= { start = "38701", noquest = true },
 		["inferno"]		= { start =    "-1", noquest = true },
 		["oradrin"] 	= { start = "25436", noquest = true },
-		["titan"] 		= { start = "38234", noquest = true },
 		["winds"] 		= { start = "39900", noquest = true },
 
 		["badtrip"] 	= { start = "32877", noquest = true },		-- Other no-quest areas
 		["birthday"]	= { start = "10920", noquest = true },
-		["lowlands"] 	= { start = "28044", noquest = true },
 		["seaking"]		= { start =    "-1", noquest = true },
 		["amazonclan"] 	= { start = "34212", noquest = true },		-- Public clan halls
 		["bard"] 		= { start = "30538", noquest = true },
@@ -893,7 +903,7 @@
 		ColourNote("#FF5000", "", "*** Indexing area levels")
 	end
 
-	function area_index_line(name, line, wildcards)			-- called by trigger reacting to the output lines from the areas list.
+	--[[function area_index_line(name, line, wildcards)			-- called by trigger reacting to the output lines from the areas list.
 		local areaName = Trim(wildcards.areaName)
 		local arid = Trim(wildcards.arid)
 		local minLvl = tonumber(Trim(wildcards.min)) or 1
@@ -914,7 +924,83 @@
 		else
 			ColourNote("#802800", "", "*** Missing default start room - " .. areaName)
 		end
+	end]]--
+
+function createNew()
+    SnDdb = sqlite3.open(GetInfo(66) .. "databases/SnDdb.db")
+
+    SnDdb:exec([[CREATE TABLE "area" (
+	            "name"	text NOT NULL,
+	            "key"	text NOT NULL,
+	            "minlvl"	INTEGER NOT NULL,
+	            "maxlvl"	INTEGER NOT NULL,
+	            "lock"	INTEGER NOT NULL,
+	            "startRoom"	INT,
+	            "noquest"	TEXT,
+	            "vidblain"	TEXT,
+                "userKey"	TEXT)]])
+
+    SnDdb:exec([[CREATE TABLE mobs (
+                "mob" text NOT NULL,
+                room text NOT NULL,
+                roomid integer NOT NULL,
+                zone text NOT NULL,
+                count integer NOT NULL,
+                keyword text NOT NULL
+        )]])
+
+    area_index_process()
+
+    SnDdb:close()
+end
+
+function area_index_line(name, line, wildcards)
+	SnDdb = sqlite3.open(GetInfo(66) .. "databases/SnDdbtest.db")
+    local sqlQuery = "INSERT INTO area VALUES (\"%s\", \"%s\", \"%d\", \"%d\", \"%d\", \"%d\", \"%s\", \"%s\", \"%s\")"
+
+	local areaName = Trim(wildcards.areaName)
+    local arid = Trim(wildcards.arid)
+    local minLvl = tonumber(Trim(wildcards.min)) or 1
+    local maxLvl = tonumber(Trim(wildcards.max)) or 201
+    local levelLock = tonumber(Trim(wildcards.lock)) or 0
+    local noQuest = (areaDefaultStartRooms[arid].noquest == true and "true") or "false"
+    local vidblain = (tostring(areaDefaultStartRooms[arid].vidblain) == true and "true") or "false"
+
+    if arid == "sahuagin" then
+        areaName = "The Abyssal Caverns of Sahuagin"
+    elseif arid == "darkside" then
+        areaName = "The Darkside of the Fractured Lands"
+    elseif arid == "academy" or arid == "lowlands" then
+        maxLvl = 10
+    elseif arid == "sohtwo" then
+        minLvl = 170
+    end
+
+	local queryExists = "SELECT * FROM area WHERE name LIKE '%s'"
+
+	local areaExists = false
+
+	for a in SnDdb:rows(queryExists:format(areaName:gsub("'", "''"))) do
+		if a[1] then
+			areaExists = true
+			break
+		end
 	end
+
+	if not areaExists then
+		if areaDefaultStartRooms[arid] then
+       		sqlQuery = sqlQuery:format(areaName, arid, minLvl, maxLvl, levelLock, areaDefaultStartRooms[arid].start, noQuest, vidblain, arid)
+   		else
+       		sqlQuery = sqlQuery:format(areaName, arid, minLvl, maxLvl, levelLock, -1, noQuest, vidblain, arid)
+       		ColourNote("#002800", "", "*** Missing default start room - " .. areaName)
+       		ColourNote("#002800", "", "*** Please update by manually running to the area and using 'xset mark'.")
+   		end
+
+		SnDdb:exec(sqlQuery)
+	end
+
+    SnDdb:close()
+end
 
 	function area_index_end(name, line, wildcards)
 		SetVariable("mcvar_area_range", serialize.save_simple(area_range_index))
@@ -1470,6 +1556,11 @@
 		if (gqid == gqid_joined) then
 			EnableTrigger("trg_gq_info_quest_status", true)
 			player_is_on_gq()
+		elseif gqCheckPass then
+			gqid_joined = gqid
+			gqCheckPass = false
+			EnableTrigger("trg_gq_info_quest_status")
+			player_is_on_gq()
 		else
 			print("gq info name fail")
 		end
@@ -1615,6 +1706,8 @@
 	end
 
 	function gq_check_not_yet_started(name, line, wildcards)
+		gqid_joined = wildcards[1]
+		player_is_on_gq()
 		gqid_started = "-1"
 			SetVariable("mcvar_gqid_started", "-1")
 	end
@@ -2389,7 +2482,10 @@ function goto_number(name, line, wildcards)
 		if (short_mob_name == nil) or (short_mob_name == "") or (short_mob_name == "-1") then
 			ColourNote("#FF5000", "", "\nSearch and Destroy: 'Quick-kill' has no target.  Use 'ht', 'qw', or 'xcp' to select a target.\n")
 		else
-			Execute(quick_kill_command .. " '" .. short_mob_name .. "'")
+			for command in quick_kill_command:gmatch("%a[^;]") do
+				Execute(command .. " '" .. short_mob_name .. "'")
+			end
+			--Execute(quick_kill_command .. " '" .. short_mob_name .. "'")
 		end
 	end
 
@@ -4031,76 +4127,479 @@ function goto_number(name, line, wildcards)
 		raw_version = nil
 	end -- end Update code
 
-	function showHelp()
-	print([[
-Commands:
-xset win <on|off>             --> Shows or hides the window.
-xset winreset                 --> Resets the window.
-xset fontsize <#>             --> Displays current font size, or changes
-                                > it to argument.
-xset linespace <#>            --> Displays line spacing size, or changes
-                                > it to argument.
-xset speed <walk|run>         --> Displays current move speed, or changes
-                                > it to argument.
-xset vidblain                 --> Fixes Vidblain's "random drop" so you
-                                > can still run to areas within Vidblain.
-xset mark                     --> Sets current room as "start" for the
-                                > current area.
-xset index areas              --> Indexes areas. Use this if you get a lot
-                                > of "red" links but you've mapped the area.
-
-xset silent <on|off>		  --> Toggles displaying target list in main
-                                > MUD window.
-
-xset sort <all|area|room|none>--> Toggles sorting by area name in area
-                                > cps/gqs, room cps/gqs, none, or both.
-
-xm rlh <roomID>               --> Displays rooms linking to <roomID> or
-                                > current room.
-xmall <room name>             --> Displays rooms across the MUD matching
-                                > the argument.
-xm <room name>                --> Displays rooms in zone matching the
-                                > argument.
-xmap move <roomID> <run|walk> --> Move to the room id at default speed, or
-                                > walks (without portals) or runs (with
-                                > portals) based on argument.
-roomnote <area|area areakey>  --> Displays roomnotes for current room,
-                                > current area, or area argument.
-
-qw<x> <mobname>               --> Where's the current stored target or
-                                > argument. Use 'x' to where exact mob name.
-ht <mob|stop>                 --> Executes the 'hunt trick' for current
-                                > target or argument. Use 'stop' to abort.
-ah<a> <targ>                  --> Autohunts target. Append 'a' with no
-                                > target to abort.
-xset <ak|kk|qk>               --> Sets the 'quick kill' command. All options
-                                > are interchangeable.
-<ak|kk|qk>                    --> Executes the 'quick kill' command. All
-                                > options are interchangeable.
-qs                            --> Executes a 'quick scan' for the stored target.
-xq                            --> Reloads the quest info.
-xset noexp <off|#>            --> Displays current setting with no argument.
-                                > With argument, toggles noexp off or sets it
-                                > to turn on at # exp remaining.
-nx<->                         --> Moves to the next room on the list, or the
-                                > previous room with -.
-go <index>                    --> Runs to the first room in the index, or to
-                                > the index number with argument.
-<xrt|xrun> <area>             --> Runs to the area matching the argument.
-
-<cp|gq> i|info                --> Displays campaign/gquest info.
-<cp|gq> ch|check              --> Displays campaign/gquest check.
-
-xcp <index>                   --> Without argument, goes to top result in
-                                > cp/gq check. Otherwise heads to the index
-                                > chosen.
-xcp mode <ht|qw|off>          --> Sets whether you use hunt trick or quick
-                                > where upon entering an area on cp/gq. Use
-                                > 'off' to turn off this feature.
-
-snd update                    --> Automatically updates Search & Destroy.
-]])
+	function helpWrap (str, limit, indent, indent1)
+    	indent = indent or ""
+    	indent1 = indent1 or indent
+    	limit = limit or 76
+    	local here = 1-#indent1
+    	local lastColor = ''
+    	return indent1 .. str:gsub("(%s+)()(%S+)()",
+        	                function(sp, st, word, fi)
+            	                local delta = 0
+                	            here = here + delta
+                    	        if fi-here > limit then
+                        	        here = st - #indent + delta
+                            	    return "\n" .. word
+                            	end
+                        	end)
 	end
+
+	function onHelp(name, line, wildcards)
+		local str = wildcards[1]
+	    local helpFiles = {"mergePwar", "win", "fontsize", "linespace", "speed", "vidblain", "mark", "index areas", "silent", "sort", "xm", "xmap", "roomnote", "qw", "ht", "ah", "ak|kk|qk", "qs", "xq", "noexp", "nx", "go", "xrt|xrun", "cp|gq", "xcp", "xcp mode", "ms|msearch", "snd update", "snd reload"}
+
+    	local headers = {"cyan", "", string.rep("-", 76) .. "\n", "darkcyan", "", "Help keywords", "antiquewhite", "", " : " .. str .. "\n", "cyan", "", string.rep("-", 76) .. "\n"}
+
+    	ColourNote(unpack(headers))
+
+    	if str == "" or "" == nil or str == "xhelp" then
+        	ColourNote("darkcyan", "", "Plugin name    ", "antiquewhite", "", " : Search & Destroy")
+        	ColourNote("darkcyan", "", "Maintained by  ", "antiquewhite", "", " : Crowley")
+        	ColourNote("darkcyan", "", "Original Author", "antiquewhite", "", " : WinkleWinkle")
+        	ColourNote("darkcyan", "", "Credit to      ", "antiquewhite", "", " : Nokfah and Starling")
+        	Note()
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xhelp <command> (to view helpfiles below)")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Search & Destroy is a quality-of-life tool. It utilizes the mapper plugin in order to get to your quest mobs faster, your campaign targets faster, and yes, even global quest mobs. It makes every attempt to load up the keyword into an alias so all you have to do is type the alias and enter. It presents a window that displays your campaign or global targets (and eventually will show quest targets, perhaps tabbed). It uses its own runto feature in order to run to your personally chosen 'start' room of the area. To clarify, there are no 'start' rooms to any area. It's why the mapper plugin cannot just run you to an area because you tell it to.")}))
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("In short, it can speed up your quests/campaigns/global quests. It is NOT, however, a bot as some may claim.")}))
+        	Note()
+        	ColourNote("antiquewhite", "", "To get started, view the help files below:")
+        	Note()
+        	ColourNote("limegreen", "", unpack({helpWrap(table.concat(helpFiles, ", "))}))
+
+    	elseif str == "win" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset win <on|off|show|hide>")
+        	ColourNote("antiquewhite", "", "        xset winreset")
+        	Note()
+        	ColourNote("limegreen", "", "xset win:")
+        	ColourNote("antiquewhite", "", unpack({helpWrap("This command toggles the Search & Destroy miniwindow. Use 'on' or 'show' to show the window, and use 'off' or 'hide' to close the window.")}))
+        	Note()
+        	ColourNote("limegreen", "", "xset winreset:")
+        	ColourNote("antiquewhite", "", unpack({helpWrap("If, for any reason, the window goes missing and the previous command does not restore it, this command will reset the window to a default location on top of your windows.")}))
+
+		elseif str == "mergePwar" then
+			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": mergePwar")
+			Note()
+			ColourNote("antiquewhite", "", unpack({helpWrap("This command should be used if you are migrating from Pwar's version of Search and Destroy. Depending on how large your database is, this may take a few moments and WILL potentially lock up your MUSHclient while it is merging. Do not worry, for it will return to normal after the merge. Please be advised that you MUST have WinkleGold_Database.db located in your plugins folder for this to work.")}))
+
+    	elseif str == "fontsize" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset fontsize <#>")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Without an argument, it will display the current font size the miniwindow is using. With an argument, it will change the font size to the parameter.")}))
+
+    	elseif str == "linespace" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset linespace <#>")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Without an argument, it will display the current line spacing size the miniwindow is using. With an argument, it will change the line spacing size to the parameter.")}))
+
+    	elseif str == "speed" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset speed <walk|run>")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Without an argument, it will display the current movement speed the mapper is using. With an argument, it will change the map speed to walk (without using portals) or run (using portals).")}))
+
+    	elseif str == "vidblain" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset vidblain")
+        	ColourNote("antiquewhite", "", "        xset vidblain level <#>")
+        	Note()
+        	ColourNote("limegreen", "", "xset vidblain:")
+        	ColourNote("antiquewhite", "", unpack({helpWrap("This will toggle a fix that allows you to run to areas within Vidblain. This was necessary because of the random drop locations when you runto Vidblain without a portal. See the next command if you have a portal to an area within Vidblain.")}))
+        	Note()
+        	ColourNote("limegreen", "", "xset vidblain level <#>:")
+        	ColourNote("antiquewhite", "", unpack({helpWrap("This command is used to display or set the lowest level portal you have to an area in Vidblain. For example, if you have a level 1 portal to Sendhia, you would simply type 'xset vidblain level 1'. ")}))
+
+    	elseif str == "mark" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset mark")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("This command will set your current room as the designated 'start' room of the area.")}))
+
+    	elseif str == "index areas" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset index areas")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Occasionally, SnD does not realize you've mapped an area for whatever reason. This becomes apparent when you see a lot of red links on your campaign or global quest check list. When this happen, this command SHOULD fix it, but again, only if you've mapped the areas linked in red. If it does not, something else is amiss, and you should probably note Crowley about it.")}))
+
+    	elseif str == "silent" then
+    	    ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset silent <on|off>")
+	        Note()
+	        ColourNote("antiquewhite", "", unpack({helpWrap("This command will turn the display of campaign or global quest targets in the main window on or off. Soneone once mentioned it was redudant to have it in both the miniwindow and the main window, so for the sake of spamreduce, this was included.")}))
+
+	    elseif str == "sort" then
+    	    ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset sort <all|area|room|none>")
+	        Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Sorts out campaign lists by rooms, by areas, both, or default sort. May or may not be bugged.")}))
+
+    	elseif str == "rlh" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xm <room name>")
+        	ColourNote("antiquewhite", "", "        xmall <room name>")
+        	ColourNote("antiquewhite", "", "        xm rlh <#>")
+        	Note()
+        	ColourNote("limegreen", "", "xm <room name>:")
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Searches for the supplied room name within the area. It can match partial room names. To get a list of all rooms in the current area, use '%' as the room name.")}))
+        	Note()
+        	ColourNote("limegreen", "", "xmall <room name>:")
+        	ColourNote("antiquewhite", "", unpack({helpWrap("As with above, searches for the supplied room name, but across all zones. It can match partial room names. Would not suggest using '%' here as it will display every room you have mapped in Aardwolf.")}))
+        	Note()
+        	ColourNote("limegreen", "", "xm rlh <#>:")
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Without an argument, displays rooms that link to the current room. With an argument, displays rooms that link to your chosen room ID. This will display room ID, room name, and room zone name that links to the room.")}))
+
+    	elseif str == "xmap" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xmap move <roomID> <walk|run>")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Moves between rooms at default speed (see 'help xset speed') without argument, or, with argument, walks (without portals) or runs (with portals) to the supplied room ID.")}))
+
+    	elseif str == "roomnote" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": roomnote <area|area areakey>")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Displays roomnotes for the current room, current area, or for the supplied area keyword.")}))
+
+    	elseif str == "qw" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": qw<x> <mobname>")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Uses the 'where' command on the stored mobname based on quest, campaign, or global quest target. If an argument is supplied, it will 'where' the argument. Use 'x' if you want an exact match on mob name.")}))
+
+    	elseif str == "ht" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": ht <mob|stop>")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Executes the 'hunt trick' for the current campaign target or supplied argument. Use 'stop' to stop the hunt trick, which will work in most cases but may fail if a mob has a keyword of 'stop'.")}))
+
+    	elseif str == "ah" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": ah<a> <mobname>")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Automatically sends the 'hunt' command and executes the direction hunt leads you. Append 'a' in order to abort autohunting. This is useful for tracking quest mobs through mazes, or if you really want to, hunting players. However, you must have hunt practiced for it to work.")}))
+
+    	elseif str == "ak" or str == "kk" or str == "qk" then
+	        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <xset> <ak|kk|qk>")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("With the 'xset' argument, sets the interchangable command of 'ak', 'kk', and 'qk' to the command supplied. Without the 'xset' argument, executes the 'quick kill' command. If you wish to stack multiple commands, you must separate each command with a semicolon. For example, 'xset kick;bash' will kick the target, then bash the target.")}))
+
+    	elseif str == "qs" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": qs")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Executes a scan for the current quest, campaign, or global quest target.")}))
+
+    	elseif str == "xq" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xq")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Reloads and displays your current quest information.")}))
+
+    	elseif str == "nx" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": nx<->")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Moves to the next room in the list, or with '-', the previous room.")}))
+
+    	elseif str == "go" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": go <index #>")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Moves to the first room in the index, or with a supplied argument to the index number supplied.")}))
+
+    	elseif str == "xrt" or str == "xrun" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <xrt|xrun> <area keyword>")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Executes a run to the supplied area keyword. If a room has been marked (help 'xset mark') as the start room of the area, it will run there instead.")}))
+
+	  	elseif str == "noexp" then
+	        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset noexp <off|#>")
+	   	    Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Without an argument, it will display the current setting. With an argument, it will turn off monitoring for noexp or set a threshhold for turning on noexp. This feature is to keep you from accidentally leveling while you're campaign leveling.")}))
+
+    	elseif str == "cp" or str == "gq" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <cp|gq> <i|info|c|check>")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Displays information/check for campaigns and global quests. With the 'i' or 'info' argument, it will load the list of mobs in the miniwindow.")}))
+
+    	elseif str == "xcp" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xcp <index>")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Without an argument, this command will search for the first mob listed in the miniwindow. Otherwise, it will search for the mob based on the supplied index number.")}))
+
+    	elseif str == "xcp mode" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xcp mode <ht|qw|off>")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Without an argument, displays your current default action to take when searching for a mob using 'xcp' (see 'help xcp'). With an argument, sets your default action to 'ht' (hunt trick, 'help ht'), 'qw' (quick where, 'help qw'), or 'off' (no action taken).")}))
+
+    	elseif str == "snd update" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd update")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("Whenever Crowley announces a new version, this command will make it easy to update the Search & Destroy plugin.")}))
+
+    	elseif str == "ms" or str == "msearch" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <ms|msearch> <here|area> <mob name>")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("This command will search the mob database for the mob name supplied based on the area supplied (here, [area key], defaults to 'all' with no argument), returning the rooms the mob has been found, the area, and the times it has been found in that room.")}))
+
+    	elseif str == "snd reload" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd reload")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("If, for any reason, Search & Destroy stops functioning correctly, this theoretically should fix it. In some cases, it may be necessary to open up your plugins (Ctrl+Shift+P) and reinstall Search & Destroy.")}))
+
+    	elseif str == "snd migrate" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd migrate")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("This command is for previous users of Pwar's Search & Destroy. In an effort to not lose a previously built mob database, this command will migrate all data to this version of SnD.")}))
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("This will only work if the file name has not been altered from 'WinkleGold_Database.db' and that the file is located in the default plugin directory. If you have moved it or renamed it, please make sure it is located in the 'plugins' folder with the name 'WinkleGold_Database.db' and run this command again. Thank you.")}))
+
+    	elseif str == "mobkey" then
+        	ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset mobkey {<short desc>} {<keyword>} <all>")
+        	Note()
+        	ColourNote("antiquewhite", "", unpack({helpWrap("This will change the keyword to the mob based on the short description in the room you are currently in. You must use the braces to capture the information correctly. Adding the argument 'all' will change the keyword for all mobs with the same short description in the area rather than just in the room.")}))
+
+    	else
+        	ColourNote("antiquewhite", "", "No help files found with your query. Please see the help files below:")
+        	Note()
+        	ColourNote("limegreen", "", unpack({helpWrap(table.concat(helpFiles, ", "))}))
+    	end
+    	ColourNote("cyan", "", string.rep("-", 76))
+	end
+
+	function sndReload()
+		Execute(GetAlphaOption("script_prefix") .. "DoAfterSpecial(1, \"ReloadPlugin('" .. GetPluginID() .. "')\", sendto.script)")
+	end
+
+	function copyPwarDB()
+    	local f = io.open(GetInfo(60) .. "WinkleGold_Database.db", "r")
+
+    	if not f then
+        	ColourNote("tomato", "", "To start migration process, please locate the file 'WinkleGold_Database.db' and move it to the plugins folder. Then try again.")
+    	else
+	        f:close()
+    	    PwarDb = sqlite3.open(GetInfo(60) .. "/WinkleGold_Database.db")
+	        mapperDb = sqlite3.open(GetInfo(66) .. "Aardwolf.db")
+        	SnDdb = sqlite3.open(GetInfo(66) .. "databases/SnDdb.db")
+        	migrateTable = {}
+
+        	ColourNote("cyan", "", "Now copying data from Pwar's database. Go make a sandwich or something while this completes the process. It may take a few minutes. Your client will likely freeze during this operation. You have 10 seconds to get to somewhere safe first!")
+
+        	for i = 1,10 do
+            	DoAfterSpecial(i, "print('" .. 10-i .. " seconds left...')", 12)
+        	end
+
+        	DoAfterSpecial(10, [[
+        	local sqlQuery = "SELECT roomid, mobname, freq FROM mobs"
+
+        	for a in PwarDb:rows(sqlQuery) do
+            	zoneQuery = "SELECT area, name FROM rooms WHERE uid = " .. a[1]
+            	for b in mapperDb:rows(zoneQuery) do
+                	table.insert(migrateTable, {roomid = a[1],  mob = a[2], count = a[3], room = b[2], zone = b[1], keyword = ""})
+            	end
+        	end
+
+        	mapperDb:close()
+
+        	local keyQuery = "SELECT mobname, areaid, subname FROM mobsubs"
+
+        	for a in PwarDb:rows(keyQuery) do
+	            for i,v in ipairs(migrateTable) do
+    	            if v.mob:upper() == a[1]:upper() and v.zone:upper() == a[2]:upper() then
+	                    v.keyword = a[3]
+    	            end
+        	    end
+        	end
+
+        	PwarDb:close()
+
+        	for _,v in ipairs(migrateTable) do
+            	local sqlInsert = "INSERT INTO mobs VALUES ('" .. v.mob .. "','" .. v.room .. "'," .. tonumber(v.roomid) .. ",'" .. v.zone .. "'," .. v.count .. ",'" .. v.keyword .."')"
+
+            	SnDdb:exec(sqlInsert)
+        	end
+
+        	SnDdb:exec("DELETE FROM mobs WHERE rowid NOT IN (SELECT min(rowid) FROM mobs GROUP BY mobname, roomid)")
+
+        	SnDdb:close()
+
+        	ColourNote("cyan", "", "Finished migrating! You can now resume play!")]], 12)
+    	end
+	end
+
+	function mobKey(name, line, wildcards)
+    	if wildcards[1] == "" then
+	        ColourNote("cyan", "", "The correct syntax is: ", "antiquewhite", "", "xset mobkey {short name} {keyword} <all|area keyword>")
+	    else
+        	local short, keyword, span, sqlAppend, updateAppend = wildcards[1], wildcards[2], wildcards[3] or "", "", "room only."
+
+        	if span:upper() == "ALL" then
+	            sqlAppend = " AND zone = " .. gmcp("room.info.zone")
+            	updateAppend = "entire zone."
+        	elseif span and span ~= "" then
+	            sqlAppend = " AND zone = " .. span
+            	updateAppend = "in zone " .. span
+        	end
+
+        	SnDdb = sqlite3.open(GetInfo(66) .. "databases/SnDdb.db")
+
+    	    local sqlQuery = "UPDATE mobs SET keyword = '" .. keyword .. "' WHERE mob LIKE '" .. short .. "'" .. sqlAppend
+
+	        SnDdb:exec(sqlQuery)
+
+        	ColourNote("cyan", "", "Updated " .. short .. " keyword to " .. keyword .. " in " .. updateAppend)
+
+        	SnDdb:close()
+
+    	end
+	end
+
+	function mobLookup (name, location, level, exact)
+	    SnDdb = sqlite3.open(GetInfo(66) .. "databases/SnDdb.db")
+
+	    if exact ~= "" or exact ~= nil then exact = false end
+
+	    local locFound, locQuery, searchQuery, lvlQuery, searchMsg = false, "SELECT * FROM area WHERE key LIKE '%s'", "", " AND area.minlvl <= %s AND area.maxlvl >= %s", "Search for " .. name .. " in  " .. location
+
+	    if location ~= "" or location ~= nil then
+    	    if location:upper() == "HERE" then
+	            location = gmcp("room.info.zone")
+        	elseif location:upper() == "ALL" then
+	            location = "%"
+        	end
+
+        	locQuery = locQuery:format(fixSQL(location))
+
+        	for a in SnDdb:rows(locQuery) do
+            	if a[1] then
+	                locFound = true
+            	end
+        	end
+    	end
+
+    	if locFound then
+	        if exact then
+    	        searchQuery = "SELECT * FROM mobs, area WHERE zone LIKE '" .. fixSQL(location)  .. "' AND mob LIKE '" .. fixSQL(name) .. "'"
+	        else
+    	        searchQuery = "SELECT * FROM mobs, area WHERE zone LIKE '" .. fixSQL(location) .. "' AND mob LIKE '%" .. fixSQL(name) .. "%'"
+	        end
+	    else
+        	if exact then
+	            searchQuery = "SELECT * FROM mobs, area WHERE mobs.mob LIKE '" .. fixSQL(name) .. "' AND mobs.room LIKE '" .. fixSQL(location) .. "' AND area.key = mobs.zone"
+        	else
+	            searchQuery = "SELECT * FROM mobs, area WHERE mobs.mob LIKE '%" .. fixSQL(name) .. "%' AND mobs.room LIKE '%" .. fixSQL(location) .. "%' AND area.key = mobs.zone"
+        	end
+    	end
+
+    	if tonumber(level) then
+	        searchQuery = searchQuery .. lvlQuery:format(level, level)
+	    end
+
+	    searchQuery = searchQuery .. " and area.noquest LIKE 'false' and mobs.zone = area.key ORDER BY mobs.zone, mobs.Count DESC"
+
+		print(searchQuery)
+
+    	SnDdb:close()
+
+	    showResults(searchQuery, searchMsg)
+	end
+
+	function showResults(query, msg)
+
+	    SnDdb = sqlite3.open(GetInfo(66) .. "databases/SnDdb.db")
+	    mshow = {}
+	    local searchMsg, failure = msg, "No matches found!"
+
+	    local dividers = "+" .. string.rep("-", 30) .. "+" .. string.rep("-", 25) .. "+" .. string.rep("-", 13) .. "+" .. string.rep("-", 12) .. "+" .. string.rep("-", 7) .. "+"
+
+    	ColourNote("orange", "", searchMsg .. " ...")
+    	ColourNote("dimgray", "", dividers)
+    	ColourNote("dimgray", "", "| ", "white", "", "Mob name" .. string.rep(" ", 28-#"Mob name"), "dimgray", "", " | ", "green", "", "Room name" .. string.rep(" ", 23-#"Room name"), "dimgray", "", " | ", "cyan", "", "ID" .. string.rep(" ", 11-#"ID"), "dimgray", "", " | ", "yellow", "", "Zone" .. string.rep(" ", 10-#"Zone"), "dimgray", "", " | ", "white", "", "Count ", "dimgray", "", "|"  )
+
+    	ColourNote("dimgray", "", dividers)
+
+    	local count = 0
+
+    	for a in SnDdb:rows(query) do
+        	count = count + 1
+        	if #a > 0 then
+            	mName, rName, rID, zName, mobCount = count .. ". " .. a[1], a[2], tostring(a[3]), a[4], a[5]
+            	if #mName > 28 then
+	                mName = string.sub(mName, 1, 28)
+    	        end
+
+        	    if #rName > 23 then
+            	    rName = string.sub(rName, 1, 23)
+            	end
+
+            	ridStr = count .. ". " .. rID
+
+            	bgColor = "black"
+
+            	if count%2 == 0 then
+                	bgColor = "midnightblue"
+            	end
+
+            	table.insert(mshow, {a[1], zName, rID})
+
+            	ColourTell("dimgray", "", "|", "white", bgColor, " " .. string.format("%-29s",mName), "dimgray", "", "|", "limegreen", bgColor, " " .. string.format("%-24s", rName), "dimgray", "", "|", "cyan", bgColor, " " .. count .. ". ")
+            	Hyperlink("mapper goto " .. rID, rID, "goto id", "cyan", bgColor, 0)
+            	ColourTell("", bgColor,  string.rep(" ", 12-#ridStr),"dimgray", "", "|", "yellow", bgColor, " " .. string.format("%-11s", zName), "dimgray", "", "|", "white", bgColor, " " .. string.format("%-5d", mobCount), "dimgray", bgColor, " |\n")
+
+        	end
+    	end
+
+    	if count == 0 then
+        	ColourNote("dimgray", "", "| ", "tomato", "", string.format("%-89s", failure), "dimgray", "", " |")
+    	end
+
+    	ColourNote("dimgray", "", dividers)
+
+    	if count > 0 and count < 2 then
+        	ColourNote("orange", "", count .. " match found")
+    	elseif count > 1 then
+        	ColourNote("orange", "", count .. " matches found")
+    	end
+
+    	SnDdb:close()
+    	SnDdb = nil
+	end
+
+	function mobShow(name, line, args)
+    	if #mshow ~= 0 then
+	        mob, zone, room, rid = mshow[tonumber(args[1])][1], mshow[tonumber(args[1])][2], mshow[tonumber(args[1])][3], mshow[tonumber(args[1])][4]
+        	Execute(args[2] .. " " .. string.format(showStr, mob, zone, room, rid))
+    	else
+	        ColourNote("orange", "", "No results loaded. Try searching for your mob first.")
+	    end
+	end
+
+	function mobGo(name, line, args)
+    	if #mshow ~= 0 then
+        	Execute("mapper goto " .. mshow[tonumber(args[1])][4])
+    	else
+        	ColourNote("orange", "", "No results loaded. Try searching for your mob first.")
+    	end
+	end
+
+	function fixSQL (str)
+   		return str:gsub("'", "''")
+	end
+
+    function onSearch(name, line, wildcards)
+        local param1, param2, param3 = wildcards[1], wildcards[2], (tonumber(wildcards[3]) and tonumber(wildcards[3])) or nil
+
+        if string.upper(param1) == "HELP" then
+            onHelp()
+        else
+            local zone, name, sendit = param1, param2, false
+
+            if #name < 1 then
+                name = zone
+                zone = "all"
+                sendit = true
+       	     elseif #name >= 1 and #name < 2 then
+                ColourNote("#802800", "", "*** You need at least 2 characters of the mob name!")
+            else
+                sendit = true
+            end
+
+            if sendit then
+                if param3 then
+                    mobLookup(name, zone, param3)
+                else
+                    mobLookup(name, zone)
+                end
+            else
+                ColourNote("#802800", "", "*** Syntax error! Use: ", "green", "", "msearch <areakey|here|all> <mob>")
+            end
+        end
+    end
 
 ]]>
 </script>
@@ -4503,10 +5002,10 @@ snd update                    --> Automatically updates Search & Destroy.
 <!-- Plugin Update automatic -->
 	<alias enabled="y" match="snd update" script="update_plugin" sequence="100">
 	</alias>
-	<alias enabled="y" match="xhelp" script="showHelp" sequence="100">
+	<alias enabled="y" match="^xhelp(?:\s(.*))?$" regexp="y" script="onHelp" sequence="100">
 	</alias>
 
-	<alias enabled="y" match="xset silent(?: (on|off))?" regexp="y" script="xset_silentMode" sequence="100">
+	<alias enabled="y" match="^xset silent(?: (on|off))?" regexp="y" script="xset_silentMode" sequence="100">
 	</alias>
 
 	<alias enabled="y" match="xset sort(?: (all|room|area|none))?" regexp="y" script="xset_sortBy" sequence="100">
@@ -4585,7 +5084,7 @@ snd update                    --> Automatically updates Search & Destroy.
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 <!-- Quick-kill commands: qk, ak, kk, xset attack -->
-	<alias	match="^(?:quick kill|ak|kk|qk)$"
+	<alias	match="^(?:quick kill|kk|qk)$"
 			script="quick_kill"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
@@ -4742,6 +5241,40 @@ snd update                    --> Automatically updates Search & Destroy.
 	<alias	match="^xtest popmsg$"
 			script="xtest_popmsg"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+	<alias  match="^snd reload$"
+			script="sndReload"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
+	<alias	match="snd create$"
+			script="createNew"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+<!-- New commands -->
+  <alias
+   match="^m(?:ob)?s(?:earch)? ([\p{P}\w]+)(?:\s([^0-9]+))?(?:\s+(\d+))?$"
+   enabled="y"
+   group="Mob_Database"
+   regexp="y"
+   script="onSearch"
+   sequence="100"
+  >
+  </alias>
+
+  <alias
+   match="^mgo(?:to)? (\d+)$"
+   enabled="y"
+   regexp="y"
+   script="mobGo"
+   sequence="100"
+  >
+  </alias>
+
+  <alias
+	match="mergePwar"
+	enabled="y"
+	script="copyPwarDB"
+	sequence="100"
+  >
+	</alias>
 </aliases>
 </muclient>

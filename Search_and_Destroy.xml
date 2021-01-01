@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.2" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="5.3" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -1326,7 +1326,7 @@ end
 			-- in all of these, the action is "status"
 			elseif (q.action == "status" and q.target == "killed") then		-- on quest, qmob has been killed (do not confuse q.target with q.targ above!)
                 stopUpdate = true
-                findMobs(targetMob, tonumber(gmcp("room.info.num")))
+                findMobs(targetMob or "", tonumber(gmcp("room.info.num")))
 				quest_target.qstat = "3"
 				ColourNote("#FF5000", "", "\nSearch and Destroy: You have already killed your quest target!\n")
 			--elseif (q.action == "status" and q.targ and q.timer) then		-- on quest, qmob not yet killed
@@ -1438,7 +1438,7 @@ end
 
 	function cp_mob_killed()
         stopUpdate = true
-        findMobs(targetMob, tonumber(gmcp("room.info.num")))
+        findMobs(targetMob or "", tonumber(gmcp("room.info.num")))
 
 		if (player_on_gq == "no") then
 			xcp_retry_stat = 1
@@ -4604,31 +4604,37 @@ function goto_number(name, line, wildcards)
 
 
     function findMobs(name, room)
-        SnDdb = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
 
-        name = name:gsub("'", "''")
+		if #name > 1 then
+        	SnDdb = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
+
+        	name = name:gsub("'", "''")
 
 
-        local rname, zname = strip_colours(gmcp("room.info.name")), gmcp("room.info.zone")
-        local sqlQuery = "SELECT * FROM mobs WHERE mob LIKE '" .. name:gsub("'", "''") .. "' AND roomid = " .. room
-        local sqlUpdate = "UPDATE mobs SET Count = Count + 1 WHERE mob LIKE '" .. name:gsub("'", "''") .. "' AND roomid = " .. room
-        local sqlInsert = "INSERT INTO mobs VALUES ('" .. name:gsub("'", "''") .. "','" .. rname:gsub("'", "''") .. "'," .. room .. ",'" .. zname .. "',1,'" .. gmkw(name) .. "')"
+        	local rname, zname = strip_colours(gmcp("room.info.name")), gmcp("room.info.zone")
+        	local sqlQuery = "SELECT * FROM mobs WHERE mob LIKE '" .. name:gsub("'", "''") .. "' AND roomid = " .. room
+        	local sqlUpdate = "UPDATE mobs SET Count = Count + 1 WHERE mob LIKE '" .. name:gsub("'", "''") .. "' AND roomid = " .. room
+        	local sqlInsert = "INSERT INTO mobs VALUES ('" .. name:gsub("'", "''") .. "','" .. rname:gsub("'", "''") .. "'," .. room .. ",'" .. zname .. "',1,'" .. gmkw(name) .. "')"
 
-        local mobFound = false
+        	local mobFound = false
 
-        for m in SnDdb:rows(sqlQuery) do
-            if m[1] then
-                mobFound = true
-            end
-        end
+        	for m in SnDdb:rows(sqlQuery) do
+            	if m[1] then
+	                mobFound = true
+            	end
+        	end
 
-        if mobFound then
-            SnDdb:exec(sqlUpdate)
-        else
-            SnDdb:exec(sqlInsert)
-        end
+        	if mobFound then
+            	SnDdb:exec(sqlUpdate)
+        	else
+	            SnDdb:exec(sqlInsert)
+        	end
 
-        SnDdb:close_vm()
+        	SnDdb:close_vm()
+		else
+			ColourNote("#802800", "", "*** Target mob not captured. Possibly due to a one-hit-kill. Mob database not updated.")
+		end
+
         stopUpdate = false
     end
 

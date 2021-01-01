@@ -1,4 +1,7 @@
 # CHANGELOG
+**v5.3**<br>
+*fix*       : Fixed (hopefully) instances where the mob is killed in one hit and not added to mob database.
+
 **v5.2**<br>
 *fix*       : Fixed all the previous bugs relating to indexing errors.<br>
 *fix*       : Added 'ak' back to the public version and fixed the bug that would split commands erroneously.

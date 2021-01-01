@@ -1,4 +1,9 @@
 # CHANGELOG
+**v5.0**<br>
+*feature*   : Added long-awaited mob database!<br>
+*feature*   : Added 'snd reload' so you do not have to open Plugins to reinstall.<br>
+*change*    : Changed how the help files look. See 'xhelp' for more info.<br>
+*Notes*     : Still working on a fix for a couple bugs, but wanted to push this out in the meantime.
 
 **v4.60**<br>
 *feature*   : Added changelog per request.<br>

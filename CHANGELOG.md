@@ -1,4 +1,11 @@
 # CHANGELOG
+**v5.2**<br>
+*fix*       : Fixed all the previous bugs relating to indexing errors.<br>
+*fix*       : Added 'ak' back to the public version and fixed the bug that would split commands erroneously.
+
+**v5.1**<br>
+*fix*       : Attempted to fix, failed misrable. See 5.2.
+
 **v5.0**<br>
 *feature*   : Added long-awaited mob database!<br>
 *feature*   : Added 'snd reload' so you do not have to open Plugins to reinstall.<br>

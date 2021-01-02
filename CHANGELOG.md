@@ -1,4 +1,9 @@
 # CHANGELOG
+**v5.5**<br>
+*fix*       : Migrating Pwar's database would not work because the SnDdb database was not created yet. Fixed.<br>
+*fix*       : Quick kill commands would not accept multiple word commands.<br>
+*feature*   : 'xhelp summary' will provide a summary of all commands. For more details, visit each help file.<br>
+
 **v5.4**<br>
 *fix*       : The quick kill command was not executing single letter commands. Now fixed.<br>
 **v5.3**<br>

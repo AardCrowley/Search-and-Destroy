@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.4" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="5.5" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -33,8 +33,6 @@
 	-- This script was originally improved upon by Starling. Credit is due to Starling for the job she did on the plugin in the past, but in order to ensure future compliance with Aardwolf and MUSHclient, maintenance will now be provided by me. If you have any questions, feel free to shoot me a message on Personal or through tells. I'll make changes as I see fit to the code. // Crowley
 
 	--[[ ToDo List:
-		* Move 'hiding' mobs further down the list
-		* Add a mob database
 		* Add ability to keyword mobs, tie in with mob database
 		* Change way XRT works - if no shortname found, run to best matching area
 
@@ -245,6 +243,7 @@
 		ColourNote("#FF3000", "", "    " .. current_sd_version .. " installed at " .. os.time() )
 		print("")
 		ColourNote("#FF3000", "", "    " .. "For support, contact Crowley" )
+		ColourNote("#FF3000", "", "    " .. "Note: It's beneficial to run 'xset index areas' if you have never run it before." )
 		ColourNote("#808080", "", "+=================================================================+\n")
 		windowinfo = movewindow.install (win, miniwin.pos_center, miniwin.create_absolute_location, false, nil, {mouseup=MouseUp, mousedown=LeftClickOnly, dragmove=LeftClickOnly, dragrelease=LeftClickOnly},{x=win_pos_x, y=win_pos_y})
 		xg_create_window()
@@ -2475,7 +2474,7 @@ function goto_number(name, line, wildcards)
 		if (short_mob_name == nil) or (short_mob_name == "") or (short_mob_name == "-1") then
 			ColourNote("#FF5000", "", "\nSearch and Destroy: 'Quick-kill' has no target.  Use 'ht', 'qw', or 'xcp' to select a target.\n")
 		else
-			for command in quick_kill_command:gmatch("%a+[^;]?") do
+			for command in quick_kill_command:gmatch("[%a%s]+[^;]?") do
 				Execute(command .. " '" .. short_mob_name .. "'")
 			end
 			--Execute(quick_kill_command .. " '" .. short_mob_name .. "'")
@@ -4141,7 +4140,7 @@ function goto_number(name, line, wildcards)
 
 	function onHelp(name, line, wildcards)
 		local str = wildcards[1]
-	    local helpFiles = {"win", "fontsize", "linespace", "speed", "vidblain", "mark", "index areas", "silent", "sort", "xm", "xmap", "roomnote", "qw", "ht", "ah", "ak|kk|qk", "qs", "xq", "noexp", "nx", "go", "xrt|xrun", "cp|gq", "xcp", "xcp mode", "ms|msearch", "mgo|mgoto", "snd migrate|mergePwar", "snd update", "snd reload"}
+	    local helpFiles = {"win", "fontsize", "linespace", "speed", "vidblain", "mark", "index areas", "silent", "sort", "xm", "xmap", "roomnote", "qw", "ht", "ah", "ak|kk|qk", "qs", "xq", "noexp", "nx", "go", "xrt|xrun", "cp|gq", "xcp", "xcp mode", "ms|msearch", "mgo|mgoto", "snd migrate|mergePwar", "snd update", "snd reload", "summary"}
 
     	local headers = {"cyan", "", string.rep("-", 76) .. "\n", "darkcyan", "", "Help keywords", "antiquewhite", "", " : " .. str .. "\n", "cyan", "", string.rep("-", 76) .. "\n"}
 
@@ -4339,6 +4338,79 @@ function goto_number(name, line, wildcards)
         	Note()
         	ColourNote("antiquewhite", "", unpack({helpWrap("This will change the keyword to the mob based on the short description in the room you are currently in. You must use the braces to capture the information correctly. Adding the argument 'all' will change the keyword for all mobs with the same short description in the area rather than just in the room.")}))
 
+		elseif str == "summary" then
+		ColourNote("yellow", "", "Commands:")
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xset win <on|off>: Shows your hides the window.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xset winreset: Resets the window.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xset fontsize <#>: Displays current font size or changes it to argument.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xset linespace <#>: Displays line spacing size or changes it to argument.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xset speed <walk|run>: Displays current move speed, or changes it to argument.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xset vidblain:  Fixes Vidblain's "random drop" so you can still run to areas within Vidblain.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xset mark:  Sets current room as "start" for the current area.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xset index areas:  Indexes areas. Use this if you get a lot of "red" links but you've mapped the area.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xset silent <on|off>:  Toggles displaying target list in main MUD window.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xset sort <all|area|room|none>: Toggles sorting by area name in area cps/gqs, room cps/gqs, none, or both.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xm rlh <roomID>:  Displays rooms linking to <roomID> or current room.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xmall <room name>:  Displays rooms across the MUD matching the argument.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xm <room name>:  Displays rooms in zone matching the argument.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xmap move <roomID> <run|walk>:  Move to the room id at default speed, or walks (without portals) or runs (with portals) based on argument.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("roomnote <area|area areakey>:  Displays roomnotes for current room, current area, or area argument.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("qw<x> <mobname>:  Where's the current stored target or argument. Use 'x' to where exact mob name.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("ht <mob|stop>:  Executes the 'hunt trick' for current target or argument. Use 'stop' to abort.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("ah<a> <targ>:  Autohunts target. Append 'a' with no target to abort.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xset <ak|kk|qk>:  Sets the 'quick kill' command. All options are interchangeable.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("<ak|kk|qk>:  Executes the 'quick kill' command. All options are interchangeable.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("qs:  Executes a 'quick scan' for the stored target.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xq:  Reloads the quest info.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xset noexp <off|#>:  Displays current setting with no argument. With argument, toggles noexp off or sets it to turn on at # exp remaining.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("nx<->:  Moves to the next room on the list, or the previous room with -.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("go <index>:  Runs to the first room in the index, or to the index number with argument.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("<xrt|xrun> <area>:  Runs to the area matching the argument.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("<cp|gq> i|info:  Displays campaign/gquest info.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("<cp|gq> ch|check:  Displays campaign/gquest check.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xcp <index>:  Without argument, goes to top result in cp/gq check. Otherwise heads to the index chosen.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xcp mode <ht|qw|off>:  Sets whether you use hunt trick or quick where upon entering an area on cp/gq. Use 'off' to turn off this feature.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("snd update:  Automatically updates Search & Destroy.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("ms<earch> <area|here|all> <mob>: Searches for mobs in the mob database.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("mgo<to> <idx>: After searching for mobs, goes to the index chosen.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("snd reload: Reloads the plugin if it errors out.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("snd migrate: If you used Pwar's plugin and have a database, this will migrate it over to this version so you do not lose your hard earned data.")}))
+
     	else
         	ColourNote("antiquewhite", "", "No help files found with your query. Please see the help files below:")
         	Note()
@@ -4352,6 +4424,31 @@ function goto_number(name, line, wildcards)
 	end
 
 	function copyPwarDB()
+
+		os.remove(GetInfo(66) .. "/SnDdb.db")
+
+		    SnDdb = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
+
+    SnDdb:exec([[CREATE TABLE "area" (
+	            "name"	text NOT NULL,
+	            "key"	text NOT NULL,
+	            "minlvl"	INTEGER NOT NULL,
+	            "maxlvl"	INTEGER NOT NULL,
+	            "lock"	INTEGER NOT NULL,
+	            "startRoom"	INT,
+	            "noquest"	TEXT,
+	            "vidblain"	TEXT,
+                "userKey"	TEXT)]])
+
+    SnDdb:exec([[CREATE TABLE mobs (
+                "mob" text NOT NULL,
+                room text NOT NULL,
+                roomid integer NOT NULL,
+                zone text NOT NULL,
+                count integer NOT NULL,
+                keyword text NOT NULL
+        )]])
+
     	local f = io.open(GetInfo(60) .. "WinkleGold_Database.db", "r")
 
     	if not f then

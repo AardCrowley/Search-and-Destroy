@@ -70,7 +70,8 @@
 	local db_file_1
 	local db_file_2
 	local mapper_db_file = GetInfo(66)..WorldName()..".db"	-- typically aardwolf.db, normally found in main Mushclient folder
-	--local sd_db_file = GetPluginInfo(GetPluginID(), 20) .. "sddb.db"	-- sddb.db, normally found in MUSHClient/worlds/plugins folder
+	local sd_db_file = GetPluginInfo(GetPluginID(), 20) .. "sddb.db"	-- sddb.db, normally found in MUSHClient/worlds/plugins folder
+	local mob_kw_table = "mob_keyword_exceptions"
 
 -- [[ Current, previous room data GMCP_room_info ]]
 	local current_room  = { rmid = "-1", arid = "-1", maze = "no", exits = {} }
@@ -247,18 +248,39 @@
 		ColourNote("#808080", "", "+=================================================================+\n")
 		windowinfo = movewindow.install (win, miniwin.pos_center, miniwin.create_absolute_location, false, nil, {mouseup=MouseUp, mousedown=LeftClickOnly, dragmove=LeftClickOnly, dragrelease=LeftClickOnly},{x=win_pos_x, y=win_pos_y})
 		xg_create_window()
-	--	db = assert(sqlite3.open(sd_db_file))
-		--if not db then db = assert (sqlite3.open(dbPath)) end
-		--DebugNote("opened WinkleGold_Database.db")
-		--print(sql_table_exists("mobs"))
-	--	if not sql_table_exists("mobs") then
-	--	--DebugNote("No tables found in database, creating fresh structure.")
-	--		create_sddb_tables()
-	--		--print("create sql tables")
-	--	else
-	--		--print("no create sql tables")
-	--	end
-	--	db:close()
+		db = assert(sqlite3.open(sd_db_file))
+		if not db then db = assert (sqlite3.open(dbPath)) end
+		-- DebugNote("opened WinkleGold_Database.db")
+		if not sql_table_exists(db, mob_kw_table) then
+		--DebugNote("No tables found in database, creating fwresh structure.")
+			create_mob_aliases_table(db)
+			--print("create sql tables")
+		end
+		db:close()
+	end
+
+	function sql_table_exists(db, table_name)
+		local found = false
+		function found_table()
+			found = true
+			return 0
+		end
+		db:exec("SELECT name FROM sqlite_master WHERE type='table' AND name='" .. table_name .. "';", found_table)
+		Note("Db found: " .. tostring(found))
+		return found
+	end
+
+	function create_mob_aliases_table(db)
+		Note("Creating mob aliases database table")
+		db:execute(string.format([[
+			CREATE TABLE IF NOT EXISTS %s (
+				area_name	TEXT NOT NULL,
+				mob_name	TEXT NOT NULL,
+				alias		TEXT NOT NULL,
+				UNIQUE(area_name, mob_name)
+			);
+		]], mob_kw_table))
+		populate_mob_alias_table(db)
 	end
 
 	local init_called = 0
@@ -1173,18 +1195,104 @@ end
 
 		["zoo"]			= { ["a black-footed pine marten"]			= { kw="pine marte"			}, }, }
 
+	function populate_mob_alias_table(db)
+		Note("Populating mob aliases database")
+		local inserts = {}
+		for area, mob_aliases in pairs(gmkw_exceptions) do
+			for mob_name, alias in pairs(mob_aliases) do
+				local str = string.format("INSERT INTO %s VALUES (%s,%s,%s);", mob_kw_table, fixsql(area), fixsql(mob_name), fixsql(alias["kw"]))
+				table.insert(inserts, str)
+			end
+		end
+		db:execute(table.concat(inserts, ""))
+	end
+
+	function set_mob_keyword_alias(name, line, wildcards)
+		local area = wildcards.area or current_room.arid
+		local mob_name = wildcards.name
+		local alias = wildcards.alias
+
+		save_mob_keyword_alias(area, mob_name, alias)
+
+		if full_mob_name == mob_name then
+			short_mob_name = alias
+		end
+	end
+
+	function set_current_mob_keyword_alias(name, line, wildcards)
+		local alias = wildcards.alias
+		local area
+
+		Note("Short mob name is " .. short_mob_name)
+		if (short_mob_name == nil) or (short_mob_name == "") or (short_mob_name == "-1") or (short_mob_name == -1) then
+			ColourNote("#FF5000", "", "\nSearch and Destroy: 'alias' has no target.  Use 'ht', 'qw', or 'xcp' to select a target, or specify the area and mob name with ",
+				"", "", "xset alias <area> \"<mob name>\" \"<alias>\"")
+		else
+			-- find area. Check if it's a quest target
+			if quest_target.mob and quest_target.mob == full_mob_name then
+				area = quest_target.arid
+			end
+
+			if not area then
+				area = main_target_list[xcp_index].arid
+			end
+
+			save_mob_keyword_alias(area, full_mob_name, alias)
+			short_mob_name = alias
+		end
+	end	
+
+	function save_mob_keyword_alias(area, mob_name, alias)
+		local found_area = false
+		local query
+
+		function area_found_callback()
+			found_area = true
+			return 0
+		end
+
+		local db = assert(sqlite3.open(mapper_db_file))
+		db:exec(string.format("SELECT uid FROM areas WHERE uid = %s", fixsql(area)), area_found_callback)
+		db:close_vm()
+
+		if not found_area then
+			ColourNote("red", "", "Area ", "yellow", "", area, "red", "", " not known. Aborting alias creation.\n")
+			return
+		end
+
+		local db = assert(sqlite3.open(sd_db_file))
+		query = string.format("INSERT OR REPLACE INTO %s VALUES (%s,%s,%s);", mob_kw_table, fixsql(area), fixsql(mob_name), fixsql(alias))
+		db:exec(query)
+		db:close_vm()
+
+		ColourNote(
+			"", "", "Updated alias for ", 
+			"green", "", mob_name, 
+			"", "", " to alias ",
+			"green", "", alias,
+			"", "", " in area ",
+			"green", "", area .. "\n"
+		)
+	end
+
 	function gmkw(s, a)	-- guess mob keywords
 		if not s then return "" end
 		local ri = current_room
 		local ar = a or ri.zone
 		local guess
-		if gmkw_exceptions[ar] then			-- Is the mob listed as a keyword exception?  if so, look up keywords from the exception table instead of guessing.
-			if gmkw_exceptions[ar][s] then
-				guess = gmkw_exceptions[ar][s].kw	-- Special thanks to Redryn for being obtuse and aggravating me enough that I added this.  Dick.
-				return guess
-			else
-				--
-			end
+		
+		local db = sqlite3.open(sd_db_file)
+		function found_alias(_udata, _cols, values, _names)
+			guess = values[1]
+			return 0
+		end
+		query = string.format("SELECT alias FROM %s WHERE area_name = %s AND mob_name = %s;", mob_kw_table, fixsql(ar), fixsql(s))
+		db:exec(query, found_alias)
+		db:close_vm()
+
+		if guess then
+			ColourNote("", "", "Found custom alias for ", "green", "", s, "", "", ": ", "green", "", guess)
+			return guess
 		end
 
 		local omit = gmkw_omit
@@ -2471,7 +2579,7 @@ function goto_number(name, line, wildcards)
 	end
 
 	function quick_kill(name, line, wildcards)
-		if (short_mob_name == nil) or (short_mob_name == "") or (short_mob_name == "-1") then
+		if (short_mob_name == nil) or (short_mob_name == "") or (short_mob_name == "-1") or (short_mob_name == -1) then
 			ColourNote("#FF5000", "", "\nSearch and Destroy: 'Quick-kill' has no target.  Use 'ht', 'qw', or 'xcp' to select a target.\n")
 		else
 			for command in quick_kill_command:gmatch("[%a%s%p]+[^;]?") do
@@ -5322,6 +5430,14 @@ function goto_number(name, line, wildcards)
 	<alias	match="^xset sendecho$"
 			script=""
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match='^xset alias( (?<area>\w+))? +"(?<name>.+?)" +"(?<alias>.+?)"$'
+		script="set_mob_keyword_alias"
+		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xset alias +(?<alias>[\w- ']+?)$"
+		script="set_current_mob_keyword_alias"
+		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 <!-- xset window commands -->
 	<alias	match="^xset fontsize( (?<size>[0-9]+))?$"

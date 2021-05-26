@@ -2228,7 +2228,7 @@ end
 						xrun_to("", "", {destination=t.arid})
 					end
 				else	-- Room cp:  get target room from mapper, but don't move yet.  "go" takes you to room.
-					search_rooms(t.roomName .. "|" .. t.arid, "area", t.kw)
+					search_rooms(t.roomName .. "|" .. t.arid, "area", t.mob)
 				end
 			else
 				ColourNote("#FF5000", "", "No item exists, or data is busy")
@@ -2751,7 +2751,9 @@ function goto_number(name, line, wildcards)
 			local db = assert(sqlite3.open(mapper_db_file))
 			local results = {}
 			local roomid_list = {}
+			local has_results = false
 			for row in db:nrows(select) do
+				has_results = true
 				local id = (tonumber(row.uid) or -1) -- sanitize text room ids for "unmappable" (nomap) rooms that are now being mapped
 				results[#results + 1] = {
 					rmid = id,
@@ -2765,6 +2767,34 @@ function goto_number(name, line, wildcards)
 
 			end   -- finding rooms
 			db:close_vm()
+
+			if has_results and fullMobName then
+				local SnDdb = assert(sqlite3.open(snd_db_file))
+				select = string.format("SELECT roomid, count FROM mobs WHERE zone = %s AND mob = %s;", fixsql(arid), fixsql(fullMobName))
+				
+				local count_by_room = {}
+				for row in SnDdb:nrows(select) do
+					count_by_room[row.roomid] = row.count
+				end
+
+				for i, result in ipairs(results) do
+					result.count = count_by_room[result.rmid] or 0
+				end
+
+				function sort_by_count(a, b)
+					if a.count > b.count then
+						return true
+					elseif	a.count < b.count then
+						return false
+					else
+						return a.rmid < b.rmid
+					end
+				end
+
+				table.sort(results, sort_by_count)
+				SnDdb:close_vm()
+			end
+
 			search_rooms_results(results)
 		end
 	end
@@ -2798,7 +2828,7 @@ function goto_number(name, line, wildcards)
 			Hyperlink("go " .. mapper_area_index, line2, "go to item " .. mapper_area_index, "lightblue", "", 0)
 			Hyperlink("mapper where " .. v.rmid, "   {sw}", "click for speedwalk to this room", "#FF5000", "", 0)
 			gotoList[mapper_area_index] = v.rmid
-			print("")
+			print(string.format(" (%i)", v.count))
 			mapper_area_index = mapper_area_index + 1
 		end
 		if (mapper_area_index == 0) then
@@ -2809,11 +2839,11 @@ function goto_number(name, line, wildcards)
 	end
 
 	function map_area(name, line, wildcards)
-		search_rooms(wildcards.loc, 'area', wildcards.mob)
+		search_rooms(wildcards.loc, 'area')
 	end
 
 	function map_area_all(name, line, wildcards)
-		search_rooms(wildcards.loc .. "|all", 'all', wildcards.mob)
+		search_rooms(wildcards.loc .. "|all", 'all')
 	end
 
 --	[[ "xwhere" command ]]

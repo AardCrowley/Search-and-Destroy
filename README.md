@@ -117,8 +117,29 @@ Commands:<br>
 	&gt;where upon entering an area on cp/gq. Use <br>
 	&gt;'off' to turn off this feature.<br>
 **xcp quest**<br>
-	&gt;Toggle whether `xcp` will target your current<br>
-	&gt;quest mob if you have are on a quest.<br>
+	&gt;Toggles whether or not `xcp` with no args<br>
+	&gt;will target your current quest mob if you<br>
+	&gt;are on a quest.<br>
+<br>
+**xset kw &lt;mob name&gt;**<br>
+	&gt;Sets the keyword for the currently targeted<br>
+	&gt;mob. If used without a mob name then it will<br>
+	&gt;open dialogs to rename any mob.<br>
+	&gt;Say you have the campaign target 'a yummy<br>
+	&gt;beef pot pie.' By default, S&D might use<br>
+	&gt;'yummy pie' but that doesn't actually target<br>
+	&gt;You can then do `xset kw beef pie` to change<br>
+	&gt;it.<br>
+**xset autocon**<br>
+	&gt;Toggle whether or not to perform a consider<br>
+	&gt;upon entering a target room. Any mobs found<br>
+	&gt;will be added to the mobs database. If the<br>
+	&gt;target mob is not here it will then scan.<br>
+	&gt;When disabled it will instead perform a scan<br>
+	&gt;and any mobs in the current room will be<br>
+	&gt;add to the mobs database, though this will<br>
+	&gt;miss any mobs that are noscan.<br>
+>>>>>>> bdf2b4e (Added some missing stuff to readme)
 <br>
 **snd update**<br>
 	&gt;Automatically updates Search & Destroy.<br>

@@ -1487,7 +1487,7 @@ end
 						"#00C040", "", qt.room)
 			end
 		end
-		Execute("xm "..qt.room.."|"..qt.arid)
+		search_rooms(string.format("%s|%s", qt.room, qt.arid), "area", qt.mob)
 	end
 
 	function quest_status_gmcp(q)	-- sets quest status when you take a new quest, kill qmob, complete quest, etc.
@@ -2586,8 +2586,7 @@ function goto_number(name, line, wildcards)
 			end
 		end
 		qw_reset(qw.exact)
-		local cmd = "xm { } " .. room
-		Execute(cmd)
+		search_rooms(room, 'area', Trim(mob))
 	end
 
 	function qw_no_match()	-- responds to "There is no <mob name> around here."
@@ -2770,15 +2769,24 @@ function goto_number(name, line, wildcards)
 
 			if has_results and fullMobName then
 				local SnDdb = assert(sqlite3.open(snd_db_file))
-				select = string.format("SELECT roomid, count FROM mobs WHERE zone = %s AND mob = %s;", fixsql(arid), fixsql(fullMobName))
-				
 				local count_by_room = {}
+				local sum = 0
+
+				select = string.format("SELECT roomid, count FROM mobs WHERE zone = %s AND mob = %s AND roomid in (%s);", fixsql(arid), fixsql(fullMobName), table.concat(roomid_list, ","))
+
 				for row in SnDdb:nrows(select) do
 					count_by_room[row.roomid] = row.count
+					sum = sum + row.count
 				end
+				SnDdb:close_vm()
 
 				for i, result in ipairs(results) do
 					result.count = count_by_room[result.rmid] or 0
+					if sum > 0 then
+						result.percentage = (result.count / sum)
+					else
+						result.percentage = 0
+					end
 				end
 
 				function sort_by_count(a, b)
@@ -2792,7 +2800,6 @@ function goto_number(name, line, wildcards)
 				end
 
 				table.sort(results, sort_by_count)
-				SnDdb:close_vm()
 			end
 
 			search_rooms_results(results)
@@ -2828,7 +2835,13 @@ function goto_number(name, line, wildcards)
 			Hyperlink("go " .. mapper_area_index, line2, "go to item " .. mapper_area_index, "lightblue", "", 0)
 			Hyperlink("mapper where " .. v.rmid, "   {sw}", "click for speedwalk to this room", "#FF5000", "", 0)
 			gotoList[mapper_area_index] = v.rmid
-			print(string.format(" (%i)", v.count))
+			if v.percentage then
+				ColourNote("silver", "", " (",
+					mob_room_percentage_color(v.percentage), "", string.format("%.2f%%", v.percentage * 100),
+					"silver", "", ")")
+			else
+				print("")
+			end
 			mapper_area_index = mapper_area_index + 1
 		end
 		if (mapper_area_index == 0) then
@@ -2836,6 +2849,21 @@ function goto_number(name, line, wildcards)
 		end
 		ColourNote("#808080", "", string.rep("-", 67))
 		ColourNote("#808080", "", "Type 'go <index>' or click link to go to that room.\n")
+	end
+
+	-- Return a color between #aaaaaa (grey, at 0%) and #44ff00 (green, at 100%)
+	function mob_room_percentage_color(percentage)
+		local red_from, red_to = 170, 68
+		local green_from, green_to = 170, 255
+		local blue_from, blue_to = 170, 0
+
+		-- using the straight percentage was resulting in numbers being too grey
+		percentage = math.min(1, math.max(0, math.sqrt(percentage)))
+
+		return string.format("#%02x%02x%02x",
+			red_from + (red_to - red_from) * percentage,
+			green_from + (green_to - green_from) * percentage,
+			blue_from + (blue_to - blue_from) * percentage)
 	end
 
 	function map_area(name, line, wildcards)
@@ -4711,7 +4739,7 @@ function goto_number(name, line, wildcards)
 							PwarDb:close()
 							error("Encountered an error during migration: " .. err)
 						end
-						insertStatements = }
+						insertStatements = {}
 					end
 				end
 			end

@@ -2570,14 +2570,23 @@ end
 		end
 	end
 
-	function qw_arg(name, line, wildcards)
-		local t = main_target_list
-		local s = wildcards.mob
-		local ix = tonumber(wildcards.index) or 1
-		short_mob_name = s
-		qw.index = ix
+	function qw_arg_alias(name, line, wildcards)
+		local mob = wildcards.mob
+		local index = tonumber(wildcards.index) or 1
+
+		xcp_index = 0
+		full_mob_name = -1
+		xg_draw_window()
+
+		qw_arg(index, mob)
+	end
+
+	function qw_arg(index, mob)
+		short_mob_name = mob
+		qw.index = index
 		qw.exact = false
-		do_quick_where(ix, s)
+
+		do_quick_where(index, mob)
 	end
 
 	function qw_exact()  -- called from code, e.g. xcp function
@@ -2646,6 +2655,21 @@ end
 			end
 		end
 		qw_reset(qw.exact)
+		-- change target
+		xcp_index = 0
+		full_mob_name = -1
+		if quest_target.mob and current_room.arid == quest_target.arid and quest_target.mob:lower() == Trim(mob):lower() then
+			full_mob_name = quest_target.mob
+		else
+			for i, target in ipairs(main_target_list) do
+				if current_room.arid == target.arid and Trim(mob):lower() == target.mob:lower() then
+					full_mob_name = target.mob
+					xcp_index = i
+					break
+				end
+			end
+		end
+		xg_draw_window()
 		search_rooms(room, 'area', Trim(mob))
 	end
 
@@ -2674,6 +2698,9 @@ end
 		local s = wildcards.mob
 		local ix = tonumber(wildcards.index) or 1
 		short_mob_name = s
+		xcp_index = 0
+		full_mob_name = -1
+		xg_draw_window()
 		do_hunt_trick(ix, s)
 	end
 
@@ -2698,7 +2725,7 @@ end
 		EnableTriggerGroup("AutoHunt", false)
 		local s = short_mob_name
 		local ix = ht.index or 1
-		qw_arg("", "", {index=ix, mob=s})
+		qw_arg(ix, s)
 		ht_reset()
 	end
 
@@ -6068,7 +6095,7 @@ end
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 	<alias	match="^qw (?:(?<index>\d+)\.)?(?<mob>.+)?$"
-			script="qw_arg"
+			script="qw_arg_alias"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 	<alias	match="^qwx$"

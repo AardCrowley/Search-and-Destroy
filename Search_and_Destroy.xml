@@ -213,8 +213,17 @@
 	local mobs_here = {}
 	local activity_target_found_here = false
 	local quest_target_found_here = false
+	local target_found_nearby = false
+	local other_target_found_here = false
 	local scanning_current_room = false
 	local scan_after_con = false
+
+-- [[ Sound settings ]]
+	-- Defaults on if soundpack is enabled, off otherwise
+	local xset_sound_onoff = GetVariable("mcvar_xset_sound_onoff") or (IsPluginInstalled(plugin_id_soundpack) and GetPluginInfo(plugin_id_soundpack, 17) and "on") or "off"
+
+	local target_nearby_sound = "target_nearby.wav"
+	local other_target_here_sound = "other_target_here.wav"
 
 -- [[ S&D dev stuff ]]
 	local debug_mode = GetVariable("debug_mode") or "off"
@@ -260,6 +269,7 @@
 		xg_create_window()
 
 		migrate_database()
+		move_sounds()
 	end
 
 	function migrate_database()
@@ -364,6 +374,22 @@
 			DROP TABLE old_mobs;
 			COMMIT;
 		]])
+	end
+
+	function move_sounds()
+		move_sound(target_nearby_sound)
+		move_sound(other_target_here_sound)
+	end
+
+	function move_sound(filename)
+		local path = GetInfo(60) .. filename
+		local f = io.open(path, "r")
+		if f then
+			DebugNote(string.format("Moving %s to sounds directory.", path))
+			f:close()
+			os.rename(path, GetInfo(74) .. filename, GetInfo)
+			os.remove(path)
+		end
 	end
 
 	local init_called = 0
@@ -1382,9 +1408,7 @@ end
 		db:close_vm()
 
 		if guess then
-			if is_debug_enabled() then
-				ColourNote("", "", "Found custom keyword for ", "lime", "", s, "", "", ": ", "lime", "", guess)
-			end
+			DebugNote(string.format("Found custom keyword for '%s': %s", s, guess))
 			return guess
 		end
 
@@ -4358,8 +4382,10 @@ end
 		SetVariable("debug_mode", debug_mode)
 	end
 
-	function is_debug_enabled()
-		return debug_mode == "on"
+	function DebugNote(text)
+		if debug_mode == "on" then
+			ColourNote("gold", "", "DEBUG: ", "lightskyblue", "", text)
+		end
 	end
 
 -- [[ New code ]]
@@ -4419,7 +4445,7 @@ end
 
 	function onHelp(name, line, wildcards)
 		local str = wildcards[1]
-		local helpFiles = {"win", "fontsize", "linespace", "speed", "vidblain", "mark", "index areas", "silent", "sort", "xm", "xmap", "roomnote", "qw", "ht", "ah", "ak|kk|qk", "qs", "xq", "noexp", "kw|keyword", "nx", "go", "autocon", "xrt|xrun", "cp|gq", "xcp", "xcp mode", "ms|msearch", "mgo|mgoto", "snd migrate|mergePwar", "snd update", "snd reload", "summary"}
+		local helpFiles = {"win", "fontsize", "linespace", "speed", "vidblain", "mark", "index areas", "silent", "sort", "xm", "xmap", "roomnote", "qw", "ht", "ah", "ak|kk|qk", "qs", "xq", "noexp", "kw|keyword", "nx", "go", "autocon", "sound", "xrt|xrun", "cp|gq", "xcp", "xcp mode", "ms|msearch", "mgo|mgoto", "snd migrate|mergePwar", "snd update", "snd reload", "summary"}
 
 		local headers = {"cyan", "", string.rep("-", 76) .. "\n", "darkcyan", "", "Help keywords", "antiquewhite", "", " : " .. str .. "\n", "cyan", "", string.rep("-", 76) .. "\n"}
 
@@ -4626,6 +4652,11 @@ end
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("If disabled, it will perform a scan upon arrival and add the mobs found in this room to the mobs database. Unlike consider, scan will have no delay, but it will miss any mobs that are flagged noscan.")}))
 
+		elseif str == "sound" then
+			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset sound")
+			Note()
+			ColourNote("antiquewhite", "", unpack({helpWrap("Toggles sounds. Currently this is only used to signify that a target is in a nearby room as determined by scan, or that one of the targets on your campaign/gquest, but not your current target, is in the same room as you. For full functionality, the soundpack plugin is expected to be enabled.")}))
+
 		elseif str == "summary" then
 		ColourNote("yellow", "", "Commands:")
 		Note()
@@ -4682,6 +4713,8 @@ end
 		ColourNote("antiquewhite", "", unpack({helpWrap("go <index>:  Runs to the first room in the index, or to the index number with argument.")}))
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("xset autocon:  Toggle automatically considering the room you reach via 'nx' or 'go,' and then adding the mobs found to the mobs database.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xset sound:  Toggles sounds.")}))
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("<xrt|xrun> <area>:  Runs to the area matching the argument.")}))
 		Note()
@@ -4992,8 +5025,8 @@ end
 		end
 		SetVariable("mcvar_xset_autocon_onoff", xset_autocon_onoff)
 
-		ColourTell ("#FF5000", "", "\nAutocon is now ",
-			"#00C040", "", string.upper(xset_autocon_onoff) .. "\n")
+		ColourNote("#FF5000", "", "\nAutocon is now ",
+			"#00C040", "", string.upper(xset_autocon_onoff))
 	end
 
 	function is_autocon_enabled()
@@ -5041,32 +5074,60 @@ end
 		ColourNote("silver", "", mob_name, details.colour, "", string.format(" (%s)", details.level_range))
 	end
 
-	function consider_end()
-		local rname = strip_colours(gmcp("room.info.name"))
-		local zname = gmcp("room.info.zone")
+	function consider_shopkeeper()
+		EnableTrigger("consider_end", true)
+	end
 
+	function consider_end()
 		EnableTriggerGroup("consider_end", false)
 
 		if #mobs_here > 0 then
 			write_current_room_mob_list()
-		elseif is_debug_enabled() then
-			Note("No mobs found to update the mobs database\n")
+		else
+			DebugNote("No mobs found to update the mobs database")
 		end
 
-		if activity_target_found_here then
-			play_target_found_sound()
-		elseif consider_destination_room and not quest_target_found_here then
-			scan_after_con = true
-			SendNoEcho("scan")
+		-- Don't play sound when a quest target is here, assume soundpack will already play a sound
+		if not quest_target_here then
+			if activity_target_found_here then
+				-- The current target is found in the room, play a sound
+				play_target_found_sound()
+			else
+				-- A non-active target on the campaign/gquest list is found in the current room, play a sound
+				if other_target_found_here then
+					play_other_target_here_sound()
+				end
+
+				if consider_destination_room then
+					scan_after_con = true
+					SendNoEcho("scan")
+				end
+			end
 		end
 
 		activity_target_found_here = false
 		quest_target_found_here = false
+		other_target_found_here = false
 	end
 
 	function play_target_found_sound()
-		if IsPluginInstalled(plugin_id_soundpack) and GetPluginInfo(plugin_id_soundpack, 17) then
+		DebugNote("Play target found here sound")
+		if is_sound_enabled() and IsPluginInstalled(plugin_id_soundpack) and GetPluginInfo(plugin_id_soundpack, 17) then
 			CallPlugin(plugin_id_soundpack, "TriggerEvent", "quest_target_found")
+		end
+	end
+
+	function play_target_nearby_sound()
+		DebugNote("Play target found nearby sound")
+		if is_sound_enabled() then
+			PlaySound(0, GetInfo(74) .. target_nearby_sound, false, 100, 0)
+		end
+	end
+
+	function play_other_target_here_sound()
+		DebugNote("Play other target here sound")
+		if is_sound_enabled() then
+			PlaySound(0, GetInfo(74) .. other_target_here_sound, false, 100, 0)
 		end
 	end
 
@@ -5077,13 +5138,25 @@ end
 	function scan_end()
 		EnableTriggerGroup("scan", false)
 		write_current_room_mob_list()
-		if activity_target_found_here and not scan_after_con then
+		if activity_target_found_here then
 			play_target_found_sound()
+		else
+			if target_found_nearby then
+				play_target_nearby_sound()
+			end
+
+			-- A non-active target on the campaign/gquest list is found in the current room, play a sound
+			-- but only if we didn't already see this mob with con
+			if other_target_found_here and not scan_after_con then
+				play_other_target_here_sound()
+			end
 		end
 		scanning_current_room = false
 		scan_after_con = false
 		activity_target_found_here = false
 		quest_target_found_here = false
+		target_found_nearby = false
+		other_target_found_here = false
 	end
 
 	function scan_location_current_room()
@@ -5134,8 +5207,14 @@ end
 		end
 
 		if on_target_list then
-			if checking_current_room and type(full_mob_name) == 'string' and full_mob_name:lower() == lower_mob_name then
-				activity_target_found_here = true
+			if checking_current_room then
+				if type(full_mob_name) == 'string' and full_mob_name:lower() == lower_mob_name then
+					activity_target_found_here = true
+				else
+					other_target_found_here = true
+				end
+			else
+				target_found_nearby = true
 			end
 			table.insert(result, { text = "[", colour = "gold" })
 			table.insert(result, { text = current_activity:upper(), colour = "magenta" })
@@ -5143,7 +5222,11 @@ end
 		end
 
 		if quest_target.mob and quest_target.mob:lower() == lower_mob_name and quest_target.arid == current_room.arid then
-			quest_target_found_here = true
+			if checking_current_room then
+				quest_target_found_here = true
+			else
+				target_found_nearby = true
+			end
 			table.insert(result, { text = "[", colour = "gold" })
 			table.insert(result, { text = "Q", colour = "magenta" })
 			table.insert(result, { text = "] ", colour = "gold" })
@@ -5154,9 +5237,7 @@ end
 
 	function write_current_room_mob_list()
 		if #mobs_here < 1 then
-			if is_debug_enabled() then
-				Note("No mobs to be written to the database")
-			end
+			DebugNote("No mobs to be written to the database")
 			return
 		end
 
@@ -5175,15 +5256,42 @@ end
 
 		execute_in_transaction(db, writes)
 
-		if is_debug_enabled() then
+		if debug_mode then
 			if db:errcode() > 0 then
 				ColourNote("tomato", "", "Db error: " .. db:error_message())
 			else
-				Note("Successfully inserted or updated ", #mobs_here, " in the mobs database\n")
+				DebugNote(string.format("Successfully inserted or updated %i in the mobs database", #mobs_here))
 			end
 		end
 		db:close_vm()
 		mobs_here = {}
+	end
+
+	function xset_sound()
+		if xset_sound_onoff == "on" then
+			xset_sound_onoff = "off"
+		else
+			move_sounds()
+			local f1 = io.open(GetInfo(74) .. target_nearby_sound)
+			local f2 = io.open(GetInfo(74) .. other_target_here_sound)
+			local sounds_found = f1 and f2
+			f1:close()
+			f2:close()
+
+			if not sounds_found then
+				ColourNote("tomato", "", "Sound files could not be found. Extract them from Search&Destroy's zip file to the plugins folder and try again.")
+				return
+			end
+			xset_sound_onoff = "on"
+		end
+		SetVariable("mcvar_xset_sound_onoff", xset_sound_onoff)
+
+		ColourNote ("#FF5000", "", "\nSearch&Destroy Sounds are now ",
+			"#00C040", "", string.upper(xset_sound_onoff))
+	end
+
+	function is_sound_enabled()
+		return xset_sound_onoff == "on"
 	end
 ]]>
 </script>
@@ -5622,6 +5730,10 @@ end
 		name="m"
 		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
+	<trigger match="^If you killed .+, who would serve .+ customers\?$"
+		script="consider_shopkeeper"
+		enabled="y" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
+
 	<trigger match="^$"
 		name="consider_end"
 		group="consider_end"
@@ -5877,6 +5989,10 @@ end
 
 	<alias	match="^xset autocon$"
 		script="xset_autocon"
+		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xset sound$"
+		script="xset_sound"
 		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 <!-- xset window commands -->

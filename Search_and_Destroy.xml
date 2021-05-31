@@ -1490,6 +1490,17 @@ end
 		send_gmcp_packet("request quest")
 	end
 
+	function retarget_quest()
+		if quest_target.qstat == "2" then
+			target_quest_mob(true)
+			xg_draw_window()
+		elseif quest_target.qstat == "3" then
+			ColourNote("#FF5000", "", "\nSearch and Destroy: You have already killed your quest target!\n")
+		else
+			ColourNote("#FF5000", "", "\nSearch and Destroy: You are not on a quest.\n")
+		end
+	end
+
 	function target_quest_mob(bool)	-- Re-targets your quest mob if you un-target it somehow (xcp, etc.)
 		local qt = quest_target
 		xcp_clear_target(true)
@@ -4570,6 +4581,7 @@ end
 			"ak|kk|qk",
 			"qs",
 			"xq",
+			"xqt",
 			"noexp",
 			"kw|keyword",
 			"nx",
@@ -4720,6 +4732,11 @@ end
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("Reloads and displays your current quest information.")}))
 
+		elseif str == "xqt" then
+			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xqt")
+			Note()
+			ColourNote("antiquewhite", "", unpack({helpWrap("Retargets the current quest mob if you changed it, for instance with 'xcp' or 'qw.'")}))
+
 		elseif str == "nx" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": nx<->")
 			Note()
@@ -4852,6 +4869,8 @@ end
 		ColourNote("antiquewhite", "", unpack({helpWrap("qs:  Executes a 'quick scan' for the stored target.")}))
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("xq:  Reloads the quest info.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xqt:  Retargets the current quest mob.")}))
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("xset noexp <off|#>:  Displays current setting with no argument. With argument, toggles noexp off or sets it to turn on at # exp remaining.")}))
 		Note()
@@ -6033,6 +6052,10 @@ end
 <!-- Quest commands -->
 	<alias	match="^(?:xq|xq1)$"
 			script="xq_command"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xqt$"
+			script="retarget_quest"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 <!-- Quick scan -->

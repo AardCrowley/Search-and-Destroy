@@ -88,6 +88,8 @@ Commands:<br>
 	&gt;Executes a 'quick scan' for the stored target.<br>
 **xq**<br>
 	&gt;Reloads the quest info.<br>
+**xqt**<br>
+	&gt;Retargets the current quest mob.<br>
 **xset noexp &lt;off|#&gt;**<br>
 	&gt;Displays current setting with no argument.<br>
 	&gt;With argument, toggles noexp off or sets it<br>

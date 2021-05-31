@@ -125,6 +125,7 @@
 
 -- [[ xcp action mode ]]
 	local xcp_action_mode = GetVariable("mcvar_xcp_action_mode") or "qw"
+	local xcp_targets_quest_onoff = GetVariable("mcvar_xcp_targets_quest_onoff") or "off"
 
 -- [[ goto/nx data ]]
 	local gotoArea = -1
@@ -2187,7 +2188,10 @@ end
 -- [[ "xcp" command ]]
 	function xcp_noarg()	-- xcp with no argument given, so find the first available mob (alive, location known) and go to it.
 		local t = main_target_list
-		if (area_room_type == "none") then	-- abort if not on cp
+		if xcp_targets_quest_onoff == "on" and quest_target.qstat == "2" then
+			target_quest_mob(true)
+			xg_draw_window()
+		elseif (area_room_type == "none") then	-- abort if not on cp
 			ColourNote("#FF5000", "", "\nSearch and Destroy: 'xcp' aborted - you're not on a cp.\n")
 		elseif (#t == 0) then	-- abort if on a cp, but target list is empty
 			ColourNote("#FF5000", "", "\nSearch and Destroy: 'xcp' aborted - cp is active but target list is empty.\n")
@@ -2302,6 +2306,18 @@ end
 				ColourNote("#FF5000", "", "Invalid 'xcp' mode given.  Syntax: 'xcp mode [ht|qw|off]'")
 			end
 			print("")
+	end
+
+	function xcp_toggle_quest_targeting()
+		if xcp_targets_quest_onoff == "on" then
+			xcp_targets_quest_onoff = "off"
+		else
+			xcp_targets_quest_onoff = "on"
+		end
+		SetVariable("mcvar_xcp_targets_quest_onoff", xcp_targets_quest_onoff)
+
+		ColourNote("#FF5000", "", "\nxcp quest targeting is now ",
+			"#00C040", "", string.upper(xcp_targets_quest_onoff))
 	end
 
 -- [[  Goto area (xrt), goto room (go), goto next (nx), goto previous (nx-) ]]
@@ -4564,6 +4580,7 @@ end
 			"cp|gq",
 			"xcp",
 			"xcp mode",
+			"quest|xcp quest",
 			"ms|msearch",
 			"mgo|mgoto",
 			"snd migrate|mergePwar",
@@ -4572,7 +4589,9 @@ end
 			"summary",
 		}
 
-		local headers = {"cyan", "", string.rep("-", 76) .. "\n", "darkcyan", "", "Help keywords", "antiquewhite", "", " : " .. str .. "\n", "cyan", "", string.rep("-", 76) .. "\n"}
+
+		local headers = {"cyan",
+			"", string.rep("-", 76) .. "\n", "darkcyan", "", "Help keywords", "antiquewhite", "", " : " .. str .. "\n", "cyan", "", string.rep("-", 76) .. "\n"}
 
 		ColourNote(unpack(headers))
 
@@ -4736,6 +4755,11 @@ end
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("Without an argument, displays your current default action to take when searching for a mob using 'xcp' (see 'help xcp'). With an argument, sets your default action to 'ht' (hunt trick, 'help ht'), 'qw' (quick where, 'help qw'), or 'off' (no action taken).")}))
 
+		elseif str == "xcp quest" or str == "quest"then
+			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xcp quest")
+			Note()
+			ColourNote("antiquewhite", "", unpack({helpWrap("When enabled, using 'xcp' with no arguments will target your quest mob if you are currently on a quest.")}))
+
 		elseif str == "snd update" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd update")
 			Note()
@@ -4850,6 +4874,8 @@ end
 		ColourNote("antiquewhite", "", unpack({helpWrap("xcp <index>:  Without argument, goes to top result in cp/gq check. Otherwise heads to the index chosen.")}))
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("xcp mode <ht|qw|off>:  Sets whether you use hunt trick or quick where upon entering an area on cp/gq. Use 'off' to turn off this feature.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xcp quest:  Set whether or not 'xcp' will target quest mobs.")}))
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("snd update:  Automatically updates Search & Destroy.")}))
 		Note()
@@ -5977,6 +6003,10 @@ end
 	<alias	match="^xcp mode(?: (?<option>ht|qw|off))?$"
 			script="xcp_set_action_mode"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xcp q(uest)?$"
+		script="xcp_toggle_quest_targeting"
+		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 <!-- movement: xrunto, go, nx, etc.  -->
 	<alias	match="^(?:xrt|xrun|xrunto) (?<destination>.+)$"

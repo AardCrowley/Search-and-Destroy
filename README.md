@@ -114,6 +114,9 @@ Commands:<br>
 	&gt;Sets whether you use hunt trick or quick <br>
 	&gt;where upon entering an area on cp/gq. Use <br>
 	&gt;'off' to turn off this feature.<br>
+**xcp quest**<br>
+	&gt;Toggle whether `xcp` will target your current<br>
+	&gt;quest mob if you have are on a quest.<br>
 <br>
 **snd update**<br>
 	&gt;Automatically updates Search & Destroy.<br>

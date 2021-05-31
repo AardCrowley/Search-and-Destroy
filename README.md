@@ -17,7 +17,7 @@ In short, it can speed up your quests/campaigns/global quests. It is **NOT**, ho
 
 # What are the commands?
 
-First and foremost, you should learn about **xhelp**. That will display, in the client, all the commands listed below. Another one you should learn about is **snd update**, which will automatically update the plugin if I make any changes and post about it. See below for all commands.
+First and foremost, you should learn about **xhelp**. That will display, in the client, all the commands listed below. Another one you should learn about is **snd update**, which will automatically update the plugin if changes are made and I post about it. See below for all commands.
 
 Commands:<br>
 **xset win &lt;on|off&gt;**<br>

@@ -54,7 +54,6 @@
 
 	mshow                           = {}
 	showStr                         = "@W%s @wis found in @Y%s @win/around @G%s @w(@Cmapper goto %s@w)"
-	targetMob                       = ""
 
 	PLUGIN_VERSION  = GetPluginInfo(GetPluginID(), 19)
 	PLUGIN_NAME 	= GetPluginInfo(GetPluginID(), 1)
@@ -64,6 +63,7 @@
 	local plugin_id_gmcp_handler 	= "3e7dedbe37e44942dd46d264"		-- easier to remember the var names than the plugin id's
 	local plugin_id_gmcp_mapper		= "b6eae87ccedd84f510b74714"
 	local plugin_id_z_order 		= "462b665ecb569efbf261422f"
+	local plugin_id_soundpack 		= "23832d1089f727f5f34abad8"
 
 	gqCheckPass = false
 
@@ -206,14 +206,33 @@
 -- [[ S&D window color data]]
 	local win_bgcolor = 0x000000
 
+-- [[ Con and scan stuff ]]
+	local xset_autocon_onoff = GetVariable("mcvar_xset_autocon_onoff") or "on"
+
+	local consider_destination_room = false
+	local mobs_here = {}
+	local activity_target_found_here = false
+	local quest_target_found_here = false
+	local target_found_nearby = false
+	local other_target_found_here = false
+	local scanning_current_room = false
+	local scan_after_con = false
+
+-- [[ Sound settings ]]
+	-- Defaults on if soundpack is enabled, off otherwise
+	local xset_sound_onoff = GetVariable("mcvar_xset_sound_onoff") or (IsPluginInstalled(plugin_id_soundpack) and GetPluginInfo(plugin_id_soundpack, 17) and "on") or "off"
+
+	local target_nearby_sound = "target_nearby.wav"
+	local other_target_here_sound = "other_target_here.wav"
+
+-- [[ S&D dev stuff ]]
+	local debug_mode = GetVariable("debug_mode") or "off"
+
 --	[[ Plugin broadcast/receive process ]]
 	function OnPluginBroadcast(msg, id, name, text)
 		if (id == plugin_id_gmcp_handler) then
 			if (text == "char.status") then		-- character status
 				current_character_state = gmcp("char.status.state")
-				if not stopUpdate then
-					targetMob = gmcp("char.status.enemy")
-				end
 			elseif (text == "room.info") then	-- current/previous room info
 				local ri = gmcp("room.info")
 				ri.maze = (string.match(ri.details, "maze") == "maze") and 1 or 0
@@ -250,6 +269,7 @@
 		xg_create_window()
 
 		migrate_database()
+		move_sounds()
 	end
 
 	function migrate_database()
@@ -356,6 +376,22 @@
 		]])
 	end
 
+	function move_sounds()
+		move_sound(target_nearby_sound)
+		move_sound(other_target_here_sound)
+	end
+
+	function move_sound(filename)
+		local path = GetInfo(60) .. filename
+		local f = io.open(path, "r")
+		if f then
+			DebugNote(string.format("Moving %s to sounds directory.", path))
+			f:close()
+			os.rename(path, GetInfo(74) .. filename, GetInfo)
+			os.remove(path)
+		end
+	end
+
 	local init_called = 0
 	function init_plugin()
 		if not IsConnected() then return end
@@ -364,6 +400,7 @@
 			send_gmcp_packet("request char")
 			return
 		end
+      	SendNoEcho("tags scan on")
 		send_gmcp_packet("request room")
 		init_called = init_called + 1
 		if (init_called == 2) then
@@ -1348,11 +1385,11 @@ end
 
 		ColourNote(
 			"", "", "Updated keyword for ",
-			"green", "", mob_name,
+			"lime", "", mob_name,
 			"", "", " to ",
-			"green", "", keyword,
+			"lime", "", keyword,
 			"", "", " in area ",
-			"green", "", area .. "\n"
+			"lime", "", area .. "\n"
 		)
 		return true
 	end
@@ -1371,7 +1408,7 @@ end
 		db:close_vm()
 
 		if guess then
-			ColourNote("", "", "Found custom keyword for ", "green", "", s, "", "", ": ", "green", "", guess)
+			DebugNote(string.format("Found custom keyword for '%s': %s", s, guess))
 			return guess
 		end
 
@@ -1512,8 +1549,6 @@ end
 
 			-- in all of these, the action is "status"
 			elseif (q.action == "status" and q.target == "killed") then		-- on quest, qmob has been killed (do not confuse q.target with q.targ above!)
-				stopUpdate = true
-				findMobs(targetMob or "", tonumber(gmcp("room.info.num")))
 				quest_target.qstat = "3"
 				ColourNote("#FF5000", "", "\nSearch and Destroy: You have already killed your quest target!\n")
 			--elseif (q.action == "status" and q.targ and q.timer) then		-- on quest, qmob not yet killed
@@ -1624,9 +1659,6 @@ end
 	end
 
 	function cp_mob_killed()
-		stopUpdate = true
-		findMobs(targetMob or "", tonumber(gmcp("room.info.num")))
-
 		if (player_on_gq == "no") then
 			xcp_retry_stat = 1
 			qw_reset(false)
@@ -2303,18 +2335,28 @@ end
 		end
 	end
 
-function goto_number(name, line, wildcards)
+	function action_on_destination_arrived()
+		if is_autocon_enabled() then
+			EnableTrigger("consider_end_empty", true)
+			consider_destination_room = true
+			SendNoEcho("consider")
+		else
+			SendNoEcho("scan")
+		end
+	end
+
+	function goto_number(name, line, wildcards)
 		local ch_state = current_character_state
 		if (ch_state == "3") then
 			gotoIndex = tonumber(wildcards.index) or 1
 			if gotoList[gotoIndex] then
 				if (tonumber(gotoList[gotoIndex]) == nil) then
 					xrun_to("", "", {destination=gotoList[gotoIndex]})
-					quick_scan()
+					action_on_destination_arrived()
 				else
 					next_room = gotoList[gotoIndex]
 					goto_room_id(gotoList[gotoIndex])
-					quick_scan()
+					action_on_destination_arrived()
 				end
 			else
 				ColourNote("#FF5000", "", "Goto room result (go) aborted - No destination yet.")
@@ -2341,7 +2383,7 @@ function goto_number(name, line, wildcards)
 					ColourNote("#00C040", "", "Next room (nx) - " .. gotoIndex .. " of " .. #gotoList)
 					next_room = gotoList[gotoIndex]
 					do_mapper_goto(next_room)
-					quick_scan()
+					action_on_destination_arrived()
 				else
 					ColourNote("#FF5000", "", "Goto next (nx) aborted - No more rooms.")
 				end
@@ -4329,6 +4371,23 @@ function goto_number(name, line, wildcards)
 
 	end
 
+	function xtest_debug(name, line, wildcards)
+		if debug_mode == "on" then
+			ColourNote("gold", "", "Debug mode ", "tomato", "", "disabled\n")
+			debug_mode = "off"
+		else
+			ColourNote("gold", "", "Debug mode ", "lime", "", "enabled\n")
+			debug_mode = "on"
+		end
+		SetVariable("debug_mode", debug_mode)
+	end
+
+	function DebugNote(text)
+		if debug_mode == "on" then
+			ColourNote("gold", "", "DEBUG: ", "lightskyblue", "", text)
+		end
+	end
+
 -- [[ New code ]]
 
 	function update_plugin()
@@ -4386,7 +4445,42 @@ function goto_number(name, line, wildcards)
 
 	function onHelp(name, line, wildcards)
 		local str = wildcards[1]
-		local helpFiles = {"win", "fontsize", "linespace", "speed", "vidblain", "mark", "index areas", "silent", "sort", "xm", "xmap", "roomnote", "qw", "ht", "ah", "ak|kk|qk", "qs", "xq", "noexp", "kw|keyword", "nx", "go", "xrt|xrun", "cp|gq", "xcp", "xcp mode", "ms|msearch", "mgo|mgoto", "snd migrate|mergePwar", "snd update", "snd reload", "summary"}
+		local helpFiles = {
+			"win",
+			"fontsize",
+			"linespace",
+			"speed",
+			"vidblain",
+			"mark",
+			"index areas",
+			"silent",
+			"sort",
+			"xm",
+			"xmap",
+			"roomnote",
+			"qw",
+			"ht",
+			"ah",
+			"ak|kk|qk",
+			"qs",
+			"xq",
+			"noexp",
+			"kw|keyword",
+			"nx",
+			"go",
+			"autocon",
+			"sound",
+			"xrt|xrun",
+			"cp|gq",
+			"xcp",
+			"xcp mode",
+			"ms|msearch",
+			"mgo|mgoto",
+			"snd migrate|mergePwar",
+			"snd update",
+			"snd reload",
+			"summary",
+		}
 
 		local headers = {"cyan", "", string.rep("-", 76) .. "\n", "darkcyan", "", "Help keywords", "antiquewhite", "", " : " .. str .. "\n", "cyan", "", string.rep("-", 76) .. "\n"}
 
@@ -4586,6 +4680,18 @@ function goto_number(name, line, wildcards)
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("To do so, you can use 'xset kw beef pie' while it is a campaign, quest, or gquest target. Alternatively, you can use 'xset kw' with no arguments and follow the dialogs that appear.")}))
 
+		elseif str == "autocon" then
+			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset autocon")
+			Note()
+			ColourNote("antiquewhite", "", unpack({helpWrap("Toggle auto consider. When enabled, it will automatically perform a consider upon arrival at a room reached with 'nx' or 'go.' All mobs found will be added to the mobs database. If the target mob is not here it will then perform a scan.")}))
+			Note()
+			ColourNote("antiquewhite", "", unpack({helpWrap("If disabled, it will perform a scan upon arrival and add the mobs found in this room to the mobs database. Unlike consider, scan will have no delay, but it will miss any mobs that are flagged noscan.")}))
+
+		elseif str == "sound" then
+			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset sound")
+			Note()
+			ColourNote("antiquewhite", "", unpack({helpWrap("Toggles sounds. Currently this is only used to signify that a target is in a nearby room as determined by scan, or that one of the targets on your campaign/gquest, but not your current target, is in the same room as you. For full functionality, the soundpack plugin is expected to be enabled.")}))
+
 		elseif str == "summary" then
 		ColourNote("yellow", "", "Commands:")
 		Note()
@@ -4640,6 +4746,10 @@ function goto_number(name, line, wildcards)
 		ColourNote("antiquewhite", "", unpack({helpWrap("nx<->:  Moves to the next room on the list, or the previous room with -.")}))
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("go <index>:  Runs to the first room in the index, or to the index number with argument.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xset autocon:  Toggle automatically considering the room you reach via 'nx' or 'go,' and then adding the mobs found to the mobs database.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xset sound:  Toggles sounds.")}))
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("<xrt|xrun> <area>:  Runs to the area matching the argument.")}))
 		Note()
@@ -4942,29 +5052,283 @@ function goto_number(name, line, wildcards)
 		return (s:gsub("%z", "@")) -- put @ back (has parentheses on purpose)
 	end
 
-
-	function findMobs(name, room)
-
-		if #name > 1 then
-			local rname, zname = strip_colours(gmcp("room.info.name")), gmcp("room.info.zone")
-
-			local update = {
-				string.format("INSERT OR IGNORE INTO mobs (mob,room,roomid,zone) VALUES (%s,%s,%i,%s);", fixsql(name), fixsql(rname), tonumber(room), fixsql(zname)),
-				string.format("UPDATE mobs SET Count = Count + 1 WHERE mob = %s AND roomid = %i;", fixsql(name), tonumber(room)),
-			}
-
-			SnDdb = sqlite3.open(snd_db_file)
-
-			execute_in_transaction(SnDdb, update)
-
-			SnDdb:close_vm()
+	function xset_autocon()
+		if xset_autocon_onoff == "on" then
+			xset_autocon_onoff = "off"
 		else
-			ColourNote("#802800", "", "*** Target mob not captured. Possibly due to a one-hit-kill. Mob database not updated.")
+			xset_autocon_onoff = "on"
 		end
+		SetVariable("mcvar_xset_autocon_onoff", xset_autocon_onoff)
 
-		stopUpdate = false
+		ColourNote("#FF5000", "", "\nAutocon is now ",
+			"#00C040", "", string.upper(xset_autocon_onoff))
 	end
 
+	function is_autocon_enabled()
+		return xset_autocon_onoff == "on"
+	end
+
+	function consider_trigger(name, line, wildcards, style)
+		local con_details = {
+			a = { level_range="-20 and below", 		colour="cornflowerblue", },
+			b = { level_range="-10 to -19", 		colour="deepskyblue", },
+			c = { level_range="-5 to -9", 			colour="turquoise", },
+			d = { level_range="-2 to -4", 			colour="mediumspringgreen", },
+			e = { level_range="-1 to +1", 			colour="lime", },
+			f = { level_range="+2 to +4", 			colour="lawngreen", },
+			g = { level_range="+5 to +9", 			colour="limegreen", },
+			h = { level_range="+10 to +15", 		colour="greenyellow", },
+			i = { level_range="+16 to +20", 		colour="#EFF22D", },
+			j = { level_range="+21 to +30", 		colour="gold", },
+			k = { level_range="+31 to +40", 		colour="darkorange", },
+			l = { level_range="+41 to +50", 		colour="orangered", },
+			m = { level_range="+51 and above", 		colour="red", },
+		}
+
+		local details = con_details[name]
+		local on_target_list = false
+		local mob_name = wildcards.mob_name
+		local lower_mob_name = mob_name:lower()
+		local tags = mob_activity_tags(mob_name, true)
+
+		EnableTrigger("consider_end", true)
+		table.insert(mobs_here, lower_mob_name)
+
+		for i, tag in ipairs(tags) do
+			ColourTell(tag.colour, "", tag.text)
+		end
+
+		for i, s in ipairs(style) do
+			if string.match(s.text, "^%s*%(.+%)%s*$") then
+				ColourTell(RGBColourToName(s.textcolour), RGBColourToName(s.backcolour), s.text)
+			else
+				break
+			end
+		end
+
+		ColourNote("silver", "", mob_name, details.colour, "", string.format(" (%s)", details.level_range))
+	end
+
+	function consider_unkillable()
+		EnableTrigger("consider_end", true)
+	end
+
+	function consider_end()
+		EnableTriggerGroup("consider_end", false)
+
+		if #mobs_here > 0 then
+			write_current_room_mob_list()
+		else
+			DebugNote("No mobs found to update the mobs database")
+		end
+
+		-- Don't play sound when a quest target is here, assume soundpack will already play a sound
+		if not quest_target_here then
+			if activity_target_found_here then
+				-- The current target is found in the room, play a sound
+				play_target_found_sound()
+			else
+				-- A non-active target on the campaign/gquest list is found in the current room, play a sound
+				if other_target_found_here then
+					play_other_target_here_sound()
+				end
+
+				if consider_destination_room then
+					scan_after_con = true
+					SendNoEcho("scan")
+				end
+			end
+		end
+
+		consider_destination_room = false
+		activity_target_found_here = false
+		quest_target_found_here = false
+		other_target_found_here = false
+	end
+
+	function play_target_found_sound()
+		DebugNote("Play target found here sound")
+		if is_sound_enabled() and IsPluginInstalled(plugin_id_soundpack) and GetPluginInfo(plugin_id_soundpack, 17) then
+			CallPlugin(plugin_id_soundpack, "TriggerEvent", "quest_target_found")
+		end
+	end
+
+	function play_target_nearby_sound()
+		DebugNote("Play target found nearby sound")
+		if is_sound_enabled() then
+			PlaySound(0, GetInfo(74) .. target_nearby_sound, false, 100, 0)
+		end
+	end
+
+	function play_other_target_here_sound()
+		DebugNote("Play other target here sound")
+		if is_sound_enabled() then
+			PlaySound(0, GetInfo(74) .. other_target_here_sound, false, 100, 0)
+		end
+	end
+
+	function scan_start()
+		EnableTriggerGroup("scan", true)
+	end
+
+	function scan_end()
+		EnableTriggerGroup("scan", false)
+		write_current_room_mob_list()
+		if activity_target_found_here then
+			play_target_found_sound()
+		else
+			if target_found_nearby then
+				play_target_nearby_sound()
+			end
+
+			-- A non-active target on the campaign/gquest list is found in the current room, play a sound
+			-- but only if we didn't already see this mob with con
+			if other_target_found_here and not scan_after_con then
+				play_other_target_here_sound()
+			end
+		end
+		scanning_current_room = false
+		scan_after_con = false
+		activity_target_found_here = false
+		quest_target_found_here = false
+		target_found_nearby = false
+		other_target_found_here = false
+	end
+
+	function scan_location_current_room()
+		scanning_current_room = true
+		mobs_here = {}
+	end
+
+	function scan_location_nearby_room()
+		scanning_current_room = false
+	end
+
+	function scan_mob(name, line, wildcards, style)
+		local padding = 5
+		if not string.find(wildcards.flags, "(Player)") then
+			local mob_name = wildcards.mob_name
+			local tags = mob_activity_tags(mob_name, scanning_current_room)
+
+			if scanning_current_room and not scan_after_con then
+				table.insert(mobs_here, mob_name:lower())
+			end
+
+			for i, tag in ipairs(tags) do
+				ColourTell(tag.colour, "", tag.text)
+				padding = padding - #tag.text
+			end
+		end
+
+		for i, s in ipairs(style) do
+			if i == 1 then
+				local text = string.gsub(s.text, "^     ", string.rep(" ", padding))
+				ColourTell(RGBColourToName(s.textcolour), RGBColourToName(s.backcolour), text)
+			else
+				ColourTell(RGBColourToName(s.textcolour), RGBColourToName(s.backcolour), s.text)
+			end
+		end
+	end
+
+	function mob_activity_tags(mob_name, checking_current_room)
+		local on_target_list = false
+		local lower_mob_name = mob_name:lower()
+		local result = {}
+
+		for i, target in ipairs(main_target_list) do
+			if current_room.arid == target.arid and target.mob:lower() == lower_mob_name then
+				on_target_list = true
+				break
+			end
+		end
+
+		if on_target_list then
+			if checking_current_room then
+				if type(full_mob_name) == 'string' and full_mob_name:lower() == lower_mob_name then
+					activity_target_found_here = true
+				else
+					other_target_found_here = true
+				end
+			else
+				target_found_nearby = true
+			end
+			table.insert(result, { text = "[", colour = "gold" })
+			table.insert(result, { text = current_activity:upper(), colour = "magenta" })
+			table.insert(result, { text = "] ", colour = "gold" })
+		end
+
+		if quest_target.mob and quest_target.mob:lower() == lower_mob_name and quest_target.arid == current_room.arid then
+			if checking_current_room then
+				quest_target_found_here = true
+			else
+				target_found_nearby = true
+			end
+			table.insert(result, { text = "[", colour = "gold" })
+			table.insert(result, { text = "Q", colour = "magenta" })
+			table.insert(result, { text = "] ", colour = "gold" })
+		end
+
+		return result
+	end
+
+	function write_current_room_mob_list()
+		if #mobs_here < 1 then
+			DebugNote("No mobs to be written to the database")
+			return
+		end
+
+		local rname = strip_colours(gmcp("room.info.name"))
+		local zname = gmcp("room.info.zone")
+		local writes = {}
+		local sql_mobs = {}
+		for i, mob in ipairs(mobs_here) do
+			table.insert(sql_mobs, fixsql(mob))
+			table.insert(writes, string.format("INSERT OR IGNORE INTO mobs (mob,room,roomid,zone) VALUES (%s,%s,%i,%s);",
+				fixsql(mob), fixsql(rname), tonumber(current_room.rmid), fixsql(zname)))
+			table.insert(writes, string.format("UPDATE mobs SET Count = Count + 1 WHERE mob = %s AND roomid = %i;", fixsql(mob), tonumber(current_room.rmid)))
+		end
+
+		local db = assert(sqlite3.open(snd_db_file))
+
+		execute_in_transaction(db, writes)
+
+		if debug_mode then
+			if db:errcode() > 0 then
+				ColourNote("tomato", "", "Db error: " .. db:error_message())
+			else
+				DebugNote(string.format("Successfully inserted or updated %i in the mobs database", #mobs_here))
+			end
+		end
+		db:close_vm()
+		mobs_here = {}
+	end
+
+	function xset_sound()
+		if xset_sound_onoff == "on" then
+			xset_sound_onoff = "off"
+		else
+			move_sounds()
+			local f1 = io.open(GetInfo(74) .. target_nearby_sound)
+			local f2 = io.open(GetInfo(74) .. other_target_here_sound)
+			local sounds_found = f1 and f2
+			f1:close()
+			f2:close()
+
+			if not sounds_found then
+				ColourNote("tomato", "", "Sound files could not be found. Extract them from Search&Destroy's zip file to the plugins folder and try again.")
+				return
+			end
+			xset_sound_onoff = "on"
+		end
+		SetVariable("mcvar_xset_sound_onoff", xset_sound_onoff)
+
+		ColourNote ("#FF5000", "", "\nSearch&Destroy Sounds are now ",
+			"#00C040", "", string.upper(xset_sound_onoff))
+	end
+
+	function is_sound_enabled()
+		return xset_sound_onoff == "on"
+	end
 ]]>
 </script>
 <triggers>
@@ -5336,6 +5700,115 @@ function goto_number(name, line, wildcards)
 			<send>	EnableTrigger("trg_area_index_line", false)
 					EnableTrigger("trg_area_index_end", false) </send> </trigger>
 
+<!-- Consider -->
+	<trigger match="^(?<flags>\(.*\) )?You would stomp (?<mob_name>.+?) into the ground\.$"
+		script="consider_trigger"
+		name="a"
+		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) would be easy, but is it even worth the work out\?$"
+		script="consider_trigger"
+		name="b"
+		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="^(?<flags>\(.*\) )?No Problem! (?<mob_name>.+?) is weak compared to you\.$"
+		script="consider_trigger"
+		name="c"
+		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) looks a little worried about the idea\.$"
+		script="consider_trigger"
+		name="d"
+		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) should be a fair fight!$"
+		script="consider_trigger"
+		name="e"
+		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) snickers nervously\.$"
+		script="consider_trigger"
+		name="f"
+		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) chuckles at the thought of you fighting \S+\.$"
+		script="consider_trigger"
+		name="g"
+		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="^(?<flags>\(.*\) )?Best run away from (?<mob_name>.+?) while you can!$"
+		script="consider_trigger"
+		name="h"
+		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="^(?<flags>\(.*\) )?Challenging (?<mob_name>.+?) would be either very brave or very stupid\.$"
+		script="consider_trigger"
+		name="i"
+		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) would crush you like a bug!$"
+		script="consider_trigger"
+		name="j"
+		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) would dance on your grave!$"
+		script="consider_trigger"
+		name="k"
+		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) says 'BEGONE FROM MY SIGHT unworthy\!'$"
+		script="consider_trigger"
+		name="l"
+		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="^(?<flags>\(.*\) )?You would be completely annihilated by (?<mob_name>.+?)!$"
+		script="consider_trigger"
+		name="m"
+		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="^(.+ has divine protection\.|If you killed .+, who would serve .+ customers\?)$"
+		script="consider_unkillable"
+		enabled="y" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
+
+	<trigger match="^$"
+		name="consider_end"
+		group="consider_end"
+		script="consider_end"
+		enabled="n" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
+
+	<trigger match="^(?:You see no one here but yourself!|Strange forces prevent violence here\.)$"
+		name="consider_end_empty"
+		group="consider_end"
+		script="consider_end"
+		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+<!-- Scan -->
+	<trigger match="^Tag option scan turned ON$"
+		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="{scan}"
+		script="scan_start"
+		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="{/scan}"
+		script="scan_end"
+		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="^Right here you see:$"
+		script="scan_location_current_room"
+		group="scan"
+		enabled="n" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
+
+	<trigger match="^(\d )?(North|East|South|West) from here you see:$"
+		script="scan_location_nearby_room"
+		group="scan"
+		enabled="n" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
+
+	<trigger match="^ {5}-(?<flags> [\[\(].+[\]\)])? (?<mob_name>.+)$"
+		script="scan_mob"
+		group="scan"
+		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
 <!-- PAGE SIZE -->
 	<trigger match="^You currently display ([0-9]+) lines per page\.|You do not page long messages\.$"
 		script="capture_page_size"
@@ -5360,17 +5833,6 @@ function goto_number(name, line, wildcards)
 	<trigger match="^[\s\S]*$"
 		name="trg_gag_everything"
 		enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="y" > </trigger>
-
-	<trigger
-		enabled="y"
-		keep_evaluating="y"
-		match="^(?:You assassinate |You catch |You attempt to bury .* deep into |You lunge at)(.*)(?: with cold efficiency\.| completely off-guard and inflict massive damage on .*\.|'s? back!|with a .*!)$"
-		regexp="y"
-		send_to="12"
-		sequence="100"
-	>
-	<send>targetMob = "%1"</send>
-  </trigger>
 </triggers>
 
 <aliases>
@@ -5561,6 +6023,14 @@ function goto_number(name, line, wildcards)
 		script="set_current_mob_keyword"
 		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
+	<alias	match="^xset autocon$"
+		script="xset_autocon"
+		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xset sound$"
+		script="xset_sound"
+		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
 <!-- xset window commands -->
 	<alias	match="^xset fontsize( (?<size>[0-9]+))?$"
 			script="xset_font_size"
@@ -5624,6 +6094,11 @@ function goto_number(name, line, wildcards)
 	<alias	match="^xtest popmsg$"
 			script="xtest_popmsg"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xtest debug$"
+			script="xtest_debug"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
 	<alias  match="^snd reload$"
 			script="sndReload"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>

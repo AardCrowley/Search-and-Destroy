@@ -4445,7 +4445,42 @@ end
 
 	function onHelp(name, line, wildcards)
 		local str = wildcards[1]
-		local helpFiles = {"win", "fontsize", "linespace", "speed", "vidblain", "mark", "index areas", "silent", "sort", "xm", "xmap", "roomnote", "qw", "ht", "ah", "ak|kk|qk", "qs", "xq", "noexp", "kw|keyword", "nx", "go", "autocon", "sound", "xrt|xrun", "cp|gq", "xcp", "xcp mode", "ms|msearch", "mgo|mgoto", "snd migrate|mergePwar", "snd update", "snd reload", "summary"}
+		local helpFiles = {
+			"win",
+			"fontsize",
+			"linespace",
+			"speed",
+			"vidblain",
+			"mark",
+			"index areas",
+			"silent",
+			"sort",
+			"xm",
+			"xmap",
+			"roomnote",
+			"qw",
+			"ht",
+			"ah",
+			"ak|kk|qk",
+			"qs",
+			"xq",
+			"noexp",
+			"kw|keyword",
+			"nx",
+			"go",
+			"autocon",
+			"sound",
+			"xrt|xrun",
+			"cp|gq",
+			"xcp",
+			"xcp mode",
+			"ms|msearch",
+			"mgo|mgoto",
+			"snd migrate|mergePwar",
+			"snd update",
+			"snd reload",
+			"summary",
+		}
 
 		local headers = {"cyan", "", string.rep("-", 76) .. "\n", "darkcyan", "", "Help keywords", "antiquewhite", "", " : " .. str .. "\n", "cyan", "", string.rep("-", 76) .. "\n"}
 

@@ -5074,7 +5074,7 @@ end
 		ColourNote("silver", "", mob_name, details.colour, "", string.format(" (%s)", details.level_range))
 	end
 
-	function consider_shopkeeper()
+	function consider_unkillable()
 		EnableTrigger("consider_end", true)
 	end
 
@@ -5105,6 +5105,7 @@ end
 			end
 		end
 
+		consider_destination_room = false
 		activity_target_found_here = false
 		quest_target_found_here = false
 		other_target_found_here = false
@@ -5730,8 +5731,8 @@ end
 		name="m"
 		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
-	<trigger match="^If you killed .+, who would serve .+ customers\?$"
-		script="consider_shopkeeper"
+	<trigger match="^(.+ has divine protection\.|If you killed .+, who would serve .+ customers\?)$"
+		script="consider_unkillable"
 		enabled="y" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
 
 	<trigger match="^$"

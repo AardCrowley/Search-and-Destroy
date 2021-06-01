@@ -2,6 +2,8 @@
 
 **v5.61**<br>
 *fix* : Some time ago, a change was made to how MUSHclient handled GMCP data. This was never reflected in SnD, so it broke a few things, namely `xq` and `noexp`. This has now been fixed.<br>
+*feature* : Will now automatically download the sounds set up by Naricain for snd events. https://github.com/AardCrowley/Search-and-Destroy/pull/12#issue-659354367<br>
+*Improvement* : Changes to the sorting of room-based CPs and GQs to better highlight when a particular area is likely to have your target and when it is not when more than one area matches. It also makes it more clear when there are multiple, possible targets in different areas. https://github.com/AardCrowley/Search-and-Destroy/pull/11#issue-659308193<br>
 
 **v5.6**<br>
 *feature*	: Ability to change mob keywords with `xset kw <mob name>`. When given a mob name it will update the keyword for the currently targeted mob. Without supplying a mob name it will open a series of dialog boxes to rename any mob. https://github.com/AardNaricain/Search-and-Destroy/pull/1<br>

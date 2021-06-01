@@ -3687,7 +3687,7 @@ end
 			for k,v in pairs (window_fonts) do
 				WindowFont(win, k, v.f, v.s, v.b, v.i, v.u, false)
 			end
-			WindowShow(win, true and GetVariable("mcvar_xgui_window_onoff") = "on" or false)  -- show it
+			WindowShow(win, true and GetVariable("mcvar_xgui_window_onoff") == "on" or false)  -- show it
 			if (win_state == "min") then
 				mouseup_drag(0, "hsMinimize")
 			end

@@ -4640,7 +4640,7 @@ end
 		raw_version = nil
 	end -- end Update code
 
-	function update_plugin()
+	function force_update_plugin()
 		raw = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/Search_and_Destroy.xml"
 
 		async_ok, async = pcall (require, "async")

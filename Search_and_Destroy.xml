@@ -4668,7 +4668,6 @@ end
 
 			Execute(GetAlphaOption("script_prefix") .. "DoAfterSpecial(1, \"ReloadPlugin('" .. GetPluginID() .. "')\", sendto.script)")
 			ColourNote("white", "blue", "Update complete!")
-		end
 
 		raw_version = nil
 	end -- end Force Update code

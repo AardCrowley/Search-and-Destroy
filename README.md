@@ -47,11 +47,6 @@ Commands:<br>
 	&gt;Toggles displaying target list in main<br>
 	&gt;MUD window.<br>
 <br>
-**xset sort &lt;all|area|room|none&gt;**<br>
-	&gt;Toggles sorting by area name in area<br>
-	&gt;cps/gqs, room cps/gqs, none, or both. *Currently*<br>
-	&gt;*bugged. Working on a fix.*<br>
-<br>
 **xm rlh &lt;roomID&gt;**<br>
 	&gt;Displays rooms linking to &lt;roomID&gt;or<br>
 	&gt;current room.<br>

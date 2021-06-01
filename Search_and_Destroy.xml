@@ -81,7 +81,6 @@
 -- [[ player status ]]
 	local current_character_state = "0"
 	local silentMode = GetVariable("mcvar_silentMode_command") or "off"
-	local sortBy = GetVariable("mcvar_sortBy") or "all"
 
 -- [[ Execute in area, room ]]
 	local execute_in_area_tbl = { i=0, j=0, arid="", f="", stat=1 }
@@ -2049,7 +2048,9 @@ end
 	end
 
 	function build_room_targets(cp_gq, sqlr, sqla)
-		local t, ig, list = {}, {}, {}
+		local ig, list = {}, {}
+		local low_chance = {}
+		local high_chance = {}
 		local level_taken
 		if (cp_gq == "cp") then
 			list = cp_check_list
@@ -2059,10 +2060,23 @@ end
 			level_taken = tonumber(gq_info_efflvl)
 		end
 		local db = assert(sqlite3.open(mapper_db_file))
+		local SnDdb = assert(sqlite3.open(snd_db_file))
+		local area_sorter = function(a, b)
+			if a.arid == "-1" then
+				return false
+			elseif b.arid == "-1" then
+				return true
+			else
+				return a.arid < b.arid
+			end
+		end
+
 		for i,v in ipairs (list) do
+			local possibilities = {}
 			local dead = v.is_dead
 			local cx -- color of link text
 			local lt -- link type (area, room, unknown)
+			local areas_sql = {}
 			if (dead == "yes") then
 				cx = "#484848"
 				lt = "area"
@@ -2082,7 +2096,8 @@ end
 						local area_min_lvl = (area_range_index[row.areaName].min) or 1
 						local area_max_lvl = (area_range_index[row.areaName].max) or 300
 						if (level_taken >= area_min_lvl) and (level_taken <= (area_max_lvl+25)) then	-- limit results to sensible level range.
-							table.insert(t, {
+							table.insert(areas_sql, fixsql(row.arid))
+							table.insert(possibilities, {
 								mob = v.mob,
 								arid = row.arid,
 								roomid = row.roomid,
@@ -2093,11 +2108,7 @@ end
 								minlvl = area_min_lvl,
 								maxlvl = area_max_lvl,
 								link_type = lt,	--((v.is_dead == false) and "room" or "area"),	-- deals with dead mobs when area contains roomnames same as area name e.g. Aardington Estate
-								index = #t+1,
-								ord = v.ord	} )
-								if sortBy == "all" or sortBy == "area" then
-									table.sort(t, function (a,b) return a.arid < b.arid end)
-								end
+								ord = v.ord } )
 						else
 							table.insert(ig, {	-- build table of search results for areas out of your level range.
 								mob = v.mob,	-- Usually invalid, but valid links can wind up here if area's level range is too broad, or wrong.
@@ -2110,36 +2121,106 @@ end
 								minlvl = area_min_lvl,
 								maxlvl = area_max_lvl,
 								link_type = "ignored",
-								index = #ig+1,
 								ord = v.ord } )
-								if sortBy == "all" or sortBy == "room" then
-									table.sort(t, function (a,b) return a.arid > b.arid end)
-								end
 						end
 					end
 				end
 			end
-			if (results_found == false) then	-- no results were returned: either the mob is dead, or the location is unknown.
+			if results_found then
+				-- When more than one possible area is found, check if you've seen the mob in that room in any of the areas
+				-- if never seen in any of the rooms, check if you've seen them anywhere in the areas
+				if #possibilities > 1 then
+					local mobs_by_room_query = string.format("SELECT sum(count) as count, zone FROM mobs WHERE mob = %s AND room = %s AND zone IN (%s);",
+						fixsql(v.mob), fixsql(v.loc), table.concat(areas_sql, ","))
+					local mob_found = false
+					for row in SnDdb:nrows(mobs_by_room_query) do
+						for i, possibility in ipairs(possibilities) do
+							if possibility.arid == row.zone then
+								mob_found = true
+								possibility.found = true
+								break
+							end
+						end
+					end
+
+					if not mob_found then
+						local mobs_by_area_query = string.format("SELECT sum(count) as count, zone FROM mobs WHERE mob = %s AND zone IN (%s);",
+							fixsql(v.mob), table.concat(areas_sql, ","))
+						for row in SnDdb:nrows(mobs_by_room_query) do
+							for i, possibility in ipairs(possibilities) do
+								if possibility.arid == row.zone then
+									mob_found = true
+									possibility.found = true
+									break
+								end
+							end
+						end
+					end
+
+					table.sort(possibilities, area_sorter)
+					if mob_found then
+						local temp_high = {}
+						local temp_low = {}
+						for i, possibility in ipairs(possibilities) do
+							possibility.count_for_room = #possibilities
+							if possibility.found then
+								table.insert(temp_high, possibility)
+							else
+								possibility.unlikely = true
+								possibility.color = "#484848"
+								table.insert(temp_low, possibility)
+							end
+						end
+						for i, possibility in ipairs(temp_high) do
+							possibility.room_index = i
+							table.insert(high_chance, possibility)
+						end
+
+						for i, possibility in ipairs(temp_low) do
+							possibility.room_index = i + #temp_high
+							table.insert(low_chance, possibility)
+						end
+					else
+						for i, possibility in ipairs(possibilities) do
+							possibility.count_for_room = #possibilities
+							possibility.room_index = i
+							table.insert(high_chance, possibility)
+						end
+					end
+				elseif #possibilities == 1 then
+					DebugNote(string.format("Mob %s is high chance as %s was only found in one area", possibilities[1].mob, possibilities[1].roomName))
+					table.insert(high_chance, possibilities[1])
+				end
+			else	-- no results were returned: either the mob is dead, or the location is unknown.
 				if (dead == "yes") then	-- mob is dead
 					local results_found = false
 					local select = string.format(sqla, fixsql(v.loc))	-- dead mobs only give area name (even in room cp's) so search area info only.
 					for dead_row in db:nrows(select) do	-- mob is dead, location is known
 						results_found = true
-						table.insert(t, { mob=v.mob, arid=dead_row.arid, qty = v.qty, is_dead="yes", color="#484848", link_type="area", index=#t+1, ord=v.ord } )
+						table.insert(high_chance, { mob=v.mob, arid=dead_row.arid, qty = v.qty, is_dead="yes", color="#484848", link_type="area", ord=v.ord } )
 					end
 					if (results_found == false) then	-- mob is dead, location is unknown
-						table.insert(t, { mob=v.mob, arid="-1", location=v.loc, qty = v.qty, is_dead="yes", color="#900000", link_type="unknown", index=#t+1, ord=v.ord } )
+						table.insert(high_chance, { mob=v.mob, arid="-1", location=v.loc, qty = v.qty, is_dead="yes", color="#900000", link_type="unknown", ord=v.ord } )
 					end
 				else	-- mob is alive, but location is unknown
-					table.insert(t, { mob=v.mob, arid="-1", location=v.loc, qty = v.qty, is_dead="no", color="#FF0000", link_type="unknown", index=#t+1, ord=v.ord } )
+					table.insert(high_chance, { mob=v.mob, arid="-1", location=v.loc, qty = v.qty, is_dead="no", color="#FF0000", link_type="unknown", ord=v.ord } )
 				end
 			end
 		end
+		table.sort(ig, area_sorter)
+		table.sort(high_chance, area_sorter)
+		table.sort(low_chance, area_sorter)
+
+		for i, v in ipairs(low_chance) do
+			table.insert(high_chance, v)
+		end
+
 		db:close_vm()
-		for i,v in ipairs (t) do
+		SnDdb:close_vm()
+		for i,v in ipairs(high_chance) do
 			v.kw = gmkw(v.mob, v.arid)
 		end
-		return t, ig
+		return high_chance, ig
 	end
 
 --	[[ Display target links in MUD window ]]
@@ -2170,6 +2251,9 @@ end
 						link_text = string.format(" %2d  %s - %s  %s", padRight(i, 4, " "), padRight(mob_text, 32, " "), padRight(v.arid, 10, " "), padRight(roomText, 40, " "))
 						tooltip = "Target cp mob " .. i .. " - " .. mob_text .. " (" .. v.arid .. ")"
 						Hyperlink("xcp " .. i, link_text, tooltip, v.color, "", 0)
+						if v.unlikely then
+							ColourTell("mediumblue", "", "(unlikely)")
+						end
 					elseif (v.link_type == "unknown") then
 						link_text = string.format(" %2d  %s - unknown: '%s'", padRight(i, 4, " "), padRight(mob_text, 32, " "), v.location)
 						tooltip = "Location not found in mapper database"
@@ -2786,15 +2870,6 @@ end
 		end
 	end
 
-	function xset_sortBy(name, line, wildcards)
-		if (not wildcards[1] or wildcards[1] == "") then
-			ColourNote("#FF5000", "", "Search and Destroy: Sort mode currently set to: '" .. sortBy .. "'\nOptions are: all, area, room, none")
-		else
-			sortBy = wildcards[1]:lower()
-			SetVariable("mcvar_sortBy", sortBy)
-			ColourNote("#FF5000", "", "Search and Destroy: Sort mode is now set to: '" .. sortBy .. "'")
-		end
-	end
 -- [[ Room search processes ]]
 	local search_rooms_sql =
 		"SELECT r.uid as uid, r.name as name, info, r.area as area, " ..
@@ -3334,7 +3409,6 @@ end
 	end
 
 --	[[ Simulate cp ]]
-	local cp_simulate_toggle = "0"
 	function simulate_cp(name, line, wildcards)
 		if (wildcards.type == "") then
 			area_room_type = "area"
@@ -3351,7 +3425,7 @@ end
 		cp_check_list = {}
 		EnableTrigger("trg_cp_check_line", true)
 		Simulate("\n")
-		if (cp_simulate_toggle == "0") then
+		if (area_room_type == "area") then
 			Simulate("You still have to kill * A test mob (A Cold Path)\n")	--dead
 			Simulate("You still have to kill * the head necromancer's assistant (Necromancers' Guild)\n")
 			Simulate("You still have to kill * Isscheburqua (Insanitaria)\n")
@@ -3372,14 +3446,16 @@ end
 			Simulate("You still have to kill * the spirit of Bakarne (The Empire of Aiighialla)\n")
 			Simulate("You still have to kill * Elfgar Sous-Fled (Some Place)\n")
 			Simulate("You still have to kill * the heart of a sandstorm (Living Mines of Dak'Tai)\n")
-			cp_simulate_toggle = "1"
 		else
 			Simulate("You still have to kill * a former court jester (The Labyrinth)\n")
+			Simulate("You still have to kill * the iron golem (Audience Chamber)\n")
+			Simulate("You still have to kill * probably a fake mob (Probably a Fake Room)\n")
+			Simulate("You still have to kill * Jarre (The UnderDark - Dead)\n")
 			Simulate("You still have to kill * the heart of a sandstorm (Buried in the Great Desert's unrelenting dunes)\n")
 			Simulate("You still have to kill * Parent (The Kitchen)\n")
 			Simulate("You still have to kill * a rhino seraph (A Corridor of Cinnamon and Silver)\n")
 			Simulate("You still have to kill * A sprite prisoner (A cell)\n")
-			cp_simulate_toggle = "0"
+			Simulate("You still have to kill * the gibbering mouther (Dining Hall)\n")
 		end
 		Simulate("Note: Dead means that the target is dead, not that you have killed it.\n")
 		Simulate("\n")
@@ -3900,12 +3976,22 @@ end
 				eventHandler = ""
 			end
 			local qty = ((player_on_gq == "yes") and v.qty .. "* " or "")
-			local link = string.format("%s)  %s%s - %s", index, qty, mob, location)
+			local counts = ""
+			if v.count_for_room and v.count_for_room > 1 then
+				counts = string.format("(%i/%i) ", v.room_index, v.count_for_room)
+			end
+			local link = string.format("%s) %s%s%s - %s", index, counts, qty, mob, location)
 			local color = ((index == xcp_index) and "0x0040FF" or convert_color_format(v.color))
 			local hs_left = (index < 10) and 13 or 6
 			local hs_top = (targ_list_top + ((index-1) * win_line_space))
 			local hs_right = math.min(hs_left + WindowTextWidth(win, font, link), win_width - 5)
 			local hs_bottom = (hs_top + font_height + 1) --(hs_top + win_line_space )
+			if v.unlikely then
+				local added_width = WindowTextWidth(win, font, "(Unlikely) ")
+				WindowText(win, font, "(Unlikely) ", 6, hs_top, 0, 0, 0xCD0000, false)
+				hs_left = hs_left + added_width
+				hs_right = math.min(hs_right + added_width, win_width - 5)
+			end
 			WindowText(win, font, link, hs_left, hs_top, 0, 0, color, false)
 			if (hs_bottom > win_height - resize_tag) then		-- Prevent list item's hotspot from overlapping with the resize tag
 				hs_right = math.min(hs_right, win_width - resize_tag - 5)
@@ -4598,7 +4684,6 @@ end
 			"mark",
 			"index areas",
 			"silent",
-			"sort",
 			"xm",
 			"xmap",
 			"roomnote",
@@ -4699,11 +4784,6 @@ end
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset silent <on|off>")
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("This command will turn the display of campaign or global quest targets in the main window on or off. Soneone once mentioned it was redudant to have it in both the miniwindow and the main window, so for the sake of spamreduce, this was included.")}))
-
-		elseif str == "sort" then
-			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset sort <all|area|room|none>")
-			Note()
-			ColourNote("antiquewhite", "", unpack({helpWrap("Sorts out campaign lists by rooms, by areas, both, or default sort. May or may not be bugged.")}))
 
 		elseif str == "rlh" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xm <room name>")
@@ -4870,8 +4950,6 @@ end
 		ColourNote("antiquewhite", "", unpack({helpWrap("xset index areas:  Indexes areas. Use this if you get a lot of 'red' links but you've mapped the area.")}))
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("xset silent <on|off>:  Toggles displaying target list in main MUD window.")}))
-		Note()
-		ColourNote("antiquewhite", "", unpack({helpWrap("xset sort <all|area|room|none>: Toggles sorting by area name in area cps/gqs, room cps/gqs, none, or both.")}))
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("xm rlh <roomID>:  Displays rooms linking to <roomID> or current room.")}))
 		Note()
@@ -5285,7 +5363,7 @@ end
 		end
 
 		-- Don't play sound when a quest target is here, assume soundpack will already play a sound
-		if not quest_target_here then
+		if not quest_target_found_here then
 			if activity_target_found_here then
 				-- The current target is found in the room, play a sound
 				play_target_found_sound()
@@ -6007,8 +6085,6 @@ end
 	<alias enabled="y" match="^xset silent(?: (on|off))?" regexp="y" script="xset_silentMode" sequence="100">
 	</alias>
 
-	<alias enabled="y" match="xset sort(?: (all|room|area|none))?" regexp="y" script="xset_sortBy" sequence="100">
-	</alias>
 <!-- Auto-hunt commands-->
 	<alias	match="^ah (?<arg>\w.+)$"
 			script="auto_hunt"
@@ -6253,7 +6329,7 @@ end
 			script="xtest_roomhist"
 			enabled="y" regexp="y" sequence="100" > </alias>
 
-	<alias	match="^xtest simulate cp(?: (?<type>ar?e?a?|ro?o?m?))?$"
+	<alias	match="^xtest simulate cp(?: (?<type>area|room))?$"
 			script="simulate_cp"
 			enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12" > </alias>
 

@@ -1,4 +1,8 @@
 # CHANGELOG
+
+**v5.61**<br>
+*fix* : Some time ago, a change was made to how MUSHclient handled GMCP data. This was never reflected in SnD, so it broke a few things, namely `xq` and `noexp`. This has now been fixed.<br>
+
 **v5.6**<br>
 *feature*	: Ability to change mob keywords with `xset kw <mob name>`. When given a mob name it will update the keyword for the currently targeted mob. Without supplying a mob name it will open a series of dialog boxes to rename any mob. https://github.com/AardNaricain/Search-and-Destroy/pull/1<br>
 *feature*   : Reorder the list of rooms to look for a mob based on the number of times you have seen it there already. https://github.com/AardCrowley/Search-and-Destroy/pull/3 and https://github.com/AardCrowley/Search-and-Destroy/pull/4<br>

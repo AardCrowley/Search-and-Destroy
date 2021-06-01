@@ -270,7 +270,7 @@
 		xg_create_window()
 
 		migrate_database()
-		move_sounds()
+		download_sounds(function() end)
 	end
 
 	function migrate_database()
@@ -375,22 +375,6 @@
 			DROP TABLE old_mobs;
 			COMMIT;
 		]])
-	end
-
-	function move_sounds()
-		move_sound(target_nearby_sound)
-		move_sound(other_target_here_sound)
-	end
-
-	function move_sound(filename)
-		local path = GetInfo(60) .. filename
-		local f = io.open(path, "r")
-		if f then
-			DebugNote(string.format("Moving %s to sounds directory.", path))
-			f:close()
-			os.rename(path, GetInfo(74) .. filename, GetInfo)
-			os.remove(path)
-		end
 	end
 
 	local init_called = 0
@@ -4570,6 +4554,65 @@ end
 		raw_version = nil
 	end -- end Update code
 
+	function download_sounds(callback)
+		local download_path = "https://github.com/AardNaricain/Search-and-Destroy/tree/download-sounds/%s"
+		local sounds = {
+			other_target_here_sound,
+			target_nearby_sound,
+		}
+		local async_ok, async = pcall (require, "async")
+		local file
+		local files_to_download = {}
+
+		if async_ok then
+			for i, filename in ipairs(sounds) do
+				file = io.open(GetInfo(74) .. filename)
+				if file then
+					file:close()
+				else
+					table.insert(files_to_download, filename)
+				end
+			end
+
+			local callbacks_required = #files_to_download
+			local all_downloads_successful = true
+			function callbackWrapper(success)
+				all_downloads_successful = all_downloads_successful and success
+				callbacks_required = callbacks_required - 1
+				if callbacks_required == 0 then
+					callback(all_downloads_successful)
+				end
+			end
+
+			for i, filename in ipairs(files_to_download) do
+				ColourNote("", "", "Downloading ", "white", "", filename)
+				async.doAsyncRemoteRequest(string.format(download_path, filename), download_sounds_callback(filename, callbackWrapper), "HTTPS")
+			end
+
+			if #files_to_download == 0 then
+				callback(true)
+			end
+		else
+			ColourNote("white", "blue", "Error downloading sounds")
+			callback(false)
+		end
+	end
+
+	function download_sounds_callback(filename, callback)
+		return function(retval, page, status, headers, full_status, request_url)
+			if status == 200 then
+				local file = io.open(GetInfo(74) .. filename, "wb")
+				file:write(page)
+				file:close()
+				Note(string.format("Wrote %s successfully to sounds directory", filename))
+				callback(true)
+			else
+				Note(string.format("Couldn't download %s", filename))
+				callback(false)
+			end
+		end
+	end
+
 	function helpWrap (str, limit, indent, indent1)
 		indent = indent or ""
 		indent1 = indent1 or indent
@@ -5465,27 +5508,27 @@ end
 		mobs_here = {}
 	end
 
-	function xset_sound()
-		if xset_sound_onoff == "on" then
-			xset_sound_onoff = "off"
-		else
-			move_sounds()
-			local f1 = io.open(GetInfo(74) .. target_nearby_sound)
-			local f2 = io.open(GetInfo(74) .. other_target_here_sound)
-			local sounds_found = f1 and f2
-			f1:close()
-			f2:close()
-
-			if not sounds_found then
-				ColourNote("tomato", "", "Sound files could not be found. Extract them from Search&Destroy's zip file to the plugins folder and try again.")
-				return
-			end
-			xset_sound_onoff = "on"
-		end
+	function update_sounds_onoff_value(new_val)
+		xset_sound_onoff = new_val
 		SetVariable("mcvar_xset_sound_onoff", xset_sound_onoff)
 
 		ColourNote ("#FF5000", "", "\nSearch&Destroy Sounds are now ",
 			"#00C040", "", string.upper(xset_sound_onoff))
+	end
+
+	function xset_sound()
+		if xset_sound_onoff == "on" then
+			update_sounds_onoff_value("off")
+		else
+			download_sounds(function(success)
+				if success then
+					xset_sound_onoff = "on"
+					update_sounds_onoff_value("on")
+				else
+					ColourNote("Tomato", "", "Sound could not be enabled")
+				end
+			end)
+		end
 	end
 
 	function is_sound_enabled()

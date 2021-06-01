@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.61" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="5.62" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -4640,6 +4640,39 @@ end
 		raw_version = nil
 	end -- end Update code
 
+		function force_update_plugin()
+		raw = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/Search_and_Destroy.xml"
+
+		async_ok, async = pcall (require, "async")
+
+		if async_ok then
+			plugin_page = async.doAsyncRemoteRequest(raw, raw_get, "HTTPS")
+		else
+			ColourNote("white", "blue", "Error on plugin update!")
+		end
+	end
+
+	function raw_get(retval, page, status, headers, full_status, request_url)
+		if status == 200 then
+			raw_version = tonumber(string.match(page, '<plugin version="([0-9%.]+)"'))
+		end
+			
+		ColourNote("white", "blue", "Redownloading version " .. PLUGIN_VERSION .. ". Do not touch anything!")
+			local file = io.open(GetPluginInfo(GetPluginID(), 6), "w")
+			file:write(page)
+			file:close()
+
+			if "" == GetAlphaOption("script_prefix") then
+				SetAlphaOption("script_prefix", "\\\\\\")
+			end
+
+			Execute(GetAlphaOption("script_prefix") .. "DoAfterSpecial(1, \"ReloadPlugin('" .. GetPluginID() .. "')\", sendto.script)")
+			ColourNote("white", "blue", "Update complete!")
+		end
+
+		raw_version = nil
+	end -- end Force Update code
+
 	function download_sounds(callback)
 		local download_path = "https://github.com/AardNaricain/Search-and-Destroy/tree/download-sounds/%s"
 		local sounds = {
@@ -6121,6 +6154,11 @@ end
 <aliases>
 <!-- Plugin Update automatic -->
 	<alias enabled="y" match="snd update" script="update_plugin" sequence="100">
+	</alias>
+	<alias enabled="y" match="^xhelp(?:\s(.*))?$" regexp="y" script="onHelp" sequence="100">
+	</alias>
+
+	<alias enabled="y" match="snd force update" script="force_update_plugin" sequence="100">
 	</alias>
 	<alias enabled="y" match="^xhelp(?:\s(.*))?$" regexp="y" script="onHelp" sequence="100">
 	</alias>

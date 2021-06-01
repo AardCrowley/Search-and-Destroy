@@ -4640,7 +4640,7 @@ end
 		raw_version = nil
 	end -- end Update code
 
-		function force_update_plugin()
+	function update_plugin()
 		raw = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/Search_and_Destroy.xml"
 
 		async_ok, async = pcall (require, "async")
@@ -4656,8 +4656,11 @@ end
 		if status == 200 then
 			raw_version = tonumber(string.match(page, '<plugin version="([0-9%.]+)"'))
 		end
-			
-		ColourNote("white", "blue", "Redownloading version " .. PLUGIN_VERSION .. ". Do not touch anything!")
+
+		if raw_version ~= PLUGIN_VERSION then
+			ColourNote("white", "blue", PLUGIN_NAME .. " is not up-to-date.")
+		elseif raw_version == PLUGIN_VERSION then
+			ColourNote("white", "blue", "Redownloading version " .. PLUGIN_VERSION .. ". Do not touch anything!")
 			local file = io.open(GetPluginInfo(GetPluginID(), 6), "w")
 			file:write(page)
 			file:close()
@@ -4668,9 +4671,10 @@ end
 
 			Execute(GetAlphaOption("script_prefix") .. "DoAfterSpecial(1, \"ReloadPlugin('" .. GetPluginID() .. "')\", sendto.script)")
 			ColourNote("white", "blue", "Update complete!")
+		end
 
 		raw_version = nil
-	end -- end Force Update code
+	end -- end Update code
 
 	function download_sounds(callback)
 		local download_path = "https://github.com/AardNaricain/Search-and-Destroy/tree/download-sounds/%s"

@@ -4646,13 +4646,13 @@ end
 		async_ok, async = pcall (require, "async")
 
 		if async_ok then
-			plugin_page = async.doAsyncRemoteRequest(raw, raw_get, "HTTPS")
+			plugin_page = async.doAsyncRemoteRequest(raw, force_raw_get, "HTTPS")
 		else
 			ColourNote("white", "blue", "Error on plugin update!")
 		end
 	end
 
-	function raw_get(retval, page, status, headers, full_status, request_url)
+	function force_raw_get(retval, page, status, headers, full_status, request_url)
 		if status == 200 then
 			raw_version = tonumber(string.match(page, '<plugin version="([0-9%.]+)"'))
 		end

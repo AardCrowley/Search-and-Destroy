@@ -101,6 +101,9 @@
 	local room_targets_ignored = {}
 	local area_room_type = "init"
 	local current_activity = "init"	-- valid: cp, gq, init, none = "init"
+	local xcp_retry_stat
+	local xcp_index_attempt
+	local last_kill_index
 
 -- [[ campaign data (cpmd) ]]
 	local cp_info_level = tonumber(GetVariable("mcvar_cp_level_taken")) or 0
@@ -217,6 +220,34 @@
 
 -- [[ S&D window color data]]
 	local win_bgcolor = 0x000000
+
+	TEXT_COLOR_DETAILS = {
+		{ key = "normal",			default = "#E0E0E0", menu_name = "Normal mobs",
+			desc = "normal mobs" },
+		{ key = "targeted",			default = "#FF4000", menu_name = "Targeted mob",
+			desc = "the currently targeted mob"},
+		{ key = "dead",				default = "#484848", menu_name = "Dead mobs",
+			desc = "a dead mobs" },
+		{ key = "unknown",			default = "#FF0000", menu_name = "Unknown mobs",
+			desc = "mobs in an unknown area" },
+		{ key = "unknown_dead",		default = "#900000", menu_name = "Unknown dead mobs",
+			desc = "deads mob in an unknown areas" },
+		{ key = "unlikely",			default = "#484848", menu_name = "Unlikely mobs",
+			desc = "mobs that are not likely to be the target in a room-based campaign or global quest"},
+		{ key = "unlikely_tag",		default = "#0000CD", menu_name = "Unlikely tag",
+			desc = "the text informing you that you have a quest available" },
+		{ key = "quest_available",	default = "#1E90FF", menu_name = "Quest available",
+			desc = "the text informing you that you have a quest available" },
+		{ key = "quest_complete",	default = "#7CFC00", menu_name = "Quest complete",
+			desc = "the text informing you that you have a quest to turn in"},
+	}
+
+
+	local text_colors = {}
+
+	for i, details in ipairs(TEXT_COLOR_DETAILS) do
+		text_colors[details.key] = GetVariable("color_" .. details.key) or details.default
+	end
 
 -- [[ Con and scan stuff ]]
 	local xset_nx_action = GetVariable("mcvar_xset_nx_action") or (GetVariable("mcvar_xset_autocon_onoff") == "on" and "conscan") or "qs"
@@ -1641,16 +1672,7 @@ end
 		player_on_cp = "yes"
 		current_activity = "cp"
 		build_main_target_list("cp", area_room_type)
-		if (xcp_retry_stat == 2) then						-- About xcp_retry_stat:
-			if (xcp_index == 0) or (xcp_index == 1) then
-				xcp_retry_stat = 0							-- after killing cp mob, it's possible to 'xcp' after tables are cleared,
-				xcp_noarg()									-- but before they're refreshed, which would cause 'xcp' to fail with the
-			else											-- message "no data yet".  Instead, cp_mob_killed sets a flag that does
-				xcp_retry_stat = 0							-- two things: 1) tells 'xcp' to silently abort, 2) tells cp_check_end to
-				xcp_arg("", "", {index=xcp_index}) 			-- do xcp again (with or without arg), which works normally now that
-			end												-- table data is available.
-		end
-		xcp_retry_stat = 0				--Execute("xcp " .. xcp_index)
+		xcp_retry()
 	end
 
 --	[[ general cp status functions ]]
@@ -1672,8 +1694,9 @@ end
 		if (player_on_gq == "no") then
 			xcp_retry_stat = 1
 			qw_reset(false)
+			last_kill_index = xcp_index
 			if main_target_list[xcp_index] then
-				main_target_list[xcp_index].color = "#404040"
+				main_target_list[xcp_index].is_dead = "yes"
 			end
 			xcp_clear_target(true)
 			DoAfterSpecial(0.1, "do_cp_check()", 12)
@@ -1851,14 +1874,25 @@ end
 	function gq_check_end()
 		player_is_on_gq()
 		build_main_target_list("gq", area_room_type)
-		if (xcp_retry_stat == 2) then						-- About xcp_retry_stat:
-			if (xcp_index == 0) or (xcp_index == 1) then
-				xcp_retry_stat = 0							-- after killing gq mob, it's possible to 'xcp' after tables are cleared,
-				xcp_noarg()									-- but before they're refreshed, which would cause 'xcp' to fail with the
-			else											-- message "no data yet".  Instead, gq_mob_killed sets a flag that does
-				xcp_retry_stat = 0							-- two things: 1) tells 'xcp' to silently abort, 2) tells gq_check_end to
-				Execute("xcp " .. xcp_index)				-- do 'xcp' again (with or without arg), which works normally now that
-			end												-- table data is available.
+		xcp_retry()
+	end
+
+	function xcp_retry()
+		-- About xcp_retry_stat:
+		-- after killing gq mob, it's possible to 'xcp' after tables are cleared,
+		-- but before they're refreshed, which would cause 'xcp' to fail with the
+		-- message "no data yet".  Instead, gq_mob_killed sets a flag that does
+		-- two things: 1) tells 'xcp' to silently abort, 2) tells gq_check_end to
+		-- do 'xcp' again (with or without arg), which works normally now that
+		-- table data is available.
+		if (xcp_retry_stat == 2) then
+			DebugNote(string.format("last_kill_index: %i xcp_index_attempt: %i", last_kill_index, xcp_index_attempt))
+			xcp_index = xcp_index_attempt
+			if last_kill_index <= xcp_index_attempt then
+				xcp_index = xcp_index_attempt - 1
+			end
+			xcp_retry_stat = 0
+			xcp_arg("", "", {index=xcp_index})
 		end
 		xcp_retry_stat = 0
 	end
@@ -1875,7 +1909,8 @@ end
 				else
 					qw_reset(false)
 					xcp_retry_stat = 1
-					main_target_list[xcp_index].color = "#404040"
+					last_kill_index = xcp_index
+					main_target_list[xcp_index].is_dead = "yes"
 					xcp_clear_target(true)
 					DoAfterSpecial(0.1, "do_gq_check()", 12)
 				end
@@ -1991,6 +2026,22 @@ end
 		print_target_links(main_target_list)
 	end
 
+	function color_for_target(target, targeted)
+		if targeted then
+			return text_colors.targeted
+		elseif target.unlikely then
+			return text_colors.unlikely
+		elseif target.is_dead == "yes" and target.link_type == "unknown" then
+			return text_colors.unknown_dead
+		elseif target.is_dead == "yes" then
+			return text_colors.dead
+		elseif target.link_type == "unknown" then
+			return text_colors.unknown
+		else
+			return text_colors.normal
+		end
+	end
+
 	function build_area_targets(cp_gq, sqla)
 		local t, list = {}, {}
 		if (cp_gq == "cp") then
@@ -2001,15 +2052,6 @@ end
 		local db = assert(sqlite3.open(mapper_db_file))
 		for i,v in ipairs (list) do
 			local dead = v.is_dead
-			local cx
-			local cy
-			if (dead == "yes") then
-				cx = "#484848"
-				cy = "#900000"
-			else
-				cx = "#E0E0E0"
-				cy = "#FF0000"
-			end
 			local results_found = false
 			local select = string.format(sqla, fixsql(v.loc))
 			for row in db:nrows(select) do
@@ -2019,7 +2061,6 @@ end
 					arid = row.arid,
 					qty = v.qty,
 					is_dead = dead,
-					color = cx,
 					link_type = "area",
 					index = #t+1,
 					ord = v.ord } )
@@ -2031,10 +2072,10 @@ end
 					arid = "-1",
 					qty = v.qty,
 					is_dead = dead,
-					color = cy,
 					link_type = "unknown",
 					index = #t+1,
-					ord = v.ord } )
+					ord = v.ord,
+					unknown = true, } )
 			end
 		end
 		db:close_vm()
@@ -2071,14 +2112,11 @@ end
 		for i,v in ipairs (list) do
 			local possibilities = {}
 			local dead = v.is_dead
-			local cx -- color of link text
 			local lt -- link type (area, room, unknown)
 			local areas_sql = {}
 			if (dead == "yes") then
-				cx = "#484848"
 				lt = "area"
 			else
-				cx = "#E0E0E0"
 				lt = "room"
 			end
 			local results_found = false
@@ -2101,7 +2139,6 @@ end
 								roomName = row.roomName,
 								qty = v.qty,
 								is_dead = dead,--v.is_dead,
-								color = cx,	--((v.is_dead == false) and "#E0E0E0" or "#484848"),
 								minlvl = area_min_lvl,
 								maxlvl = area_max_lvl,
 								link_type = lt,	--((v.is_dead == false) and "room" or "area"),	-- deals with dead mobs when area contains roomnames same as area name e.g. Aardington Estate
@@ -2114,7 +2151,6 @@ end
 								roomName = row.roomName,
 								qty = v.qty,
 								is_dead = dead,
-								color = "#002460",
 								minlvl = area_min_lvl,
 								maxlvl = area_max_lvl,
 								link_type = "ignored",
@@ -2164,7 +2200,6 @@ end
 								table.insert(temp_high, possibility)
 							else
 								possibility.unlikely = true
-								possibility.color = "#484848"
 								table.insert(temp_low, possibility)
 							end
 						end
@@ -2194,13 +2229,13 @@ end
 					local select = string.format(sqla, fixsql(v.loc))	-- dead mobs only give area name (even in room cp's) so search area info only.
 					for dead_row in db:nrows(select) do	-- mob is dead, location is known
 						results_found = true
-						table.insert(high_chance, { mob=v.mob, arid=dead_row.arid, qty = v.qty, is_dead="yes", color="#484848", link_type="area", ord=v.ord } )
+						table.insert(high_chance, { mob=v.mob, arid=dead_row.arid, qty = v.qty, is_dead="yes", link_type="area", ord=v.ord } )
 					end
 					if (results_found == false) then	-- mob is dead, location is unknown
-						table.insert(high_chance, { mob=v.mob, arid="-1", location=v.loc, qty = v.qty, is_dead="yes", color="#900000", link_type="unknown", ord=v.ord } )
+						table.insert(high_chance, { mob=v.mob, arid="-1", location=v.loc, qty = v.qty, is_dead="yes", link_type="unknown", ord=v.ord } )
 					end
 				else	-- mob is alive, but location is unknown
-					table.insert(high_chance, { mob=v.mob, arid="-1", location=v.loc, qty = v.qty, is_dead="no", color="#FF0000", link_type="unknown", ord=v.ord } )
+					table.insert(high_chance, { mob=v.mob, arid="-1", location=v.loc, qty = v.qty, is_dead="no", link_type="unknown", ord=v.ord } )
 				end
 			end
 		end
@@ -2238,23 +2273,24 @@ end
 					local link_text
 					local tooltip
 					local notehelp = "Show notes for item " .. i
+					local color = color_for_target(v)
 					if (v.link_type == "area") then
 						link_text = string.format(" %2d  %s - %s", padRight(i, 6, " "), padRight(mob_text, 32, " "), padRight(v.arid, 10, " "))
 						tooltip = "Target cp mob " .. i .. " - " .. mob_text .. " (" .. v.arid .. ")"
-						Hyperlink("xcp " .. i, link_text, tooltip, v.color, "", 0)
+						Hyperlink("xcp " .. i, link_text, tooltip, color, "", 0)
 						Hyperlink("roomnote area " .. v.arid, "  [notes]", notehelp, ((v.is_dead == "yes") and "#006000" or "lightgreen"), "", 0)
 					elseif (v.link_type == "room") then
 						local roomText = string.format("%5s", v.roomid) .. ": '" .. v.roomName .. "'"
 						link_text = string.format(" %2d  %s - %s  %s", padRight(i, 4, " "), padRight(mob_text, 32, " "), padRight(v.arid, 10, " "), padRight(roomText, 40, " "))
 						tooltip = "Target cp mob " .. i .. " - " .. mob_text .. " (" .. v.arid .. ")"
-						Hyperlink("xcp " .. i, link_text, tooltip, v.color, "", 0)
+						Hyperlink("xcp " .. i, link_text, tooltip, color, "", 0)
 						if v.unlikely then
 							ColourTell("mediumblue", "", "(unlikely)")
 						end
 					elseif (v.link_type == "unknown") then
 						link_text = string.format(" %2d  %s - unknown: '%s'", padRight(i, 4, " "), padRight(mob_text, 32, " "), v.location)
 						tooltip = "Location not found in mapper database"
-						Hyperlink(" ", link_text, tooltip, v.color, "", 0)
+						Hyperlink(" ", link_text, tooltip, color, "", 0)
 					end
 					print("")
 				end
@@ -2364,6 +2400,7 @@ end
 				ColourNote("#FF5000", "", "No item exists, or data is busy")
 			end
 		else
+			xcp_index_attempt = index
 			xcp_retry_stat = 2
 		end
 	end
@@ -3456,6 +3493,7 @@ end
 			Simulate("You still have to kill * Parent (The Kitchen)\n")
 			Simulate("You still have to kill * a rhino seraph (A Corridor of Cinnamon and Silver)\n")
 			Simulate("You still have to kill * A sprite prisoner (A cell)\n")
+			Simulate("You still have to kill * definitely a fake mob (Fake Area - Dead)\n")
 			Simulate("You still have to kill * the gibbering mouther (Dining Hall)\n")
 		end
 		Simulate("Note: Dead means that the target is dead, not that you have killed it.\n")
@@ -3981,14 +4019,14 @@ end
 				counts = string.format("(%i/%i) ", v.room_index, v.count_for_room)
 			end
 			local link = string.format("%2s) %s%s%s - %s", index, counts, qty, mob, location)
-			local color = ((index == xcp_index) and "0x0040FF" or convert_color_format(v.color))
+			local color = ColourNameToRGB(color_for_target(v, index == xcp_index))
 			local hs_left = 6
 			local hs_top = (targ_list_top + ((index-1) * font_height))
 			local hs_right = math.min(hs_left + WindowTextWidth(win, font, link), win_width - 5)
 			local hs_bottom = (hs_top + font_height + 1)
 			if v.unlikely then
 				local added_width = WindowTextWidth(win, font, "(Unlikely) ")
-				WindowText(win, font, "(Unlikely) ", 6, hs_top, 0, 0, 0xCD0000, false)
+				WindowText(win, font, "(Unlikely) ", 6, hs_top, 0, 0, ColourNameToRGB(text_colors.unlikely_tag), false)
 				hs_left = hs_left + added_width
 				hs_right = math.min(hs_right + added_width, win_width - 5)
 			end
@@ -4016,14 +4054,14 @@ end
 		local hs_left, hs_top, hs_right, hs_bottom
 
 		if quest_target.qstat == "0" then
-			text = "You may now quest again"
-			color = 0xFF901E
+			text = " You may now quest again"
+			color = text_colors.quest_available
 		elseif quest_target.qstat == "2" then
-			color = ((full_mob_name == quest_target.mob and xcp_index < 1) and 0x0040FF or 0xE0E0E0)
+			color = ((full_mob_name == quest_target.mob and xcp_index < 1) and text_colors.targeted or text_colors.normal)
 			text = string.format(" Q) %s - '%s' (%s)", quest_target.mob, quest_target.room, quest_target.arid)
 		elseif quest_target.qstat == "3" then
-			text = "Quest complete! You may turn it in"
-			color = 0x00FC7C
+			text = " Quest complete! You may turn it in"
+			color = text_colors.quest_complete
 		else
 			return false
 		end
@@ -4036,7 +4074,7 @@ end
 			hs_right = math.min(hs_right, win_width - resize_tag - 5)
 		end
 
-		WindowText(win, font, text, hs_left, hs_top, 0, 0, color, false)
+		WindowText(win, font, text, hs_left, hs_top, 0, 0, ColourNameToRGB(color), false)
 
 		if quest_target.qstat == "2" then
 			table.insert(win_target_hotspots, 'q')
@@ -4217,11 +4255,33 @@ end
 
 --	[[ Window right click menu]]
 	function right_click_menu()
-		menustring = ("Change Font|-|Bring To Front|Send To Back|Collapse Window|Expand Window|-|Check for Updates")
+		local color_options = {}
+		for i, details in ipairs(TEXT_COLOR_DETAILS) do
+			if details.key == "quest_available" then
+				table.insert(color_options, "-")
+			end
+			table.insert(color_options, details.menu_name)
+		end
+		table.insert(color_options, "-")
+		table.insert(color_options, "Reset to Defaults")
+
+		local menu_options = {
+			"Change Font",
+			">Change Colors",
+			table.concat(color_options, "|"),
+			"<",
+			"-",
+			"Bring To Front",
+			"Send To Back",
+			"Collapse Window",
+			"Expand Window",
+			"-",
+			"Check for Updates"
+		}
 		result = WindowMenu (win,
 			WindowInfo (win, 14),		-- x position
 			WindowInfo (win, 15),		-- y position
-			menustring)					-- content
+			table.concat(menu_options, "|"))					-- content
 
 		if result == "Change Font" then
 			local new_font = utils.fontpicker(win_font, win_font_size, 0)
@@ -4261,6 +4321,37 @@ end
 		elseif result == "Check for Updates" then
 			Note("Check for updates...")
 			force_update_check(true)
+		elseif result == "Reset to Defaults" then
+			for i, details in ipairs(TEXT_COLOR_DETAILS) do
+				text_colors[details.key] = details.default
+				SetVariable("color_" .. details.key, details.default)
+			end
+			Note("All colors reset to default values.")
+			xg_draw_window()
+		elseif result == nil or result == "" then
+			return
+		else
+			local color_details
+			for i, details in ipairs(TEXT_COLOR_DETAILS) do
+				if details.menu_name == result then
+					color_details = details
+					break
+				end
+			end
+			if not color_details then
+				ColourNote("tomato", "", "Invalid menu option ", "darkgray", "", result, "tomato", "", ". How did you even do that?")
+				return
+			end
+			local new_color = PickColour(ColourNameToRGB(text_colors[color_details.key]))
+			if new_color == nil or new_color == -1 then
+				return
+			end
+
+			new_color = RGBColourToName(new_color)
+			text_colors[color_details.key] = new_color
+			SetVariable("color_" .. color_details.key, new_color)
+			ColourNote(new_color, "", string.format("This is now color for %s.", color_details.desc))
+			xg_draw_window()
 		end
 	end
 
@@ -4301,6 +4392,49 @@ end
 		ColourNote("Tomato", "", "Line spacing is automatically picked up from the font which can be changed by right clicking on the top bar of the targets window and choosing 'Change Font'\n")
 	end
 
+	function xset_check_colors()
+		local longest_key = 7
+		for key, val in pairs(text_colors) do
+			longest_key = math.max(#key, longest_key)
+		end
+
+		padding = longest_key + 2
+
+		ColourNote("darkgray", "", string.format("Subject%sColor", string.rep(" ", padding - 7)))
+		ColourNote("darkgray", "", string.rep("-", padding + 8))
+
+		for key, val in pairs(text_colors) do
+			ColourNote("white", "", key,
+				"", "", string.rep(" ", padding - #key),
+				val, "", val)
+		end
+
+		ColourNote("", "", "\nSee ", "white", "", "xhelp color", "", "", " for details on the individual color subjects.\n")
+	end
+
+	function check_color(subject, pad)
+		subject = subject:lower()
+		ColourNote("white", "", subject,
+			"", "", " color is ",
+			text_colors[subject], "", text_colors[subject])
+	end
+
+	function xset_check_color(name, line, wildcards)
+		check_color(wildcards.subject)
+		print("")
+	end
+
+	function xset_color(name, line, wildcards)
+		local subject = wildcards.subject:lower()
+		local color = "#" .. wildcards.color:upper()
+		text_colors[subject] = color
+		SetVariable("colors_" .. subject, color)
+
+		check_color(subject)
+		print()
+		xg_draw_window()
+	end
+
 	function OnPluginSaveState()
 		movewindow.save_state(win)	-- save window location
 		if WindowInfo(win, 3) and WindowInfo(win, 4) then
@@ -4335,14 +4469,6 @@ end
 	end
 
 -- Internal Utilities
-	function convert_color_format(s)	-- convert color format from #FF8800 (used by colournote, etc.) to 0x0088FF (used for window text)
-		local con = "0x"
-		for i=1,3,1 do
-			con = con .. string.sub(s, 8-(2*i), 9-(2*i))
-		end
-		return con
-	end
-
 	--function copytable(t)
 	--	local new_t = {}
 	--	table.foreachi(t,
@@ -6508,11 +6634,11 @@ end
 
 	<alias	match="^(?:xg|xgui) (?:ref|refresh)$"
 			script="xgui_RefreshLinks"
-			enabled="y" regexp="y" sequence="100" > </alias>
+			enabled="y" regexp="y" sequence="100" ignore_case="y" > </alias>
 
 	<alias	match="^(?:xg|xgui) (?:rel|reload)$"
 			script="xgui_ReloadLinks"
-			enabled="y" regexp="y" sequence="100" > </alias>
+			enabled="y" regexp="y" sequence="100" ignore_case="y" > </alias>
 
 <!-- xset page size (area index process) -->
 	<alias	match="^xset suspend page size$"

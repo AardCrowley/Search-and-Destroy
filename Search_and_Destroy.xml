@@ -4759,117 +4759,103 @@ end
 	end
 
 -- [[ New code ]]
-
 	function update_plugin()
-		download_plugin(raw_get)
+		DebugNote("Checking version to see if it should update itself")
+		download_version_file(do_update, true)
 	end
 
 	function force_update_plugin()
-		download_plugin(force_raw_get)
+		DebugNote("Forcing update")
+		download_plugin("master", callback_update_plugin)
 	end
 
 	function check_for_updates()
 		if automatic_update_checks ~= "on" then
 			return
-		end
-		if GetInfo(304) >= last_update_check + UPDATE_CHECK_INTERVAL then
+		elseif GetInfo(304) >= last_update_check + UPDATE_CHECK_INTERVAL then
 			force_update_check()
 		end
 	end
 
 	function force_update_check(log_no_updates)
+		DebugNote("Checking if there's an updated version available")
 		last_update_check = GetInfo(304)
-		download_plugin(compare_versions(log_no_updates))
+		download_version_file(show_update_banner, log_no_updates)
 	end
 
-	function download_plugin(callback)
-		raw_plugin = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/Search_and_Destroy.xml"
-		raw = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/versioncheck"
+	function download_plugin(version, callback)
+		DebugNote("Downloading plugin version %s", version)
+		local url = string.format("https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/%s/Search_and_Destroy.xml", version)
+		download_file(url, callback)
+	end
 
+	function download_version_file(callback, log_no_updates)
+		DebugNote("Attempting to download master")
+		local url = string.format("https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/VERSION")
+		download_file(url, check_version_callback(callback, log_no_updates))
+	end
+
+	function download_file(url, callback)
+		DebugNote("Starting download of ", url)
 		async_ok, async = pcall (require, "async")
-
 		if async_ok then
-			version_page = async.doAsyncRemoteRequest(raw, callback, "HTTPS")
-			plugin_page = async.doAsyncRemoteRequest(raw_plugin, callback, "HTTPS")
+			plugin_page = async.doAsyncRemoteRequest(url, callback, "HTTPS")
 		else
-			ColourNote("white", "blue", "Error on plugin update!")
+			ColourNote("white", "blue", "Error on file download")
 		end
 	end
 
-	function raw_get(retval, page, status, headers, full_status, request_url)
-		if status ~= 200 then
-			return
-		end
-		local raw_version = tonumber(string.match(version_page, 'Version="([0-9%.]+)"'))
-
-		if raw_version == PLUGIN_VERSION then
-			ColourNote("white", "blue", PLUGIN_NAME .. " is up-to-date.")
-		elseif raw_version > PLUGIN_VERSION then
-			ColourNote("white", "blue", "Updating from version " .. PLUGIN_VERSION .. " to " .. raw_version .. ". Do not touch anything!")
-			local file = io.open(GetPluginInfo(GetPluginID(), 6), "w")
-			file:write(plugin_page)
-			file:close()
-
-			if "" == GetAlphaOption("script_prefix") then
-				SetAlphaOption("script_prefix", "\\\\\\")
-			end
-
-			Execute(GetAlphaOption("script_prefix") .. "DoAfterSpecial(1, \"ReloadPlugin('" .. GetPluginID() .. "')\", sendto.script)")
-			ColourNote("white", "blue", "Update complete!")
-		end
-
-		raw_version = nil
-	end -- end Update code
-
-	function force_raw_get(retval, page, status, headers, full_status, request_url)
-		if status ~= 200 then
-			return
-		end
-		local raw_version = tonumber(string.match(page, '<plugin version="([0-9%.]+)"'))
-
-		if raw_version ~= PLUGIN_VERSION then
-			ColourNote("white", "blue", PLUGIN_NAME .. " is not up-to-date.")
-		elseif raw_version == PLUGIN_VERSION then
-			ColourNote("white", "blue", "Redownloading version " .. PLUGIN_VERSION .. ". Do not touch anything!")
-			local file = io.open(GetPluginInfo(GetPluginID(), 6), "w")
-			file:write(page)
-			file:close()
-
-			if "" == GetAlphaOption("script_prefix") then
-				SetAlphaOption("script_prefix", "\\\\\\")
-			end
-
-			Execute(GetAlphaOption("script_prefix") .. "DoAfterSpecial(1, \"ReloadPlugin('" .. GetPluginID() .. "')\", sendto.script)")
-			ColourNote("white", "blue", "Update complete!")
-		end
-
-		raw_version = nil
-	end -- end Update code
-
-	function compare_versions(log_no_updates)
+	function check_version_callback(callback, log_no_updates)
 		return function(retval, page, status, headers, full_status, request_url)
 			if status ~= 200 then
+				DebugNote("check_version_callback got ", status)
 				return
 			end
-			local raw_version = tonumber(string.match(page, '<plugin version="([0-9%.]+)"'))
-			if raw_version ~= PLUGIN_VERSION then
-				ColourNote("orangered", "", "\n+=================================================================+")
-				ColourNote("silver", "", "              Search & Destroy ",
-					"lime", "", "New Version Available")
-				print("")
-				ColourNote("silver", "", "             Current version: ",
-					"tomato", "", PLUGIN_VERSION,
-					"silver", "", " Latest version: ",
-					"lime", "", raw_version)
-				print("")
-				ColourNote("silver", "", "         Use ", "lime", "", "snd update", "silver", "", " to upgrade to the latest version.")
-				print("")
-				ColourNote("silver", "", "     Use ", "tomato", "", "snd check_update", "silver", "", " to disable automatic version checks.")
-				ColourNote("orangered", "", "+=================================================================+\n")
+			local upstream_version = Trim(page)
+			if upstream_version ~= PLUGIN_VERSION then
+				callback(upstream_version)
 			elseif log_no_updates then
 				ColourNote("orangered", "", "Search&Destroy: No new updates available")
 			end
 		end
+	end
+
+	function do_update(version)
+		DebugNote("Attempting to do_update with version ", version)
+		download_plugin("v" .. version, callback_update_plugin)
+	end
+
+	function callback_update_plugin(retval, page, status, headers, full_status, request_url)
+		if status ~= 200 then
+			DebugNote("callback_update_plugin got ", status)
+			return
+		end
+		local upstream_version = tonumber(string.match(page, '<plugin version="([0-9%.]+)"'))
+		ColourNote("white", "blue", "Updating from version " .. PLUGIN_VERSION .. " to " .. upstream_version .. ". Do not touch anything!")
+		local file = io.open(GetPluginInfo(GetPluginID(), 6), "w")
+		file:write(page)
+		file:close()
+		if "" == GetAlphaOption("script_prefix") then
+			SetAlphaOption("script_prefix", "\\\\\\")
+		end
+		Execute(GetAlphaOption("script_prefix") .. "DoAfterSpecial(1, \"ReloadPlugin('" .. GetPluginID() .. "')\", sendto.script)")
+		ColourNote("white", "blue", "Update complete!")
+	end -- end Update code
+
+	function show_update_banner(upstream_version)
+		ColourNote("orangered", "", "\n+=================================================================+")
+		ColourNote("silver", "", "              Search & Destroy ",
+			"lime", "", "New Version Available")
+		print("")
+		ColourNote("silver", "", "             Current version: ",
+			"tomato", "", PLUGIN_VERSION,
+			"silver", "", " Latest version: ",
+			"lime", "", upstream_version)
+		print("")
+		ColourNote("silver", "", "         Use ", "lime", "", "snd update", "silver", "", " to upgrade to the latest version.")
+		print("")
+		ColourNote("silver", "", "     Use ", "tomato", "", "snd check_update", "silver", "", " to disable automatic version checks.")
+		ColourNote("orangered", "", "+=================================================================+\n")
 	end
 
 	function toggle_automatic_update_checking()

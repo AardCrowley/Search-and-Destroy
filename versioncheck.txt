@@ -1,1 +1,0 @@
-SnD Version=5.63

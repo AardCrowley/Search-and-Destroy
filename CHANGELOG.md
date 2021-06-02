@@ -1,5 +1,9 @@
 # CHANGELOG
 
+**v5.64**<br>
+*feature* : Tweak version checking behaviour.<br>
+*feature* : Added color customizations. Those should have been in the last update but I missed that PR. Oops.<br>
+
 **v5.63**<br>
 *fix* : Downloading sounds should now work.<br>
 *fix* : Initialize the hide windows setting so people's windows don't disappear on update.<br>

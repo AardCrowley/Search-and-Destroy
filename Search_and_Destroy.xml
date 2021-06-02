@@ -4892,7 +4892,7 @@ end
 
 		if str == "" or "" == nil or str == "xhelp" then
 			ColourNote("darkcyan", "", "Plugin name    ", "antiquewhite", "", " : Search & Destroy")
-			ColourNote("darkcyan", "", "Maintained by  ", "antiquewhite", "", " : Crowley")
+			ColourNote("darkcyan", "", "Maintained by  ", "antiquewhite", "", " : Crowley and Naricain")
 			ColourNote("darkcyan", "", "Original Author", "antiquewhite", "", " : WinkleWinkle")
 			ColourNote("darkcyan", "", "Credit to      ", "antiquewhite", "", " : Nokfah and Starling")
 			Note()
@@ -4939,7 +4939,7 @@ end
 		elseif str == "index areas" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset index areas")
 			Note()
-			ColourNote("antiquewhite", "", unpack({helpWrap("Occasionally, SnD does not realize you've mapped an area for whatever reason. This becomes apparent when you see a lot of red links on your campaign or global quest check list. When this happen, this command SHOULD fix it, but again, only if you've mapped the areas linked in red. If it does not, something else is amiss, and you should probably note Crowley about it.")}))
+			ColourNote("antiquewhite", "", unpack({helpWrap("Occasionally, SnD does not realize you've mapped an area for whatever reason. This becomes apparent when you see a lot of red links on your campaign or global quest check list. When this happen, this command SHOULD fix it, but again, only if you've mapped the areas linked in red. If it does not, something else is amiss, and you should probably note Crowley or Naricain about it.")}))
 
 		elseif str == "silent" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset silent <on|off>")

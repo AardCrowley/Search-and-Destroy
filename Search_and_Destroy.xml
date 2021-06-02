@@ -4657,7 +4657,7 @@ end
 	end
 
 	function download_plugin(callback)
-		raw = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/Search_and_Destroy.xml"
+		raw = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/versioncheck"
 
 		async_ok, async = pcall (require, "async")
 
@@ -4672,7 +4672,7 @@ end
 		if status ~= 200 then
 			return
 		end
-		local raw_version = tonumber(string.match(page, '<plugin version="([0-9%.]+)"'))
+		local raw_version = tonumber(string.match(page, 'Version="([0-9%.]+)"'))
 
 		if raw_version == PLUGIN_VERSION then
 			ColourNote("white", "blue", PLUGIN_NAME .. " is up-to-date.")

@@ -207,7 +207,7 @@
 	local win_bgcolor = 0x000000
 
 -- [[ Con and scan stuff ]]
-	local xset_autocon_onoff = GetVariable("mcvar_xset_autocon_onoff") or "on"
+	local xset_nx_action = GetVariable("mcvar_xset_nx_action") or (GetVariable("mcvar_xset_autocon_onoff") == "on" and "conscan") or "qs"
 
 	local consider_destination_room = false
 	local mobs_here = {}
@@ -2433,12 +2433,16 @@ end
 	end
 
 	function action_on_destination_arrived()
-		if is_autocon_enabled() then
+		if xset_nx_action == "conscan" or xset_nx_action == "con" then
 			EnableTrigger("consider_end_empty", true)
 			consider_destination_room = true
 			SendNoEcho("consider")
-		else
+		elseif xset_nx_action == "scan" then
 			SendNoEcho("scan")
+		elseif xset_nx_action == "scanhere" then
+			SendNoEcho("scan here")
+		elseif xset_nx_action == "qs" then
+			quick_scan()
 		end
 	end
 
@@ -4777,7 +4781,7 @@ end
 			"kw|keyword",
 			"nx",
 			"go",
-			"autocon",
+			"xset nx",
 			"sound",
 			"xrt|xrun",
 			"cp|gq",
@@ -4927,11 +4931,28 @@ end
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": nx<->")
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("Moves to the next room in the list, or with '-', the previous room.")}))
+			Note()
+			ColourNote("antiquewhite", "", unpack({helpWrap("See 'help xset nx' for information about the action that will be taken upon arriving in the room.")}))
 
 		elseif str == "go" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": go <index #>")
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("Moves to the first room in the index, or with a supplied argument to the index number supplied.")}))
+			Note()
+			ColourNote("antiquewhite", "", unpack({helpWrap("See 'help xset nx' for information about the action that will be taken upon arriving in the room.")}))
+
+		elseif str == "xset nx" then
+			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset nx <conscan|con|scan|scanhere|qs|none>")
+			Note()
+			ColourNote("antiquewhite", "", unpack({helpWrap("Sets the behaviour when you arrive at a room via nx or go. Without an argument it will display the current action. With an argument, sets your action to:")}))
+			ColourNote("antiquewhite", "", unpack({helpWrap("  * conscan: consider the room. If your target is not here, do a scan.")}))
+			ColourNote("antiquewhite", "", unpack({helpWrap("  * con: consider the room")}))
+			ColourNote("antiquewhite", "", unpack({helpWrap("  * scan: perform a scan.")}))
+			ColourNote("antiquewhite", "", unpack({helpWrap("  * scanhere: perform a scan of the current room.")}))
+			ColourNote("antiquewhite", "", unpack({helpWrap("  * qs: perform a quick scan, looking for only your current target mob.")}))
+			ColourNote("antiquewhite", "", unpack({helpWrap("  * none: do nothing.")}))
+			Note()
+			ColourNote("antiquewhite", "", unpack({helpWrap("When you scan or consider, mobs found in the current room are added to the mobs database.")}))
 
 		elseif str == "xrt" or str == "xrun" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <xrt|xrun> <area keyword>")
@@ -4997,13 +5018,6 @@ end
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("To do so, you can use 'xset kw beef pie' while it is a campaign, quest, or gquest target. Alternatively, you can use 'xset kw' with no arguments and follow the dialogs that appear.")}))
 
-		elseif str == "autocon" then
-			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset autocon")
-			Note()
-			ColourNote("antiquewhite", "", unpack({helpWrap("Toggle auto consider. When enabled, it will automatically perform a consider upon arrival at a room reached with 'nx' or 'go.' All mobs found will be added to the mobs database. If the target mob is not here it will then perform a scan.")}))
-			Note()
-			ColourNote("antiquewhite", "", unpack({helpWrap("If disabled, it will perform a scan upon arrival and add the mobs found in this room to the mobs database. Unlike consider, scan will have no delay, but it will miss any mobs that are flagged noscan.")}))
-
 		elseif str == "sound" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset sound")
 			Note()
@@ -5064,7 +5078,7 @@ end
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("go <index>:  Runs to the first room in the index, or to the index number with argument.")}))
 		Note()
-		ColourNote("antiquewhite", "", unpack({helpWrap("xset autocon:  Toggle automatically considering the room you reach via 'nx' or 'go,' and then adding the mobs found to the mobs database.")}))
+		ColourNote("antiquewhite", "", unpack({helpWrap("xset nx <conscan|con|scan|scanhere|qs|none>:  Set the action to take upon arriving in a room via 'nx' or 'go'.")}))
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("xset sound:  Toggles sounds.")}))
 		Note()
@@ -5371,20 +5385,43 @@ end
 		return (s:gsub("%z", "@")) -- put @ back (has parentheses on purpose)
 	end
 
-	function xset_autocon()
-		if xset_autocon_onoff == "on" then
-			xset_autocon_onoff = "off"
-		else
-			xset_autocon_onoff = "on"
-		end
-		SetVariable("mcvar_xset_autocon_onoff", xset_autocon_onoff)
-
-		ColourNote("#FF5000", "", "\nAutocon is now ",
-			"#00C040", "", string.upper(xset_autocon_onoff))
+	function xset_nx_check()
+		ColourNote("", "", "xset nx is set to ", "white", "", xset_nx_action)
+		print_xset_nx_desc()
 	end
 
-	function is_autocon_enabled()
-		return xset_autocon_onoff == "on"
+	function xset_nx(name, line, wildcards)
+		xset_nx_action = wildcards.action
+		SetVariable("mcvar_xset_nx_action", xset_nx_action)
+		print_xset_nx_desc()
+	end
+
+	function print_xset_nx_desc()
+		if xset_nx_action == "conscan" then
+			ColourNote("", "", "You will ",
+				"white", "", "consider",
+				"", "", " every room upon arrival after nx or go, followed by a ",
+				"white", "", "scan",
+				"", "", " if your target is not here.\n")
+		elseif xset_nx_action == "con" then
+			ColourNote("", "", "You will ",
+				"white", "", "consider",
+				"", "", " every room upon arrival after nx or go.\n")
+		elseif xset_nx_action == "scan" then
+			ColourNote("", "", "You will ",
+				"white", "", "scan",
+				"", "", " surrounding rooms upon arrival after nx or go.\n")
+		elseif xset_nx_action == "scanhere" then
+			ColourNote("", "", "You will ",
+				"white", "", "scan the current room",
+				"", "", " upon arrival after nx or go.\n")
+		elseif xset_nx_action == "qs" then
+			ColourNote("", "", "You will ",
+				"white", "", "quick scan",
+				"", "", " every room upon arrival after nx or go, looking only for your target mob.\n")
+		else
+			Note("You will take no action upon arrival after nx or go.\n")
+		end
 	end
 
 	function consider_trigger(name, line, wildcards, style)
@@ -5452,7 +5489,7 @@ end
 					play_other_target_here_sound()
 				end
 
-				if consider_destination_room then
+				if consider_destination_room and xset_nx_action == "conscan" then
 					scan_after_con = true
 					SendNoEcho("scan")
 				end
@@ -6353,8 +6390,12 @@ end
 		script="set_current_mob_keyword"
 		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
-	<alias	match="^xset autocon$"
-		script="xset_autocon"
+	<alias	match="^xset nx$"
+		script="xset_nx_check"
+		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xset nx (?<action>conscan|con|scan|scanhere|qs|none)$"
+		script="xset_nx"
 		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 	<alias	match="^xset sound$"

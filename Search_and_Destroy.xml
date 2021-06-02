@@ -207,8 +207,11 @@
 	local win_dragmove_start_y
 	local win_state = GetVariable("mcvar_window_state") or "max"
 	local win_init = false
-	local win_line_space = tonumber(GetVariable("mcvar_window_line_space")) or 14
+	local win_font = GetVariable("mcvar_window_font") or "Lucida Sans Unicode"
 	local win_font_size = tonumber(GetVariable("mcvar_window_font_size")) or 8
+	local win_font_bold = tonumber(GetVariable("mcvar_window_font_bold")) or 0
+	local win_font_italic = tonumber(GetVariable("mcvar_window_font_italic")) or 0
+	local win_font_underline = tonumber(GetVariable("mcvar_window_font_underline")) or 0
 	local win_hotspots = {}
 	local win_target_hotspots = {}
 
@@ -3687,8 +3690,6 @@ end
 		["cplevel"] = { f="Consolas",				 s=11, 				b=false, 	i=false, 	u=false },
 		["noexp"]	= { f="Consolas",				 s=11, 				b=false, 	i=false, 	u=false }, --noexp tnl
 		["noexp2"]	= { f="Consolas",				 s= 9, 				b=false, 	i=false, 	u=false },
-		["cplist_area"]  = { f="Lucida Sans Unicode",	s=win_font_size, 	b=false, 	i=false, 	u=false },
-		["cplist_room"]  = { f="Segoe", 				s=win_font_size, 	b=false, 	i=false, 	u=false },
 	}
 
 	function xg_create_window()
@@ -3700,6 +3701,7 @@ end
 			for k,v in pairs (window_fonts) do
 				WindowFont(win, k, v.f, v.s, v.b, v.i, v.u, false)
 			end
+			WindowFont(win, "cplist", win_font, win_font_size, win_font_bold, win_font_italic, win_font_underline, false)
 			WindowShow(win, true and GetVariable("mcvar_xgui_window_onoff") == "on" or false)  -- show it
 			if (win_state == "min") then
 				mouseup_drag(0, "hsMinimize")
@@ -3947,21 +3949,18 @@ end
 		win_target_hotspots = {}
 		if (win_state == "min") then return	end
 		local list = main_target_list
-		local font = "cplist_" .. area_room_type
-		if area_room_type == "init" or area_room_type == "none" then
-			font = "cplist_area"
-		end
+		local font = "cplist"
 		local resize_tag = 13
 		local targ_list_top = 59
 		local targ_list_bottom = win_height - 5
-		local font_height = WindowFontInfo (win, font, 1) -- WindowFontInfo (win, font, 4)
+		local font_height = WindowFontInfo (win, font, 1)
 
 		if xg_show_quest_target_link(targ_list_top, resize_tag, font) then
-			targ_list_top = targ_list_top + win_line_space * 2
+			targ_list_top = targ_list_top + font_height * 2
 		end
 
 		for index,v in ipairs (list) do
-			if (((index-1) * win_line_space + targ_list_top) > targ_list_bottom) then break end		-- Abort loop if printed item would not be visible.
+			if (((index-1) * font_height + targ_list_top) > targ_list_bottom) then break end		-- Abort loop if printed item would not be visible.
 			local mob = v.mob .. ((v.is_dead == "yes") and " [Dead]" or "")
 			local ar = v.arid
 			local ct = v.link_type
@@ -3983,9 +3982,9 @@ end
 			local link = string.format("%2s) %s%s%s - %s", index, counts, qty, mob, location)
 			local color = ((index == xcp_index) and "0x0040FF" or convert_color_format(v.color))
 			local hs_left = 6
-			local hs_top = (targ_list_top + ((index-1) * win_line_space))
+			local hs_top = (targ_list_top + ((index-1) * font_height))
 			local hs_right = math.min(hs_left + WindowTextWidth(win, font, link), win_width - 5)
-			local hs_bottom = (hs_top + font_height + 1) --(hs_top + win_line_space )
+			local hs_bottom = (hs_top + font_height + 1)
 			if v.unlikely then
 				local added_width = WindowTextWidth(win, font, "(Unlikely) ")
 				WindowText(win, font, "(Unlikely) ", 6, hs_top, 0, 0, 0xCD0000, false)
@@ -4028,7 +4027,7 @@ end
 			return false
 		end
 
-		hs_left = 13
+		hs_left = 6
 		hs_top = targ_list_top
 		hs_right = math.min(hs_left + WindowTextWidth(win, font, text), win_width - 5)
 		hs_bottom = (hs_top + WindowFontInfo(win, font, 1) + 1)
@@ -4217,12 +4216,33 @@ end
 
 --	[[ Window right click menu]]
 	function right_click_menu()
-		menustring = ("Bring To Front|Send To Back|Collapse Window|Expand Window|-|Check for Updates")
+		menustring = ("Change Font|-|Bring To Front|Send To Back|Collapse Window|Expand Window|-|Check for Updates")
 		result = WindowMenu (win,
 			WindowInfo (win, 14),		-- x position
 			WindowInfo (win, 15),		-- y position
 			menustring)					-- content
-		if (result == "Bring To Front") then
+
+		if result == "Change Font" then
+			local new_font = utils.fontpicker(win_font, win_font_size, 0)
+			if new_font == nil then return end
+
+			win_font = new_font.name
+			win_font_size = new_font.size
+			win_font_bold = new_font.bold
+			win_font_italic = new_font.italic
+			win_font_underline = new_font.underline
+
+			WindowFont(win, "cplist", win_font, win_font_size, win_font_bold, win_font_italic, win_font_underline, false)
+
+			SetVariable("mcvar_window_font", win_font)
+			SetVariable("mcvar_window_font_size", win_font_size)
+			SetVariable("mcvar_window_font_bold", win_font_bold)
+			SetVariable("mcvar_window_font_italic", win_font_italic)
+			SetVariable("mcvar_window_font_underline", win_font_underline)
+
+			xg_draw_window()
+			ColourNote("", "", "Window font changed to ", "white", "", string.format("%s Size %i (%s)", win_font, win_font_size, new_font.style))
+		elseif (result == "Bring To Front") then
 			CallPlugin(plugin_id_z_order,"boostMe", win)
 		elseif (result == "Send To Back") then
 			CallPlugin(plugin_id_z_order,"dropMe", win)
@@ -4272,31 +4292,12 @@ end
 		end
 	end
 
-	function xset_font_size(name, line, wildcards)
-		if (wildcards.size == "") then
-			print("Cp list font size = " .. win_font_size .. "\n")
-		else
-			win_font_size = tonumber(wildcards.size)
-			WindowFont(win, "cplist_area", "Lucida Sans Unicode", win_font_size, false, false, false, false)		-- cp list font, area cp's
-			WindowFont(win, "cplist_room", "Segoe", win_font_size, false, false, false, false)					-- cp list font, room cp's
-			print("Cp list font size set to " .. win_font_size .. ".\n")
-			SetVariable("mcvar_window_font_size", win_font_size)
-			xg_draw_window()
-		end
+	function deprecated_xset_font_size()
+		ColourNote("Tomato", "", "Changing font size is now done by right clicking on the top bar of the targets window and choosing 'Change Font'\n")
 	end
 
-	function xset_line_space(name, line, wildcards)
-		local x = tonumber(wildcards.space)
-		local line_space = win_line_space
-		if (wildcards.space == "") then
-			print("Cp list line spacing = " .. line_space .. "\n")
-		else
-
-			print("Cp list line spacing set to " .. x .. ".\n")
-			win_line_space = x
-			SetVariable("mcvar_window_line_space", x)
-			xg_draw_window()
-		end
+	function deprecated_xset_line_space(name, line, wildcards)
+		ColourNote("Tomato", "", "Line spacing is automatically picked up from the font which can be changed by right clicking on the top bar of the targets window and choosing 'Change Font'\n")
 	end
 
 	function OnPluginSaveState()
@@ -4847,8 +4848,6 @@ end
 		local str = wildcards[1]
 		local helpFiles = {
 			"win",
-			"fontsize",
-			"linespace",
 			"speed",
 			"vidblain",
 			"mark",
@@ -4915,16 +4914,6 @@ end
 			Note()
 			ColourNote("limegreen", "", "xset winreset:")
 			ColourNote("antiquewhite", "", unpack({helpWrap("If, for any reason, the window goes missing and the previous command does not restore it, this command will reset the window to a default location on top of your windows.")}))
-
-		elseif str == "fontsize" then
-			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset fontsize <#>")
-			Note()
-			ColourNote("antiquewhite", "", unpack({helpWrap("Without an argument, it will display the current font size the miniwindow is using. With an argument, it will change the font size to the parameter.")}))
-
-		elseif str == "linespace" then
-			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset linespace <#>")
-			Note()
-			ColourNote("antiquewhite", "", unpack({helpWrap("Without an argument, it will display the current line spacing size the miniwindow is using. With an argument, it will change the line spacing size to the parameter.")}))
 
 		elseif str == "speed" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset speed <walk|run>")
@@ -5122,10 +5111,6 @@ end
 		ColourNote("antiquewhite", "", unpack({helpWrap("xset win <on|off>: Shows your hides the window.")}))
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("xset winreset: Resets the window.")}))
-		Note()
-		ColourNote("antiquewhite", "", unpack({helpWrap("xset fontsize <#>: Displays current font size or changes it to argument.")}))
-		Note()
-		ColourNote("antiquewhite", "", unpack({helpWrap("xset linespace <#>: Displays line spacing size or changes it to argument.")}))
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("xset speed <walk|run>: Displays current move speed, or changes it to argument.")}))
 		Note()
@@ -6499,12 +6484,12 @@ end
 		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 <!-- xset window commands -->
-	<alias	match="^xset fontsize( (?<size>[0-9]+))?$"
-			script="xset_font_size"
+	<alias	match="^xset fontsize.*$"
+			script="deprecated_xset_font_size"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
-	<alias	match="^xset linespace( (?<space>[0-9]+))?$"
-			script="xset_line_space"
+	<alias	match="^xset linespace.*$"
+			script="deprecated_xset_line_space"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 	<alias	match="^xset winreset$"

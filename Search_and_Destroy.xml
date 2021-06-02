@@ -3702,6 +3702,7 @@ end
 				WindowFont(win, k, v.f, v.s, v.b, v.i, v.u, false)
 			end
 			WindowFont(win, "cplist", win_font, win_font_size, win_font_bold, win_font_italic, win_font_underline, false)
+			if not GetVariable("mcvar_xgui_window_onoff") then SetVariable("mcvar_xgui_window_onoff", "on") end
 			WindowShow(win, true and GetVariable("mcvar_xgui_window_onoff") == "on" or false)  -- show it
 			if (win_state == "min") then
 				mouseup_drag(0, "hsMinimize")

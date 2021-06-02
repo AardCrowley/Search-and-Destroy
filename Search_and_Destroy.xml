@@ -3689,7 +3689,6 @@ end
 		["noexp2"]	= { f="Consolas",				 s= 9, 				b=false, 	i=false, 	u=false },
 		["cplist_area"]  = { f="Lucida Sans Unicode",	s=win_font_size, 	b=false, 	i=false, 	u=false },
 		["cplist_room"]  = { f="Segoe", 				s=win_font_size, 	b=false, 	i=false, 	u=false },
-		["cplist_quest"] = { f="Gadugi",				s=win_font_size+2,	b=true,		i=false, 	u=false },
 	}
 
 	function xg_create_window()
@@ -3949,13 +3948,16 @@ end
 		if (win_state == "min") then return	end
 		local list = main_target_list
 		local font = "cplist_" .. area_room_type
+		if area_room_type == "init" or area_room_type == "none" then
+			font = "cplist_area"
+		end
 		local resize_tag = 13
 		local targ_list_top = 59
 		local targ_list_bottom = win_height - 5
 		local font_height = WindowFontInfo (win, font, 1) -- WindowFontInfo (win, font, 4)
 
-		if xg_show_quest_target_link(targ_list_top, resize_tag) then
-			targ_list_top = targ_list_top + win_line_space + 5
+		if xg_show_quest_target_link(targ_list_top, resize_tag, font) then
+			targ_list_top = targ_list_top + win_line_space * 2
 		end
 
 		for index,v in ipairs (list) do
@@ -3978,9 +3980,9 @@ end
 			if v.count_for_room and v.count_for_room > 1 then
 				counts = string.format("(%i/%i) ", v.room_index, v.count_for_room)
 			end
-			local link = string.format("%s) %s%s%s - %s", index, counts, qty, mob, location)
+			local link = string.format("%2s) %s%s%s - %s", index, counts, qty, mob, location)
 			local color = ((index == xcp_index) and "0x0040FF" or convert_color_format(v.color))
-			local hs_left = (index < 10) and 13 or 6
+			local hs_left = 6
 			local hs_top = (targ_list_top + ((index-1) * win_line_space))
 			local hs_right = math.min(hs_left + WindowTextWidth(win, font, link), win_width - 5)
 			local hs_bottom = (hs_top + font_height + 1) --(hs_top + win_line_space )
@@ -4004,14 +4006,13 @@ end
 		end
 	end
 
-	function xg_show_quest_target_link(targ_list_top,resize_tag)
+	function xg_show_quest_target_link(targ_list_top, resize_tag, font)
 		if not quest_target.qstat or quest_target.qstat == "1" then
 			return false
 		end
 
 		local text
 		local color
-		local font = "cplist_quest"
 		local hs_left, hs_top, hs_right, hs_bottom
 
 		if quest_target.qstat == "0" then
@@ -4019,7 +4020,7 @@ end
 			color = 0xFF901E
 		elseif quest_target.qstat == "2" then
 			color = ((full_mob_name == quest_target.mob and xcp_index < 1) and 0x0040FF or 0xE0E0E0)
-			text = string.format("Q) %s - '%s' (%s)", quest_target.mob, quest_target.room, quest_target.arid)
+			text = string.format(" Q) %s - '%s' (%s)", quest_target.mob, quest_target.room, quest_target.arid)
 		elseif quest_target.qstat == "3" then
 			text = "Quest complete! You may turn it in"
 			color = 0x00FC7C
@@ -4043,6 +4044,12 @@ end
 							hs_left-1, hs_top+2, hs_right+2, hs_bottom,
 							"", "", "", "",
 							"win_mouseup_target_quest", "", miniwin.cursor_arrow, 0)
+		end
+		if #main_target_list > 0 then
+			local font_height = WindowFontInfo(win, font, 1)
+			local space_width = WindowTextWidth(win, font, " ")
+			hs_top = math.floor(hs_top + font_height * 1.5)
+			WindowRectOp(win, 2, hs_left + space_width, hs_top, hs_right, hs_top + 2, "0x808080")
 		end
 		return true
 	end
@@ -5740,7 +5747,7 @@ end
 			if db:errcode() > 0 then
 				ColourNote("tomato", "", "Db error: " .. db:error_message())
 			else
-				DebugNote(string.format("Successfully inserted or updated %i in the mobs database", #mobs_here))
+				DebugNote("Successfully inserted or updated ", #mobs_here, " in the mobs database")
 			end
 		end
 		db:close_vm()

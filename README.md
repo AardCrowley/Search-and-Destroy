@@ -24,12 +24,6 @@ Commands:<br>
 	&gt;Shows or hides the window.<br>
 **xset winreset**<br>
 	&gt;Resets the window.<br>
-**xset fontsize &lt;#&gt;**<br>
-	&gt; Displays current font size, or changes <br>
-	&gt;it to argument.<br>
-**xset linespace &lt;#&gt;**<br>
-	&gt;Displays line spacing size, or changes<br>
-	&gt;it to argument.<br>
 **xset speed &lt;walk|run&gt;**<br>
 	&gt;Displays current move speed, or changes<br>
 	&gt;it to argument.<br>

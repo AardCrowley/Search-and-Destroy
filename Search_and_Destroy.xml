@@ -25,6 +25,11 @@
 		script=""
 		enabled="n" send_to="12">
 			<send>	vidblain_nav_tick() </send> </timer>
+
+	<timer name="update_check_tick"
+		script="check_for_updates"
+		second="10"
+		enabled="y" send_to="12"> </timer>
 </timers>
 
 <script>
@@ -58,6 +63,10 @@
 	PLUGIN_VERSION  = GetPluginInfo(GetPluginID(), 19)
 	PLUGIN_NAME 	= GetPluginInfo(GetPluginID(), 1)
 	SCHEMA_VERSION  = 2
+
+	UPDATE_CHECK_INTERVAL = 60 * 60 -- Check once per hour
+	local last_update_check = -1
+	local automatic_update_checks = GetVariable("mcvar_automatic_update_checks") or "on"
 
 	local current_sd_version 		= "Search & Destroy v" .. PLUGIN_VERSION
 	local plugin_id_gmcp_handler 	= "3e7dedbe37e44942dd46d264"		-- easier to remember the var names than the plugin id's
@@ -262,7 +271,7 @@
 		ColourNote("#808080", "", "\n+=================================================================+")
 		ColourNote("#FF3000", "", "    " .. current_sd_version .. " installed at " .. os.time() )
 		print("")
-		ColourNote("#FF3000", "", "    " .. "For support, contact Crowley" )
+		ColourNote("#FF3000", "", "    " .. "For support, contact Crowley and Naricain" )
 		ColourNote("#FF3000", "", "    " .. "Note: It's beneficial to run 'xset index areas' if you have never run it before." )
 		ColourNote("#808080", "", "+=================================================================+\n")
 		windowinfo = movewindow.install (win, miniwin.pos_center, miniwin.create_absolute_location, false, nil, {mouseup=MouseUp, mousedown=LeftClickOnly, dragmove=LeftClickOnly, dragrelease=LeftClickOnly},{x=win_pos_x, y=win_pos_y})
@@ -392,6 +401,7 @@
 			load_saved_table_data()
 			send_gmcp_packet("config noexp")
 			send_gmcp_packet("request quest")
+			check_for_updates()
 		end
 	end
 
@@ -4200,7 +4210,7 @@ end
 
 --	[[ Window right click menu]]
 	function right_click_menu()
-		menustring = ("Bring To Front|Send To Back|Collapse Window|Expand Window")
+		menustring = ("Bring To Front|Send To Back|Collapse Window|Expand Window|-|Check for Updates")
 		result = WindowMenu (win,
 			WindowInfo (win, 14),		-- x position
 			WindowInfo (win, 15),		-- y position
@@ -4220,6 +4230,9 @@ end
 			win_height = win_height_max
 			WindowResize(win, win_width, win_height, ColourNameToRGB("black"))
 			xg_draw_window()
+		elseif result == "Check for Updates" then
+			Note("Check for updates...")
+			force_update_check(true)
 		end
 	end
 
@@ -4613,21 +4626,44 @@ end
 -- [[ New code ]]
 
 	function update_plugin()
+		download_plugin(raw_get)
+	end
+
+	function force_update_plugin()
+		download_plugin(force_raw_get)
+	end
+
+	function check_for_updates()
+		if automatic_update_checks ~= "on" then
+			return
+		end
+		if GetInfo(304) >= last_update_check + UPDATE_CHECK_INTERVAL then
+			force_update_check()
+		end
+	end
+
+	function force_update_check(log_no_updates)
+		last_update_check = GetInfo(304)
+		download_plugin(compare_versions(log_no_updates))
+	end
+
+	function download_plugin(callback)
 		raw = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/Search_and_Destroy.xml"
 
 		async_ok, async = pcall (require, "async")
 
 		if async_ok then
-			plugin_page = async.doAsyncRemoteRequest(raw, raw_get, "HTTPS")
+			plugin_page = async.doAsyncRemoteRequest(raw, callback, "HTTPS")
 		else
 			ColourNote("white", "blue", "Error on plugin update!")
 		end
 	end
 
 	function raw_get(retval, page, status, headers, full_status, request_url)
-		if status == 200 then
-			raw_version = tonumber(string.match(page, '<plugin version="([0-9%.]+)"'))
+		if status ~= 200 then
+			return
 		end
+		local raw_version = tonumber(string.match(page, '<plugin version="([0-9%.]+)"'))
 
 		if raw_version == PLUGIN_VERSION then
 			ColourNote("white", "blue", PLUGIN_NAME .. " is up-to-date.")
@@ -4648,22 +4684,11 @@ end
 		raw_version = nil
 	end -- end Update code
 
-	function force_update_plugin()
-		raw = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/Search_and_Destroy.xml"
-
-		async_ok, async = pcall (require, "async")
-
-		if async_ok then
-			plugin_page = async.doAsyncRemoteRequest(raw, force_raw_get, "HTTPS")
-		else
-			ColourNote("white", "blue", "Error on plugin update!")
-		end
-	end
-
 	function force_raw_get(retval, page, status, headers, full_status, request_url)
-		if status == 200 then
-			raw_version = tonumber(string.match(page, '<plugin version="([0-9%.]+)"'))
+		if status ~= 200 then
+			return
 		end
+		local raw_version = tonumber(string.match(page, '<plugin version="([0-9%.]+)"'))
 
 		if raw_version ~= PLUGIN_VERSION then
 			ColourNote("white", "blue", PLUGIN_NAME .. " is not up-to-date.")
@@ -4683,6 +4708,48 @@ end
 
 		raw_version = nil
 	end -- end Update code
+
+	function compare_versions(log_no_updates)
+		return function(retval, page, status, headers, full_status, request_url)
+			if status ~= 200 then
+				return
+			end
+			local raw_version = tonumber(string.match(page, '<plugin version="([0-9%.]+)"'))
+			if raw_version ~= PLUGIN_VERSION then
+				ColourNote("orangered", "", "\n+=================================================================+")
+				ColourNote("silver", "", "              Search & Destroy ",
+					"lime", "", "New Version Available")
+				print("")
+				ColourNote("silver", "", "             Current version: ",
+					"tomato", "", PLUGIN_VERSION,
+					"silver", "", " Latest version: ",
+					"lime", "", raw_version)
+				print("")
+				ColourNote("silver", "", "         Use ", "lime", "", "snd update", "silver", "", " to upgrade to the latest version.")
+				print("")
+				ColourNote("silver", "", "     Use ", "tomato", "", "snd check_update", "silver", "", " to disable automatic version checks.")
+				ColourNote("orangered", "", "+=================================================================+\n")
+			elseif log_no_updates then
+				ColourNote("orangered", "", "Search&Destroy: No new updates available")
+			end
+		end
+	end
+
+	function toggle_automatic_update_checking()
+		if automatic_update_checks == "on" then
+			automatic_update_checks = "off"
+			EnableTimer("update_check_tick", false)
+		else
+			automatic_update_checks = "on"
+			force_update_check()
+			EnableTimer("update_check_tick", true)
+		end
+		SetVariable("mcvar_automatic_update_checks", automatic_update_checks)
+
+
+		ColourNote ("#FF5000", "", "\nSearch&Destroy automatic update checking is now ",
+			"#00C040", "", string.upper(automatic_update_checks))
+	end
 
 	function download_sounds(callback)
 		local download_path = "https://raw.githubusercontent.com/AardNaricain/Search-and-Destroy/download-sounds/%s"
@@ -4806,6 +4873,7 @@ end
 			"snd migrate|mergePwar",
 			"snd update",
 			"snd reload",
+			"snd check_update",
 			"summary",
 		}
 
@@ -5017,6 +5085,11 @@ end
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("If, for any reason, Search & Destroy stops functioning correctly, this theoretically should fix it. In some cases, it may be necessary to open up your plugins (Ctrl+Shift+P) and reinstall Search & Destroy.")}))
 
+		elseif str == "snd check_update" then
+			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd check_update")
+			Note()
+			ColourNote("antiquewhite", "", unpack({helpWrap("Toggles automatic checking for new versions of Search & Destroy.")}))
+
 		elseif str == "snd migrate" or str == "mergePwar" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd migrate")
 			Note()
@@ -5108,6 +5181,8 @@ end
 		ColourNote("antiquewhite", "", unpack({helpWrap("xcp quest:  Set whether or not 'xcp' will target quest mobs.")}))
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("snd update:  Automatically updates Search & Destroy.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("snd check_update:  Toggles automatically checking for new versions of Search & Destroy.")}))
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("ms<earch> <area|here|all> <mob>: Searches for mobs in the mob database.")}))
 		Note()
@@ -6213,7 +6288,8 @@ end
 
 	<alias enabled="y" match="snd force update" script="force_update_plugin" sequence="100">
 	</alias>
-	<alias enabled="y" match="^xhelp(?:\s(.*))?$" regexp="y" script="onHelp" sequence="100">
+
+	<alias enabled="y" match="snd check_update" script="toggle_automatic_update_checking" sequence="100">
 	</alias>
 
 	<alias enabled="y" match="^xset silent(?: (on|off))?" regexp="y" script="xset_silentMode" sequence="100">

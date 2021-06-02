@@ -1,5 +1,13 @@
 # CHANGELOG
 
+**v5.63**<br>
+*fix* : Downloading sounds should now work.<br>
+*fix* : Initialize the hide windows setting so people's windows don't disappear on update.<br>
+*feature* : Added more customization options for the action to take when arriving in a room via nx or go. Use `help xset nx` for details. The `xset autocon` option was removed as this is much more flexible.<br>
+*feature* : Added the ability to customize the target window font and colors. You can do this by right clicking on the top of the window and choosing the appropriate options.<br>
+*feature* : Search & Destroy will automatically check for new updates every hour and prompt you to get the update. This can be disabled with `snd check_update`.<br>
+*feature* : Add a line between quest targets and campaign/gquest targets.<br>
+
 **v5.62**<br>
 *fix/feature* : Toggling `xset win on|off` never saved across reloads. This has been changed. Whether this is a fix or a feature, I couldn't tell you.<br>
 *feature* : There is a new, hidden command of `snd force update` that will redownload the current version from the website. This can be used if you think you *accidentally* made changes to your copy of snd that broke it.<br>

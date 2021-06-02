@@ -4600,9 +4600,13 @@ end
 		SetVariable("debug_mode", debug_mode)
 	end
 
-	function DebugNote(text)
+	function DebugNote(...)
 		if debug_mode == "on" then
-			ColourNote("gold", "", "DEBUG: ", "lightskyblue", "", text)
+			ColourTell("gold", "", "DEBUG: ")
+			for i, v in ipairs({...}) do
+				ColourTell("lightskyblue", "", tostring(v))
+			end
+			print("")
 		end
 	end
 
@@ -4719,7 +4723,7 @@ end
 				callback(true)
 			end
 		else
-			ColourNote("white", "blue", "Error downloading sounds")
+			ColourNote("tomato", "", "Error downloading sounds: async could not be initialized.")
 			callback(false)
 		end
 	end
@@ -4733,7 +4737,16 @@ end
 				Note(string.format("Wrote %s successfully to sounds directory", filename))
 				callback(true)
 			else
-				Note(string.format("Couldn't download %s", filename))
+				ColourNote("tomato", "", string.format("Couldn't download %s", filename))
+				DebugNote("HTTP Status: ", status)
+				DebugNote("Full status: ", full_status)
+				DebugNote("Headers: ", require('json').encode(headers))
+				if page and #page > 200 then
+					SetClipboard(page)
+					DebugNote("Page data was too large for display and has been save to the clipboard")
+				else
+					DebugNote("Page: ", page)
+				end
 				callback(false)
 			end
 		end

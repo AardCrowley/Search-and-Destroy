@@ -1,5 +1,9 @@
 # CHANGELOG
 
+**v5.62**<br>
+*fix/feature* : Toggling `xset win on|off` never saved across reloads. This has been changed. Whether this is a fix or a feature, I couldn't tell you.<br>
+*feature* : There is a new, hidden command of `snd force update` that will redownload the current version from the website. This can be used if you think you *accidentally* made changes to your copy of snd that broke it.<br>
+
 **v5.61**<br>
 *fix* : Some time ago, a change was made to how MUSHclient handled GMCP data. This was never reflected in SnD, so it broke a few things, namely `xq` and `noexp`. This has now been fixed.<br>
 *feature* : Will now automatically download the sounds set up by Naricain for snd events. https://github.com/AardCrowley/Search-and-Destroy/pull/12#issue-659354367<br>

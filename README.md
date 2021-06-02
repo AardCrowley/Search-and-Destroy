@@ -95,6 +95,9 @@ Commands:<br>
 **go &lt;index&gt;**<br>
 	&gt;Runs to the first room in the index, or to <br>
 	&gt;the index number with argument.<br>
+**xset nx &lt;conscan|con|scan|scanhere|qs|none&gt;**<br>
+	&gt;Set the action to take upon arriving in a <br>
+	&gt;room via 'nx' or 'go'.<br>
 **&lt;xrt|xrun&gt;&lt;area&gt;**<br>
 	&gt;Runs to the area matching the argument.<br>
 <br>
@@ -125,16 +128,6 @@ Commands:<br>
 	&gt;'yummy pie' but that doesn't actually target<br>
 	&gt;You can then do `xset kw beef pie` to change<br>
 	&gt;it.<br>
-**xset autocon**<br>
-	&gt;Toggle whether or not to perform a consider<br>
-	&gt;upon entering a target room. Any mobs found<br>
-	&gt;will be added to the mobs database. If the<br>
-	&gt;target mob is not here it will then scan.<br>
-	&gt;When disabled it will instead perform a scan<br>
-	&gt;and any mobs in the current room will be<br>
-	&gt;add to the mobs database, though this will<br>
-	&gt;miss any mobs that are noscan.<br>
->>>>>>> bdf2b4e (Added some missing stuff to readme)
 <br>
 **snd update**<br>
 	&gt;Automatically updates Search & Destroy.<br>

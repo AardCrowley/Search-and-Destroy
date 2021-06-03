@@ -2791,11 +2791,11 @@ end
 		-- change target
 		xcp_index = 0
 		full_mob_name = -1
-		if quest_target.mob and current_room.arid == quest_target.arid and quest_target.mob:lower() == Trim(mob):lower() then
+		if quest_target.mob and current_room.arid == quest_target.arid and quest_target.mob:lower():sub(1, 30) == Trim(mob):lower() then
 			full_mob_name = quest_target.mob
 		else
 			for i, target in ipairs(main_target_list) do
-				if current_room.arid == target.arid and Trim(mob):lower() == target.mob:lower() then
+				if current_room.arid == target.arid and Trim(mob):lower() == target.mob:lower():sub(1, 30) then
 					full_mob_name = target.mob
 					xcp_index = i
 					break

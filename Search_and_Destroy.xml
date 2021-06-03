@@ -74,6 +74,8 @@
 	local plugin_id_z_order 		= "462b665ecb569efbf261422f"
 	local plugin_id_soundpack 		= "23832d1089f727f5f34abad8"
 
+	notarg = (GetVariable("mcvar_quick_kill_notarg") == "true" or false)
+
 	gqCheckPass = false
 
 	local plugins_folder = GetPluginInfo(GetPluginID(), 20)
@@ -2902,6 +2904,8 @@ end
 		else
 			notarg = false
 		end
+
+		SetVariable("mcvar_quick_kill_notarg", tostring(notarg))
 
 		if (wildcards.arg == "") then
 			ColourNote("#FF5000", "", "Search and Destroy: Quick-kill command currently set to: '" .. quick_kill_command .. "'")

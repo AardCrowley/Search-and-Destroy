@@ -3,6 +3,7 @@
 **v5.66**<br>
 *feature* : Beautify and improve tables shown in the mud. No underlines, adding alternating background colors (customizable), show room notes on the rooms table.<br>
 *feature* : Added a settings button to the target list. It opens the same menu as right clicking on the top bar, this should just be more discoverable.<br>
+*feature* : When setting quick kill command, can optionally add 'notarg' to the command to prevent snd from attaching a target to your command. This is useful if you have plugin or script that already captures the mob's name and an alias to act upon it. Probably a niche feature, but it is added for the few that can find it helpful.
 
 **v5.65**<br>
 *feature* : Tweak version checking behaviour.<br>

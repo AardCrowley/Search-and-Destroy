@@ -171,7 +171,6 @@
 	local area_range_index = {}
 	local area_start_rooms = {}
 	local last_area = ""
-	local mapper_area_index = 0
 	local speed = "run"
 	local start_room_type
 
@@ -2993,12 +2992,27 @@ end
 					name = row.name,
 					info = row.info,
 					area = row.area_name,
-					arid = row.area } --or row.area_name } -- make safe against bad dbs
+					arid = row.area, --or row.area_name -- make safe against bad dbs
+					notes = row.notes,
+				}
 				if (id > 0) then	-- make a list of room ids
 					roomid_list[#roomid_list + 1] = id
 				end
 
 			end   -- finding rooms
+
+			if has_results then
+				local notes_query = string.format("SELECT uid, notes FROM bookmarks WHERE uid in (%s);", table.concat(roomid_list, ","))
+				for row in db:nrows(notes_query) do
+					for i, room in ipairs(results) do
+						if tostring(room.rmid) == row.uid then
+							room.notes = row.notes
+							break
+						end
+					end
+				end
+			end
+
 			db:close_vm()
 
 			if has_results and fullMobName then
@@ -3044,45 +3058,58 @@ end
 		gotoArea = -1
 		gotoIndex = 1
 		gotoList = {}
-		mapper_area_index = 0
+		local mapper_area_index = 0
+		local line_num = 0
 		local last_area = ""
-			ColourNote("#808080", "", string.format("\nIndex    Location %38s", "(uid)"))
-			ColourNote("#808080", "", string.rep("-", 67))
+			ColourNote("#808080", "", string.format("\nIndex   Location %38s %19s", "(uid)", "(chance)"))
+			ColourNote("#808080", "", string.rep("-", 85))
 		for i,v in ipairs (results) do
-			local background = (mapper_area_index % 2) == 1 and text_colors.alternating_row or ""
+			line_num = line_num + 1
+			local background = (line_num % 2) == 0 and text_colors.alternating_row or ""
+			local instruction = "go " .. mapper_area_index
 			if (last_area ~= v.arid) then
 				if (mapper_area_index == 0) then
-					local areaLine = string.format("~~~ %2d   %-57s", mapper_area_index, v.arid)
+					local areaLine = string.format("%3d     %-76s", mapper_area_index, v.arid)
 					Hyperlink("go " .. mapper_area_index, areaLine, "go to area " .. v.arid, "silver", background, 0, 1)
 					gotoList[mapper_area_index] = v.arid
 					gotoArea = v.arid
 					mapper_area_index = mapper_area_index + 1
 				else
-					local areaLine = string.format("~~~   %s", v.arid)
+					local areaLine = string.format("        %-76s", v.arid)
 					Hyperlink("xrt " .. v.arid, areaLine, "go to area " .. v.arid, "silver", background, 0, 1)
 				end
 				print("")
+				line_num = line_num + 1
 				last_area = v.arid
 			end
-			background = (mapper_area_index % 2) == 1 and text_colors.alternating_row or ""
+			background = (line_num % 2) == 0 and text_colors.alternating_row or ""
 			local name = string.gsub(v.name, "@[a-zA-Z]", ""):sub(1, 40)
-			local text = string.format("~~~ %2d   %-40s  %7s ", mapper_area_index, name, string.format("(%s)", v.rmid))
+			local text = string.format("%3d     %-40s  %7s ", mapper_area_index, name, string.format("(%s)", v.rmid))
 			Hyperlink("go " .. mapper_area_index, text, "go to item " .. mapper_area_index, "lightblue", background, 0, 1)
-			Hyperlink("mapper where " .. v.rmid, "   {sw}", "click for speedwalk to this room", "#FF5000", background, 0, 1)
+
+			local instruction = "mapper where " .. v.rmid
+			local tooltip = "click for speedwalk to this room"
+			Hyperlink(instruction, "   {sw}", tooltip, "#FF5000", background, 0, 1)
 			gotoList[mapper_area_index] = v.rmid
-			if v.percentage then
-				ColourNote("silver", "", " (",
-					mob_room_percentage_color(v.percentage), "", string.format("%.2f%%", v.percentage * 100),
-					"silver", "", ")")
+
+			local pct_string = string.format("%6.2f%%", v.percentage * 100)
+			Hyperlink(instruction, "  (", tooltip, "silver", background, 0, 1)
+			Hyperlink(instruction, pct_string, tooltip, mob_room_percentage_color(v.percentage), background, 0, 1)
+			Hyperlink(instruction, ")", tooltip, "silver", background, 0, 1)
+
+			if v.notes then
+				Hyperlink(string.format("roomnote %i", v.rmid), "  [notes]", v.notes, "lightgreen", background, 0, 1)
 			else
-				print("")
+				ColourTell("", background, string.rep(" ", 9))
 			end
+
+			print("")
 			mapper_area_index = mapper_area_index + 1
 		end
 		if (mapper_area_index == 0) then
 			ColourNote("#FF5000", "", "No matching rooms found.")
 		end
-		ColourNote("#808080", "", string.rep("-", 67))
+		ColourNote("#808080", "", string.rep("-", 85))
 		ColourNote("#808080", "", "Type 'go <index>' or click link to go to that room.\n")
 	end
 
@@ -3507,6 +3534,7 @@ end
 			Simulate("You still have to kill * the heart of a sandstorm (Buried in the Great Desert's unrelenting dunes)\n") -- long
 			Simulate("You still have to kill * Parent (The Kitchen)\n")  -- lots of options
 			Simulate("You still have to kill * A sprite prisoner (A cell)\n")
+			Simulate("You still have to kill * the cutpurse (Road of Shadows)\n") -- many rooms
 			Simulate("You still have to kill * definitely a fake mob (Fake Area - Dead)\n") -- unknown dead
 			Simulate("You still have to kill * the gibbering mouther (Dining Hall)\n")  -- lots of options
 			Simulate("You still have to kill * a sinister vandal (In The Courtyard)\n") -- noscan
@@ -3582,7 +3610,15 @@ end
 
 	function room_note(name, line, wildcards)
 		--get_notes(nil, current_room.rmid)
-		get_notes(nil, gmcp("room.info.num"))
+		if not get_notes(nil, gmcp("room.info.num")) then
+			ColourNote("#FF3030", "", "No notes found for room this room.\n")
+		end
+	end
+
+	function room_note_room(name, line, wildcards)
+		if not get_notes(nil, wildcards.roomid) then
+			ColourNote("#FF3030", "", string.format("No notes found for room %s.\n", wildcards.roomid))
+		end
 	end
 
 	function get_notes(arid, roomid, text_only)
@@ -3591,32 +3627,37 @@ end
 		local db = assert(sqlite3.open(mapper_db_file))
 		local sql =  " SELECT b.uid, b.notes "
 		sql = sql .. " FROM bookmarks b "
-		if (arid ~= nil) then
+		if arid then
 			sql = sql .. " INNER JOIN rooms r ON b.uid = r.uid "
 			sql = sql .. " WHERE r.area = " .. fixsql(arid)
 		else
 			sql = sql .. " WHERE b.uid = " .. fixsql(roomid)
 		end
 		sql = sql .. " ORDER BY b.uid "
-		local index = 0
+		local found_notes = false
 		if (arid ~= nil) then
 			Simulate("\nNotes for " .. getAreaNameFromId(arid) .. "\n")
 		end
 		for row in db:nrows(sql) do
-			index = index + 1
+			found_notes = true
 			if (text_only == true) then
 				local line = string.format("    note:'%s'", row.notes)
 				Hyperlink("xmapper move " .. row.uid, line, "go to room " .. row.uid, "lightblue", "black", 0, 1)
 			else
 				local line = string.format("    (%s) %s", row.uid, row.notes)
 				Hyperlink("xmapper move " .. row.uid, line, "go to room " .. row.uid, "lightblue", "black", 0, 1)
-				print("")
 			end
+			print("")
 		end
 		db:close_vm()
-		if (arid ~= nil and index == 0 and text_only ~= true) then
-			Simulate("\tNo notes.\n")
+		if not found_notes then
+			if arid then
+				Simulate("\tNo notes.\n")
+			else
+				return false
+			end
 		end
+		return true
 	end
 
 	function getAreaIdFromName(name)
@@ -6550,6 +6591,10 @@ end
 			script="room_note_area"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
+	<alias	match="^(?:roomnote|rn) (?<roomid>\d+)$"
+			script="room_note_room"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
 <!-- Sql Execution -->
 	<alias	match="^runsql (?<sql>.+)$"
 			script="RunSql"
@@ -6685,7 +6730,7 @@ end
 			script="simulate_quest"
 			enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12" > </alias>
 
-	<alias	match="^xtest loadroom(?: (?<room_id>\d+))?$"
+	<alias	match="^xtest loadroom(?: (?<roomid>\d+))?$"
 			script="xtest_loadroom"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 

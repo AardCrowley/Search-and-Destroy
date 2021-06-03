@@ -235,13 +235,14 @@
 		{ key = "unlikely",			default = "#484848", menu_name = "Unlikely mobs",
 			desc = "mobs that are not likely to be the target in a room-based campaign or global quest"},
 		{ key = "unlikely_tag",		default = "#0000CD", menu_name = "Unlikely tag",
-			desc = "the text informing you that you have a quest available" },
+			desc = "the tag beside unlikely mobs" },
 		{ key = "quest_available",	default = "#1E90FF", menu_name = "Quest available",
 			desc = "the text informing you that you have a quest available" },
 		{ key = "quest_complete",	default = "#7CFC00", menu_name = "Quest complete",
 			desc = "the text informing you that you have a quest to turn in"},
+		{ key = "alternating_row",	default = "#000040", menu_name = "Alternating Row Backgrounds",
+			desc = "the background color on alternating rows of the targets list in the mud window. Set it to black to disable"},
 	}
-
 
 	local text_colors = {}
 
@@ -2271,28 +2272,31 @@ end
 				for i,v in ipairs (list) do
 					local mob_text = string.format("%s%s",  ((v.is_dead == "no") and "" or "[Dead] "), v.mob):sub(1, 32)
 					local arid = v.arid:sub(1, 10)
+					local background = (i % 2) == 0 and text_colors.alternating_row or ""
 					local link_text
-					local tooltip
+					local tooltip = "Target cp mob " .. i .. " - " .. mob_text .. " (" .. v.arid .. ")"
 					local notehelp = "Show notes for item " .. i
 					local color = color_for_target(v)
 					if (v.link_type == "area") then
 						link_text = string.format(" %2d  %-32s - %-10s", i, mob_text, arid)
-						tooltip = "Target cp mob " .. i .. " - " .. mob_text .. " (" .. v.arid .. ")"
-						Hyperlink("xcp " .. i, link_text, tooltip, color, "", 0, 1)
-						Hyperlink("roomnote area " .. v.arid, "  [notes]", notehelp, ((v.is_dead == "yes") and "#006000" or "lightgreen"), "", 0, 1)
-					elseif (v.link_type == "room") then
+						Hyperlink("xcp " .. i, link_text, tooltip, color, background, 0, 1)
+						Hyperlink("roomnote area " .. v.arid, string.format("  %-38s", "[notes]"), notehelp, ((v.is_dead == "yes") and "#006000" or "lightgreen"), background, 0, 1)
+					elseif v.link_type == "room" and v.unlikely then
+						ColourNameToRGB(text_colors.unlikely_tag)
+						Hyperlink("xcp " .. i, string.format(" %2d ", i), tooltip, color, background, 0, 1)
+						Hyperlink("xcp " .. i, "(unlikely)", tooltip, text_colors.unlikely_tag, background, 0, 1)
+						mob_text = mob_text:sub(1,22)
+						link_text = string.format(" %-22s - %-10s  %-38s", mob_text, v.arid, roomText)
+						Hyperlink("xcp " .. i, link_text, tooltip, color, background, 0, 1)
+					elseif v.link_type == "room" then
 						local roomText = string.format("%5s", v.roomid) .. ": '" .. v.roomName
 						roomText = roomText:sub(1, 39) .. "'"
-						link_text = string.format(" %2d  %-32s - %-10s  %-40s", i, mob_text, v.arid, roomText)
-						tooltip = "Target cp mob " .. i .. " - " .. mob_text .. " (" .. v.arid .. ")"
-						Hyperlink("xcp " .. i, link_text, tooltip, color, "", 0, 1)
-						if v.unlikely then
-							ColourTell("mediumblue", "", "(unlikely)")
-						end
+						link_text = string.format(" %2d  %-32s - %-10s  %-38s", i, mob_text, v.arid, roomText)
+						Hyperlink("xcp " .. i, link_text, tooltip, color, background, 0, 1)
 					elseif (v.link_type == "unknown") then
-						link_text = string.format(" %2d  %-32s - unknown: '%s'", i, mob_text, v.location)
+						link_text = string.format(" %2d  %-32s - unknown: '%s'%s", i, mob_text, v.location, string.rep(" ", 39 - #v.location))
 						tooltip = "Location not found in mapper database"
-						Hyperlink(" ", link_text, tooltip, color, "", 0, 1)
+						Hyperlink(" ", link_text, tooltip, color, background, 0, 1)
 					end
 					print("")
 				end
@@ -3025,27 +3029,29 @@ end
 		gotoList = {}
 		mapper_area_index = 0
 		local last_area = ""
-			ColourNote("#808080", "", "\nIndex    Location     (uid)")
+			ColourNote("#808080", "", string.format("\nIndex    Location %38s", "(uid)"))
 			ColourNote("#808080", "", string.rep("-", 67))
 		for i,v in ipairs (results) do
+			local background = (mapper_area_index % 2) == 1 and text_colors.alternating_row or ""
 			if (last_area ~= v.arid) then
 				if (mapper_area_index == 0) then
-					local areaLine = string.format("~~~ %2d   %s", mapper_area_index, v.arid)
-					Hyperlink("go " .. mapper_area_index, areaLine, "go to area " .. v.arid, "silver", "", 0, 1)
+					local areaLine = string.format("~~~ %2d   %-57s", mapper_area_index, v.arid)
+					Hyperlink("go " .. mapper_area_index, areaLine, "go to area " .. v.arid, "silver", background, 0, 1)
 					gotoList[mapper_area_index] = v.arid
 					gotoArea = v.arid
 					mapper_area_index = mapper_area_index + 1
 				else
 					local areaLine = string.format("~~~   %s", v.arid)
-					Hyperlink("xrt " .. v.arid, areaLine, "go to area " .. v.arid, "silver", "", 0, 1)
+					Hyperlink("xrt " .. v.arid, areaLine, "go to area " .. v.arid, "silver", background, 0, 1)
 				end
 				print("")
 				last_area = v.arid
 			end
+			background = (mapper_area_index % 2) == 1 and text_colors.alternating_row or ""
 			local name = string.gsub(v.name, "@[a-zA-Z]", ""):sub(1, 40)
-			local text = string.format("~~~ %2d   %-40s  (%s) ", mapper_area_index, name, v.rmid)
-			Hyperlink("go " .. mapper_area_index, text, "go to item " .. mapper_area_index, "lightblue", "", 0, 1)
-			Hyperlink("mapper where " .. v.rmid, "   {sw}", "click for speedwalk to this room", "#FF5000", "", 0, 1)
+			local text = string.format("~~~ %2d   %-40s  %7s ", mapper_area_index, name, string.format("(%s)", v.rmid))
+			Hyperlink("go " .. mapper_area_index, text, "go to item " .. mapper_area_index, "lightblue", background, 0, 1)
+			Hyperlink("mapper where " .. v.rmid, "   {sw}", "click for speedwalk to this room", "#FF5000", background, 0, 1)
 			gotoList[mapper_area_index] = v.rmid
 			if v.percentage then
 				ColourNote("silver", "", " (",
@@ -4259,7 +4265,7 @@ end
 	function right_click_menu()
 		local color_options = {}
 		for i, details in ipairs(TEXT_COLOR_DETAILS) do
-			if details.key == "quest_available" then
+			if details.key == "quest_available" or details.key == "alternating_row" then
 				table.insert(color_options, "-")
 			end
 			table.insert(color_options, details.menu_name)
@@ -4352,7 +4358,11 @@ end
 			new_color = RGBColourToName(new_color)
 			text_colors[color_details.key] = new_color
 			SetVariable("color_" .. color_details.key, new_color)
-			ColourNote(new_color, "", string.format("This is now color for %s.", color_details.desc))
+			if color_details.key == "alternating_row" then
+				ColourNote("white", new_color, string.format("This is now color for %s.", color_details.desc))
+			else
+				ColourNote(new_color, "", string.format("This is now color for %s.", color_details.desc))
+			end
 			xg_draw_window()
 		end
 	end

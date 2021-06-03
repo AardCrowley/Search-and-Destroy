@@ -268,6 +268,9 @@
 	local target_nearby_sound = "target_nearby.wav"
 	local other_target_here_sound = "other_target_here.wav"
 
+-- [[ Image state ]]
+	local images_loaded = false
+
 -- [[ S&D dev stuff ]]
 	local debug_mode = GetVariable("debug_mode") or "off"
 
@@ -3836,9 +3839,10 @@ end
 			WindowDragHandler(win, "hsDrag1", "dragmove", "dragrelease", 0)
 		end
 
-		draw_b1_action_buttons(47, 20)	-- draw xcp, go, etc. buttons
-		draw_circle_readout(5, 20)		-- add circle text/level readout
-		draw_noexp_readout(206, 22)	-- add noexp on/off and TNL indicator
+		draw_settings_button(5, 20)
+		draw_b1_action_buttons(87, 20)	-- draw xcp, go, etc. buttons
+		draw_circle_readout(45, 20)		-- add circle text/level readout
+		draw_noexp_readout(246, 22)	-- add noexp on/off and TNL indicator
 		draw_resize_tag()
 		xg_show_target_links()
 		Redraw()
@@ -3861,38 +3865,95 @@ end
 		end
 	end
 
-	function draw_button_1_A(L, T, text, hsName, tooltip, tdx, tdy)
+	function load_images()
+		if images_loaded then
+			return
+		end
+
+		images_loaded = true
+		local mime = require("mime")
+		local gear_base64 = "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAJPSURBVFhHtZeNNQQxEMeXCujgtgMq4CpABagAFXAV0AE6oAI6oAPXgevg/H97k7z9SDZz2N9787JfyUxmJpPsTrUly+XyWs2tZK950OVyNps92bWLXWu34UqSUg731rrJGqCZHjBbycweBXLKofNOffcyY0SSIVCHAzVvEgZcSc4kn5ILSWmWdwrDQmMc6/pRgvLVer2e13XNGB0GBvSU/ydJIzoGTKg8MDAiGmBx+pBMpTxASA8VpiU37SQkZlMrB3Sgq6FtwItkkCQTwMzfN5fDHMC6782dC9y5rddwf5xoqg4w6Bi8v5McSmoNxiRqyY2k1LdqK4e+ByizY+uczmchgfqYBwnlUfMgTVMn7LraMaXnElbBmDuZ3bw/gz5mBKspW/0EYyELDCDmnjh2LB9DY1IxqYJFyAFvEj1b64EwuMhuRn1ycU+hb3Gva0l7DShm92/xGsC2OpZUKVyhdYdAnFpbRMbyrctgDKCoeLi1JTaKfcOpqQRhfegXIooQdSHHuxJsbtcDTDljsAxzPEgWlqjJA0mpLtDxRgPEw6cp5iyBctox9oNy6HuAuH1t7lyEpVaqom3YP+KSjgbYLDgNlWbwV1DOjth4ob0KyNyplQPeijnSNsBdPv8IM49VMhpgLmGPnxJ08PcUT0SdQqQXWJYygo54yLMf8G1U0CIo73i6YwAkjAgd+TnxeIgzA7WCb+kLSeUwqAMBrQoSktPrizrGmZfqhL5tryzGOJG86nlyd8wakKNgwEqK9u3axSAEDiilObb6Na+qqvoBy3vRX8g9PVIAAAAASUVORK5CYII="
+
+		-- local image_path = GetInfo(60) .. "images/gear_small.png"
+		-- local f = io.open(image_path, "rb")
+		-- local image_data = f:read("a*")
+		-- local encoded
+		-- f:close()
+		-- encoded = mime.b64(image_data)
+		-- Note("Base64:")
+		-- Note(encoded)
+
+		if not WindowLoadImageMemory(win, "gear", mime.unb64(gear_base64)) then
+			ColourNote("#FF5000", "", "Image could not be decoded")
+		end
+	end
+
+	function draw_settings_button(left, top, clicked)
+		load_images()
+		if images_loaded then
+			local right = left + 36
+			local bottom = top + 36
+			local bgcolor = 0x000000
+			local color_1 = 0xE0E0E0
+			local color_2 = 0x808080
+
+			if clicked then
+				color_1, color_2 = color_2, color_1
+			end
+
+			WindowRectOp(win, 2, left, top, right, bottom, bgcolor, 0)
+			WindowRectOp(win, 4, left, top, right, bottom, color_1, color_2)
+			WindowDrawImageAlpha(win, "gear", left + 2, top + 2, right - 2, bottom - 2, 1, 0, 0)
+
+			if (win_hotspots.config == nil) then
+				-- Redoing the hotspot screws with mouseup actions so we'll leave the old one in place
+				win_hotspots.config = WindowAddHotspot(win, "config", left, top, right, bottom,
+					"", "", "config_mousedown", "config_mouseup", "config_mouseup_inside", "Settings", miniwin.cursor_arrow, 0)
+			end
+		end
+	end
+
+	function config_mousedown()
+		local left = WindowHotspotInfo(win, "config", 1)
+		local top = WindowHotspotInfo(win, "config", 2)
+		draw_settings_button(left, top, true)
+		Redraw()
+	end
+
+	function config_mouseup()
+		local left = WindowHotspotInfo(win, "config", 1)
+		local top = WindowHotspotInfo(win, "config", 2)
+		draw_settings_button(left, top)
+		Redraw()
+	end
+
+	function config_mouseup_inside()
+		config_mouseup()
+		right_click_menu()
+	end
+
+
+	function draw_button_1_A(L, T, text, hsName, tooltip, tdx, tdy, clicked)
 		local x,y,w,z = L, T, L+30, T+25
 		local tx,ty = (x+tdx), (y+tdy)	-- x and y values for text location
 		local bgcolor = 0x000000
 		local color_1 = 0xE0E0E0
 		local color_2 = 0x808080
+		local text_color = color_1
+
+		if clicked then
+			color_1, color_2 = color_2, color_1
+		end
+
 		WindowRectOp(win,2, x,y,w,z, bgcolor)													-- Draw background and set color (black)
 		WindowRectOp(win,4, x,y,w,z, color_1, color_2)											-- Draw button border (left/top = light grey, right/bottom = darker grey)
-		WindowText(win, "bt1", text, tx,ty,w-1,z-1, color_1, false)								-- Draw button text ("button" font, light grey)
+		WindowText(win, "bt1", text, tx,ty,w-1,z-1, text_color, false)								-- Draw button text ("button" font, light grey)
 		if (win_hotspots[hsName] == nil) then																-- Make button clickable by defining a hotspot
 			win_hotspots[hsName] = WindowAddHotspot(win, hsName, x, y, w, z,							-- Hotspot name and location info
 				"", "", "mousedown_b1", "cancelmousedown_b1", "mouseup_b1",				-- Mouse actions
 				"" .. (tooltip or text), miniwin.cursor_arrow, 0)											-- Tooltip text, cursor shape (hand)
 		end
 	end
-
-	function draw_button_1_B(L, T, text, hsName, tooltip, tdx, tdy)
-		local x,y,w,z = L, T, L+30, T+25											-- x and y values for button boundaries
-		local tx,ty = (x+tdx), (y+tdy)	-- x and y values for text location
-		local bgcolor = 0x000060	-- red
-		local color_1 = 0x80E0E0	-- yellow
-		local color_2 = 0x80E0E0	-- yellow
-		WindowRectOp (win,2, x,y,w,z, bgcolor)												-- Draw background and set color (black)
-		WindowRectOp (win,4, x,y,w,z, color_1, color_2)										-- Draw button border (left/top = light grey, right/bottom = darker grey)
-		WindowText(win, "bt1", text, tx,ty,w-1,z-1, color_1, false)								-- Draw button text ("button" font, light grey)
-			---win_hotspots[hsName] = WindowAddHotspot(win, hsName, x,y,w,z,					-- Hotspot name and location info
-				--"", "", "", "", "",	-- "mouseover", "cancelmouseover", "mousedown", "cancelmousedown", "mouseup"
-			--	"" .. (tooltip or text), miniwin.cursor_arrow, 0)	-- Tooltip text, cursor shape (hand)
-	end
-
-
-
 
 	local win_circle_readout_vars = {
 			["cp"] 	 = { cc, cc1="r", cc2y="", tc1="", tc2="", tdx="", tdy="", text="" },
@@ -4174,7 +4235,7 @@ end
 		local click = ((bit.band(flags, 0x20) == 0) and "L" or "R")
 		local left = WindowHotspotInfo(win, hotspot_id, 1)
 		local top = WindowHotspotInfo(win, hotspot_id, 2)
-		draw_button_1_B(left, top, b.text, hotspot_id.."2", "", b.tdx, b.tdy)
+		draw_button_1_A(left, top, b.text, hotspot_id.."2", "", b.tdx, b.tdy, true)
 		Redraw()
 	end
 
@@ -4873,6 +4934,9 @@ end
 		return function(retval, page, status, headers, full_status, request_url)
 			if status ~= 200 then
 				DebugNote("check_version_callback got ", status)
+				if log_no_updates then
+					ColourNote("white", "blue", "Error while fetching latest version number")
+				end
 				return
 			end
 			local upstream_version = Trim(page)
@@ -4892,6 +4956,7 @@ end
 	function callback_update_plugin(retval, page, status, headers, full_status, request_url)
 		if status ~= 200 then
 			DebugNote("callback_update_plugin got ", status)
+			ColourNote("white", "blue", "Error while fetching latest plugin version")
 			return
 		end
 		local upstream_version = tonumber(string.match(page, '<plugin version="([0-9%.]+)"'))

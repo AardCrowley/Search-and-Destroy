@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.66" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="5.67" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -3070,8 +3070,15 @@ end
 		local mapper_area_index = 0
 		local line_num = 0
 		local last_area = ""
-			ColourNote("#808080", "", string.format("\nIndex   Location %38s %19s", "(uid)", "(chance)"))
-			ColourNote("#808080", "", string.rep("-", 85))
+		local has_chance = #results > 0 and results[1].percentage
+		local dashes = 74
+		ColourTell("#808080", "", string.format("\nIndex   Location %38s", "(uid)"))
+		if has_chance then
+			dashes = 85
+			ColourTell("#808080", "", string.format("%20s", "(chance)"))
+		end
+		print("")
+		ColourNote("#808080", "", string.rep("-", dashes))
 		for i,v in ipairs (results) do
 			line_num = line_num + 1
 			local background = (line_num % 2) == 0 and text_colors.alternating_row or ""
@@ -3093,7 +3100,7 @@ end
 			end
 			background = (line_num % 2) == 0 and text_colors.alternating_row or ""
 			local name = string.gsub(v.name, "@[a-zA-Z]", ""):sub(1, 40)
-			local text = string.format("%3d     %-40s  %7s ", mapper_area_index, name, string.format("(%s)", v.rmid))
+			local text = string.format("%3d     %-40s  %-7s ", mapper_area_index, name, string.format("(%s)", v.rmid))
 			Hyperlink("go " .. mapper_area_index, text, "go to item " .. mapper_area_index, "lightblue", background, 0, 1)
 
 			local instruction = "mapper where " .. v.rmid
@@ -3101,10 +3108,12 @@ end
 			Hyperlink(instruction, "   {sw}", tooltip, "#FF5000", background, 0, 1)
 			gotoList[mapper_area_index] = v.rmid
 
-			local pct_string = string.format("%6.2f%%", v.percentage * 100)
-			Hyperlink(instruction, "  (", tooltip, "silver", background, 0, 1)
-			Hyperlink(instruction, pct_string, tooltip, mob_room_percentage_color(v.percentage), background, 0, 1)
-			Hyperlink(instruction, ")", tooltip, "silver", background, 0, 1)
+			if v.percentage then
+				local pct_string = string.format("%6.2f%%", v.percentage * 100)
+				Hyperlink(instruction, "  (", tooltip, "silver", background, 0, 1)
+				Hyperlink(instruction, pct_string, tooltip, mob_room_percentage_color(v.percentage), background, 0, 1)
+				Hyperlink(instruction, ")", tooltip, "silver", background, 0, 1)
+			end
 
 			if v.notes then
 				Hyperlink(string.format("roomnote %i", v.rmid), "  [notes]", v.notes, "lightgreen", background, 0, 1)
@@ -3118,7 +3127,7 @@ end
 		if (mapper_area_index == 0) then
 			ColourNote("#FF5000", "", "No matching rooms found.")
 		end
-		ColourNote("#808080", "", string.rep("-", 85))
+		ColourNote("#808080", "", string.rep("-", dashes))
 		ColourNote("#808080", "", "Type 'go <index>' or click link to go to that room.\n")
 	end
 

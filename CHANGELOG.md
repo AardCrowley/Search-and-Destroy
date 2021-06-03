@@ -1,5 +1,8 @@
 # CHANGELOG
 
+**v5.67**<br>
+*fix* : A previous change broke the `xm` command. It should be fixed now.<br>
+
 **v5.66**<br>
 *feature* : Beautify and improve tables shown in the mud. No underlines, adding alternating background colors (customizable), show room notes on the rooms table.<br>
 *feature* : Added a settings button to the target list. It opens the same menu as right clicking on the top bar, this should just be more discoverable.<br>

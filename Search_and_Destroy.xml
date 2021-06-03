@@ -2891,6 +2891,23 @@ end
 	end
 
 	function xset_quick_kill_command(name, line, wildcards)		-- user-defined attack to use with qk/kk
+		if (wildcards.notarg ~= "") then
+			notarg = true
+		else
+			notarg = false
+		end
+
+		if (wildcards.arg == "") then
+			ColourNote("#FF5000", "", "Search and Destroy: Quick-kill command currently set to: '" .. quick_kill_command .. "'")
+		else
+			quick_kill_command = wildcards.arg:gsub(" notarg", "")
+			--quick_kill_command = wildcards.arg
+			SetVariable("mcvar_quick_kill_command", quick_kill_command)
+			ColourNote("#FF5000", "", "Search and Destroy: Quick-kill command is now set to: '" .. quick_kill_command .. "'")
+		end
+	end
+
+--[[	function xset_quick_kill_command(name, line, wildcards)		-- user-defined attack to use with qk/kk
 		if (wildcards.arg == "") then
 			ColourNote("#FF5000", "", "Search and Destroy: Quick-kill command currently set to: '" .. quick_kill_command .. "'")
 		else
@@ -2898,7 +2915,7 @@ end
 			SetVariable("mcvar_quick_kill_command", quick_kill_command)
 			ColourNote("#FF5000", "", "Search and Destroy: Quick-kill command is now set to: '" .. quick_kill_command .. "'")
 		end
-	end
+	end]]--
 
 	function xset_silentMode(name, line, wildcards)
 		if (not wildcards[1] or wildcards[1] == "") then
@@ -6484,7 +6501,7 @@ end
 			script="quick_kill"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
-	<alias	match="^xset (?:kk|ak|qk|qkill)( (?<arg>.+))?$"
+	<alias	match="^xset (?:kk|ak|qk|qkill)( (?<arg>.+)(?<notarg> notarg)?)?$"
 			script="xset_quick_kill_command"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 

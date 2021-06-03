@@ -1888,8 +1888,8 @@ end
 		if (xcp_retry_stat == 2) then
 			DebugNote(string.format("last_kill_index: %i xcp_index_attempt: %i", last_kill_index, xcp_index_attempt))
 			xcp_index = xcp_index_attempt
-			if last_kill_index <= xcp_index_attempt then
-				xcp_index = xcp_index_attempt - 1
+			if last_kill_index < xcp_index_attempt then
+				xcp_index = math.max(1, xcp_index_attempt - 1)
 			end
 			xcp_retry_stat = 0
 			xcp_arg("", "", {index=xcp_index})

@@ -2269,26 +2269,28 @@ end
 							v.arid = "zz" .. v.arid ]]--
 
 				for i,v in ipairs (list) do
-					local mob_text = v.mob .. ((v.is_dead == "no") and "" or " [Dead]")
+					local mob_text = string.format("%s%s",  ((v.is_dead == "no") and "" or "[Dead] "), v.mob):sub(1, 32)
+					local arid = v.arid:sub(1, 10)
 					local link_text
 					local tooltip
 					local notehelp = "Show notes for item " .. i
 					local color = color_for_target(v)
 					if (v.link_type == "area") then
-						link_text = string.format(" %2d  %s - %s", padRight(i, 6, " "), padRight(mob_text, 32, " "), padRight(v.arid, 10, " "))
+						link_text = string.format(" %2d  %-32s - %-10s", i, mob_text, arid)
 						tooltip = "Target cp mob " .. i .. " - " .. mob_text .. " (" .. v.arid .. ")"
 						Hyperlink("xcp " .. i, link_text, tooltip, color, "", 0)
 						Hyperlink("roomnote area " .. v.arid, "  [notes]", notehelp, ((v.is_dead == "yes") and "#006000" or "lightgreen"), "", 0)
 					elseif (v.link_type == "room") then
-						local roomText = string.format("%5s", v.roomid) .. ": '" .. v.roomName .. "'"
-						link_text = string.format(" %2d  %s - %s  %s", padRight(i, 4, " "), padRight(mob_text, 32, " "), padRight(v.arid, 10, " "), padRight(roomText, 40, " "))
+						local roomText = string.format("%5s", v.roomid) .. ": '" .. v.roomName
+						roomText = roomText:sub(1, 39) .. "'"
+						link_text = string.format(" %2d  %-32s - %-10s  %-40s", i, mob_text, v.arid, roomText)
 						tooltip = "Target cp mob " .. i .. " - " .. mob_text .. " (" .. v.arid .. ")"
 						Hyperlink("xcp " .. i, link_text, tooltip, color, "", 0)
 						if v.unlikely then
 							ColourTell("mediumblue", "", "(unlikely)")
 						end
 					elseif (v.link_type == "unknown") then
-						link_text = string.format(" %2d  %s - unknown: '%s'", padRight(i, 4, " "), padRight(mob_text, 32, " "), v.location)
+						link_text = string.format(" %2d  %-32s - unknown: '%s'", i, mob_text, v.location)
 						tooltip = "Location not found in mapper database"
 						Hyperlink(" ", link_text, tooltip, color, "", 0)
 					end
@@ -3040,10 +3042,9 @@ end
 				print("")
 				last_area = v.arid
 			end
-			local line1 = string.format("~~~ %2d   ", mapper_area_index)
-			Hyperlink("go " .. mapper_area_index, line1, "go to item " .. mapper_area_index, "lightblue", "", 0)
-			local line2 = string.format("%s  (%s) ", padRight(string.gsub(v.name, "@[a-zA-Z]", ""), 40, " "), v.rmid)
-			Hyperlink("go " .. mapper_area_index, line2, "go to item " .. mapper_area_index, "lightblue", "", 0)
+			local name = string.gsub(v.name, "@[a-zA-Z]", ""):sub(1, 40)
+			local text = string.format("~~~ %2d   %-40s  (%s) ", mapper_area_index, name, v.rmid)
+			Hyperlink("go " .. mapper_area_index, text, "go to item " .. mapper_area_index, "lightblue", "", 0)
 			Hyperlink("mapper where " .. v.rmid, "   {sw}", "click for speedwalk to this room", "#FF5000", "", 0)
 			gotoList[mapper_area_index] = v.rmid
 			if v.percentage then
@@ -3495,6 +3496,7 @@ end
 			Simulate("You still have to kill * A sprite prisoner (A cell)\n")
 			Simulate("You still have to kill * definitely a fake mob (Fake Area - Dead)\n")
 			Simulate("You still have to kill * the gibbering mouther (Dining Hall)\n")
+			Simulate("You still have to kill * Sssssuper long mob name that should break formatting (In the clouds)\n")
 		end
 		Simulate("Note: Dead means that the target is dead, not that you have killed it.\n")
 		Simulate("\n")
@@ -4530,12 +4532,6 @@ end
 	function md5(s)
 		local hash = utils.tohex(utils.md5(tostring(s)))
 		return hash
-	end
-
-	function padRight(text, length, padChar)
-		local padding = length - string.len(text)
-		text = text .. string.rep(padChar, padding)
-		return text
 	end
 
 	function quote(text)

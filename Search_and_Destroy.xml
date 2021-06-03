@@ -2278,21 +2278,21 @@ end
 					if (v.link_type == "area") then
 						link_text = string.format(" %2d  %-32s - %-10s", i, mob_text, arid)
 						tooltip = "Target cp mob " .. i .. " - " .. mob_text .. " (" .. v.arid .. ")"
-						Hyperlink("xcp " .. i, link_text, tooltip, color, "", 0)
-						Hyperlink("roomnote area " .. v.arid, "  [notes]", notehelp, ((v.is_dead == "yes") and "#006000" or "lightgreen"), "", 0)
+						Hyperlink("xcp " .. i, link_text, tooltip, color, "", 0, 1)
+						Hyperlink("roomnote area " .. v.arid, "  [notes]", notehelp, ((v.is_dead == "yes") and "#006000" or "lightgreen"), "", 0, 1)
 					elseif (v.link_type == "room") then
 						local roomText = string.format("%5s", v.roomid) .. ": '" .. v.roomName
 						roomText = roomText:sub(1, 39) .. "'"
 						link_text = string.format(" %2d  %-32s - %-10s  %-40s", i, mob_text, v.arid, roomText)
 						tooltip = "Target cp mob " .. i .. " - " .. mob_text .. " (" .. v.arid .. ")"
-						Hyperlink("xcp " .. i, link_text, tooltip, color, "", 0)
+						Hyperlink("xcp " .. i, link_text, tooltip, color, "", 0, 1)
 						if v.unlikely then
 							ColourTell("mediumblue", "", "(unlikely)")
 						end
 					elseif (v.link_type == "unknown") then
 						link_text = string.format(" %2d  %-32s - unknown: '%s'", i, mob_text, v.location)
 						tooltip = "Location not found in mapper database"
-						Hyperlink(" ", link_text, tooltip, color, "", 0)
+						Hyperlink(" ", link_text, tooltip, color, "", 0, 1)
 					end
 					print("")
 				end
@@ -2309,7 +2309,7 @@ end
 		ColourNote("#808080", "", string.rep("-", 90))
 		for i,v in ipairs (ig) do
 			local link = string.format(" ** Ignoring due to level: %s - %5s '%s' (%s) [%s-%s]", v.mob, v.roomid, v.roomName, v.arid, v.minlvl, v.maxlvl)
-			Hyperlink("xmapper move " .. v.roomid, link, "Move to room " .. v.roomid, "#002460", "", 0)
+			Hyperlink("xmapper move " .. v.roomid, link, "Move to room " .. v.roomid, "#002460", "", 0, 1)
 			print("")
 		end
 	end
@@ -3031,21 +3031,21 @@ end
 			if (last_area ~= v.arid) then
 				if (mapper_area_index == 0) then
 					local areaLine = string.format("~~~ %2d   %s", mapper_area_index, v.arid)
-					Hyperlink("go " .. mapper_area_index, areaLine, "go to area " .. v.arid, "silver", "", 0)
+					Hyperlink("go " .. mapper_area_index, areaLine, "go to area " .. v.arid, "silver", "", 0, 1)
 					gotoList[mapper_area_index] = v.arid
 					gotoArea = v.arid
 					mapper_area_index = mapper_area_index + 1
 				else
 					local areaLine = string.format("~~~   %s", v.arid)
-					Hyperlink("xrt " .. v.arid, areaLine, "go to area " .. v.arid, "silver", "", 0)
+					Hyperlink("xrt " .. v.arid, areaLine, "go to area " .. v.arid, "silver", "", 0, 1)
 				end
 				print("")
 				last_area = v.arid
 			end
 			local name = string.gsub(v.name, "@[a-zA-Z]", ""):sub(1, 40)
 			local text = string.format("~~~ %2d   %-40s  (%s) ", mapper_area_index, name, v.rmid)
-			Hyperlink("go " .. mapper_area_index, text, "go to item " .. mapper_area_index, "lightblue", "", 0)
-			Hyperlink("mapper where " .. v.rmid, "   {sw}", "click for speedwalk to this room", "#FF5000", "", 0)
+			Hyperlink("go " .. mapper_area_index, text, "go to item " .. mapper_area_index, "lightblue", "", 0, 1)
+			Hyperlink("mapper where " .. v.rmid, "   {sw}", "click for speedwalk to this room", "#FF5000", "", 0, 1)
 			gotoList[mapper_area_index] = v.rmid
 			if v.percentage then
 				ColourNote("silver", "", " (",
@@ -3583,10 +3583,10 @@ end
 			index = index + 1
 			if (text_only == true) then
 				local line = string.format("    note:'%s'", row.notes)
-				Hyperlink("xmapper move " .. row.uid, line, "go to room " .. row.uid, "lightblue", "black", 0)
+				Hyperlink("xmapper move " .. row.uid, line, "go to room " .. row.uid, "lightblue", "black", 0, 1)
 			else
 				local line = string.format("    (%s) %s", row.uid, row.notes)
-				Hyperlink("xmapper move " .. row.uid, line, "go to room " .. row.uid, "lightblue", "black", 0)
+				Hyperlink("xmapper move " .. row.uid, line, "go to room " .. row.uid, "lightblue", "black", 0, 1)
 				print("")
 			end
 		end
@@ -5495,7 +5495,7 @@ end
 				table.insert(mshow, {a[1], zName, rID})
 
 				ColourTell("dimgray", "", "|", "white", bgColor, " " .. string.format("%-29s",mName), "dimgray", "", "|", "limegreen", bgColor, " " .. string.format("%-24s", rName), "dimgray", "", "|", "cyan", bgColor, " " .. count .. ". ")
-				Hyperlink("mapper goto " .. rID, rID, "goto id", "cyan", bgColor, 0)
+				Hyperlink("mapper goto " .. rID, rID, "goto id", "cyan", bgColor, 0, 1)
 				ColourTell("", bgColor,  string.rep(" ", 12-#ridStr),"dimgray", "", "|", "yellow", bgColor, " " .. string.format("%-11s", zName), "dimgray", "", "|", "white", bgColor, " " .. string.format("%-5d", mobCount), "dimgray", bgColor, " |\n")
 
 			end

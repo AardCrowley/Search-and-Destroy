@@ -51,6 +51,8 @@
 	require "tprint"
 	require "wait"
 
+	async_ok, async = pcall (require, "async")
+
 	function mapFind(query)
 		return CallPlugin("b6eae87ccedd84f510b74714", "map_find_query", query)
 	end
@@ -4926,7 +4928,7 @@ end
 
 	function download_file(url, callback)
 		DebugNote("Starting download of ", url)
-		async_ok, async = pcall (require, "async")
+		--async_ok, async = pcall (require, "async")		
 		if async_ok then
 			plugin_page = async.doAsyncRemoteRequest(url, callback, "HTTPS")
 		else
@@ -5013,7 +5015,7 @@ end
 			other_target_here_sound,
 			target_nearby_sound,
 		}
-		local async_ok, async = pcall (require, "async")
+		--local async_ok, async = pcall (require, "async")
 		local file
 		local files_to_download = {}
 

@@ -4410,7 +4410,8 @@ end
 			"Expand Window",
 			"-",
 			hide_settings,
-			"Check for Updates"
+			"Check for Updates",
+			"Help",
 		}
 		result = WindowMenu (win,
 			WindowInfo (win, 14),		-- x position
@@ -4474,6 +4475,8 @@ end
 			end
 			SetVariable("mcvar_window_hide_settings_button", xcp_targets_quest_onoff)
 			xg_draw_window()
+		elseif result == "Help" then
+			Execute("xhelp")
 		elseif result == nil or result == "" then
 			return
 		else

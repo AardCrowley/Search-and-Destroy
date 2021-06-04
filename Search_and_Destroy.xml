@@ -35,12 +35,12 @@
 <script>
 <![CDATA[
 --Line 152
-	-- This script was originally improved upon by Starling. Credit is due to Starling for the job she did on the plugin in the past, but in order to ensure future compliance with Aardwolf and MUSHclient, maintenance will now be provided by me. If you have any questions, feel free to shoot me a message on Personal or through tells. I'll make changes as I see fit to the code. // Crowley
+	-- [[
+	This script was originally written by WinkleWinkle and improved upon by Starling. In an effort to keep Search and Destroy legal and up-to-date with MUSHclient,
+	maintenance will now be provided by Crowley and Naricain. If you have any questions, feel free to shoot us a message on Personal or through tells. We'll make
+	changes as we see fit to the code. // Crowley and Naricain.
 
-	--[[ ToDo List:
-		* Add ability to keyword mobs, tie in with mob database
-		* Change way XRT works - if no shortname found, run to best matching area
-
+	ToDo List:
 		Fix gq: You are no longer part of Global Quest # 4683 and will be unable to rejoin. -- gq quit
 				"You have now joined Global Quest # 4685. See 'help gquest' for available commands.", "You may win 2 more gquests at this level.", "You can be rewarded for 50 more kills this level."
 		]]--

@@ -6838,7 +6838,7 @@ end
 
 <!-- New commands -->
   <alias
-   match="^m(?:ob)?s(?:earch)? ([\p{P}\w]+)(?:\s([^0-9]+))?(?:\s+(\d+))?$"
+   match="^x?m(?:ob)?s(?:earch)? ([\p{P}\w]+)(?:\s([^0-9]+))?(?:\s+(\d+))?$"
    enabled="y"
    group="Mob_Database"
    regexp="y"
@@ -6848,7 +6848,7 @@ end
   </alias>
 
   <alias
-   match="^mgo(?:to)? (\d+)$"
+   match="^x?mgo(?:to)? (\d+)$"
    enabled="y"
    regexp="y"
    script="mobGo"

@@ -4911,8 +4911,9 @@ end
 	end
 
 	function force_update_plugin(name, line, wildcards)
-		DebugNote("Forcing update from " .. wildcards.branch)
-		download_plugin(wildcards.branch, callback_update_plugin)
+		local branch = wildcards.branch or "master"
+		DebugNote("Forcing update from " .. branch)
+		download_plugin(branch, callback_update_plugin)
 	end
 
 	function check_for_updates()

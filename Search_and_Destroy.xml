@@ -271,6 +271,7 @@
 
 -- [[ Con and scan stuff ]]
 	local xset_nx_action = GetVariable("mcvar_xset_nx_action") or (GetVariable("mcvar_xset_autocon_onoff") == "on" and "conscan") or "qs"
+	local xset_overwrite_con = GetVariable("mcvar_xset_overwrite_con") or "on"
 
 	local consider_destination_room = false
 	local mobs_here = {}
@@ -458,6 +459,7 @@
 			load_saved_table_data()
 			send_gmcp_packet("config noexp")
 			send_gmcp_packet("request quest")
+			toggle_con_overwrite_triggers()
 			check_for_updates()
 		end
 	end
@@ -5073,6 +5075,7 @@ end
 			"nx",
 			"go",
 			"xset nx",
+			"xset con_overwrite",
 			"sound",
 			"xrt|xrun",
 			"cp|gq",
@@ -5236,6 +5239,11 @@ end
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("When you scan or consider, mobs found in the current room are added to the mobs database.")}))
 
+		elseif str == "xset con_overwrite" then
+			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset con_overwrite")
+			Note()
+			ColourNote("antiquewhite", "", unpack({helpWrap("Disable replacing the output of consider. This is mainly for when you have other plugins that replace the output.")}))
+
 		elseif str == "xrt" or str == "xrun" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <xrt|xrun> <area keyword>")
 			Note()
@@ -5362,6 +5370,8 @@ end
 		ColourNote("antiquewhite", "", unpack({helpWrap("go <index>:  Runs to the first room in the index, or to the index number with argument.")}))
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("xset nx <conscan|con|scan|scanhere|qs|none>:  Set the action to take upon arriving in a room via 'nx' or 'go'.")}))
+		Note()
+		ColourNote("antiquewhite", "", unpack({helpWrap("xset con_overwrite:  Toggle overwriting the output of consider, for example if you have another plugin that also does this.")}))
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("xset sound:  Toggles sounds.")}))
 		Note()
@@ -5697,6 +5707,32 @@ end
 		end
 	end
 
+	function xset_con_overwrite()
+		if xset_overwrite_con == "on" then
+			xset_overwrite_con = "off"
+		else
+			xset_overwrite_con = "on"
+		end
+		toggle_con_overwrite_triggers()
+		SetVariable("mcvar_xset_overwrite_con", xset_overwrite_con)
+
+		InfoNote("\nConsider overwriting is now ", string.upper(xset_overwrite_con))
+	end
+
+	function is_con_overwritten()
+		return xset_overwrite_con == "on"
+	end
+
+	function toggle_con_overwrite_triggers()
+		local enabled = is_con_overwritten()
+		for i, name in ipairs(GetTriggerList()) do
+			if GetTriggerInfo(name, 26) == "consider" then
+				DebugNote("Setting omit_from_output to ", tostring(enabled), " for trigger ", name)
+				SetTriggerOption(name, "omit_from_output", enabled)
+			end
+		end
+	end
+
 	function consider_trigger(name, line, wildcards, style)
 		local con_details = {
 			a = { level_range="-20 and below", 		colour="cornflowerblue", },
@@ -5721,21 +5757,24 @@ end
 		local tags = mob_activity_tags(mob_name, true)
 
 		EnableTrigger("consider_end", true)
+
 		table.insert(mobs_here, lower_mob_name)
 
-		for i, tag in ipairs(tags) do
-			ColourTell(tag.colour, "", tag.text)
-		end
-
-		for i, s in ipairs(style) do
-			if string.match(s.text, "^%s*%(.+%)%s*$") then
-				ColourTell(RGBColourToName(s.textcolour), RGBColourToName(s.backcolour), s.text)
-			else
-				break
+		if is_con_overwritten() then
+			for i, tag in ipairs(tags) do
+				ColourTell(tag.colour, "", tag.text)
 			end
-		end
 
-		ColourNote("silver", "", mob_name, details.colour, "", string.format(" (%s)", details.level_range))
+			for i, s in ipairs(style) do
+				if string.match(s.text, "^%s*%(.+%)%s*$") then
+					ColourTell(RGBColourToName(s.textcolour), RGBColourToName(s.backcolour), s.text)
+				else
+					break
+				end
+			end
+
+			ColourNote("silver", "", mob_name, details.colour, "", string.format(" (%s)", details.level_range))
+		end
 	end
 
 	function consider_unkillable()
@@ -6330,72 +6369,72 @@ end
 
 <!-- Consider -->
 	<trigger match="^(?<flags>\(.*\) )?You would stomp (?<mob_name>.+?) into the ground\.$"
-		script="consider_trigger"
+		script="consider_trigger" group="consider"
 		name="a"
 		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
 	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) would be easy, but is it even worth the work out\?$"
-		script="consider_trigger"
+		script="consider_trigger" group="consider"
 		name="b"
 		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
 	<trigger match="^(?<flags>\(.*\) )?No Problem! (?<mob_name>.+?) is weak compared to you\.$"
-		script="consider_trigger"
+		script="consider_trigger" group="consider"
 		name="c"
 		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
 	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) looks a little worried about the idea\.$"
-		script="consider_trigger"
+		script="consider_trigger" group="consider"
 		name="d"
 		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
 	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) should be a fair fight!$"
-		script="consider_trigger"
+		script="consider_trigger" group="consider"
 		name="e"
 		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
 	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) snickers nervously\.$"
-		script="consider_trigger"
+		script="consider_trigger" group="consider"
 		name="f"
 		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
 	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) chuckles at the thought of you fighting \S+\.$"
-		script="consider_trigger"
+		script="consider_trigger" group="consider"
 		name="g"
 		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
 	<trigger match="^(?<flags>\(.*\) )?Best run away from (?<mob_name>.+?) while you can!$"
-		script="consider_trigger"
+		script="consider_trigger" group="consider"
 		name="h"
 		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
 	<trigger match="^(?<flags>\(.*\) )?Challenging (?<mob_name>.+?) would be either very brave or very stupid\.$"
-		script="consider_trigger"
+		script="consider_trigger" group="consider"
 		name="i"
 		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
 	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) would crush you like a bug!$"
-		script="consider_trigger"
+		script="consider_trigger" group="consider"
 		name="j"
 		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
 	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) would dance on your grave!$"
-		script="consider_trigger"
+		script="consider_trigger" group="consider"
 		name="k"
 		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
 	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) says 'BEGONE FROM MY SIGHT unworthy\!'$"
-		script="consider_trigger"
+		script="consider_trigger" group="consider"
 		name="l"
 		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
 	<trigger match="^(?<flags>\(.*\) )?You would be completely annihilated by (?<mob_name>.+?)!$"
-		script="consider_trigger"
+		script="consider_trigger" group="consider"
 		name="m"
 		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
 	<trigger match="^(.+ has divine protection\.|If you killed .+, who would serve .+ customers\?)$"
-		script="consider_unkillable"
+		script="consider_unkillable" name="consider_unkillable" group="consider"
 		enabled="y" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
 
 	<trigger match="^$"
@@ -6673,6 +6712,10 @@ end
 
 	<alias	match="^xset nx (?<action>conscan|con|scan|scanhere|qs|none)$"
 		script="xset_nx"
+		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias  match="^xset con_overwrite"
+		script="xset_con_overwrite"
 		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 	<alias	match="^xset sound$"

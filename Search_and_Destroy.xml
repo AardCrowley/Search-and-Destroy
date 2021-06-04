@@ -2890,16 +2890,15 @@ end
 	end
 
 	function quick_kill(name, line, wildcards)
+		local targName = ""
 		if (short_mob_name == nil) or (short_mob_name == "") or (short_mob_name == "-1") or (short_mob_name == -1) then
 			ColourNote("#FF5000", "", "\nSearch and Destroy: 'Quick-kill' has no target.  Use 'ht', 'qw', or 'xcp' to select a target.\n")
 		else
 			for command in quick_kill_command:gmatch("[%a%s%p]+[^;]?") do
-				if notarg then
-					short_mob_name = ""
-				else
-					short_mob_name = " '" .. short_mob_name .. "'"
+				if not notarg then
+					targName = " '" .. short_mob_name .. "'"
 				end
-				Execute(command .. short_mob_name)
+				Execute(command .. targName)
 				--Execute(command .. " '" .. short_mob_name .. "'")
 			end
 			--Execute(quick_kill_command .. " '" .. short_mob_name .. "'")

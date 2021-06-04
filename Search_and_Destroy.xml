@@ -2894,7 +2894,12 @@ end
 			ColourNote("#FF5000", "", "\nSearch and Destroy: 'Quick-kill' has no target.  Use 'ht', 'qw', or 'xcp' to select a target.\n")
 		else
 			for command in quick_kill_command:gmatch("[%a%s%p]+[^;]?") do
-				Execute(command .. (notarg == false and " '" .. short_mob_name .. "'" or ""))
+				if notarg then
+					short_mob_name = ""
+				else
+					short_mob_name = " '" .. short_mob_name .. "'"
+				end
+				Execute(command .. short_mob_name)
 				--Execute(command .. " '" .. short_mob_name .. "'")
 			end
 			--Execute(quick_kill_command .. " '" .. short_mob_name .. "'")

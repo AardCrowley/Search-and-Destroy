@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.67" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="5.68" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -35,7 +35,7 @@
 <script>
 <![CDATA[
 --Line 152
-	-- [[
+	--[[
 	This script was originally written by WinkleWinkle and improved upon by Starling. In an effort to keep Search and Destroy legal and up-to-date with MUSHclient,
 	maintenance will now be provided by Crowley and Naricain. If you have any questions, feel free to shoot us a message on Personal or through tells. We'll make
 	changes as we see fit to the code. // Crowley and Naricain.

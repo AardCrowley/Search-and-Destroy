@@ -220,6 +220,7 @@
 	local win_font_underline = tonumber(GetVariable("mcvar_window_font_underline")) or 0
 	local win_hotspots = {}
 	local win_target_hotspots = {}
+	local win_hide_settings_button = GetVariable("mcvar_window_hide_settings_button") or "off"
 
 -- [[ S&D window color data]]
 	local win_bgcolor = 0x000000
@@ -3835,10 +3836,14 @@ end
 			WindowDragHandler(win, "hsDrag1", "dragmove", "dragrelease", 0)
 		end
 
-		draw_settings_button(5, 20)
-		draw_b1_action_buttons(87, 20)	-- draw xcp, go, etc. buttons
-		draw_circle_readout(45, 20)		-- add circle text/level readout
-		draw_noexp_readout(246, 22)	-- add noexp on/off and TNL indicator
+		local x_offset = 0
+		if win_hide_settings_button == "off" then
+			draw_settings_button(5, 20)
+			x_offset = 40
+		end
+		draw_b1_action_buttons(47 + x_offset, 20)	-- draw xcp, go, etc. buttons
+		draw_circle_readout(5 + x_offset, 20)		-- add circle text/level readout
+		draw_noexp_readout(206 + x_offset, 22)	-- add noexp on/off and TNL indicator
 		draw_resize_tag()
 		xg_show_target_links()
 		Redraw()
@@ -4388,6 +4393,11 @@ end
 		table.insert(color_options, "-")
 		table.insert(color_options, "Reset to Defaults")
 
+		local hide_settings = "Hide Settings Button"
+		if win_hide_settings_button == "on" then
+			hide_settings = "+" .. hide_settings
+		end
+
 		local menu_options = {
 			"Change Font",
 			">Change Colors",
@@ -4399,6 +4409,7 @@ end
 			"Collapse Window",
 			"Expand Window",
 			"-",
+			hide_settings,
 			"Check for Updates"
 		}
 		result = WindowMenu (win,
@@ -4450,6 +4461,18 @@ end
 				SetVariable("color_" .. details.key, details.default)
 			end
 			Note("All colors reset to default values.")
+			xg_draw_window()
+		elseif result == "Hide Settings Button" then
+			if win_hide_settings_button == "off" then
+				win_hide_settings_button = "on"
+				InfoNote("\nSettings button will be ", "hidden", ". You can still access settings by right clicking on the title bar.")
+				WindowDeleteHotspot(win, "config")
+				win_hotspots.config = nil
+			else
+				win_hide_settings_button = "off"
+				InfoNote("\nSettings button will be ", "shown")
+			end
+			SetVariable("mcvar_window_hide_settings_button", xcp_targets_quest_onoff)
 			xg_draw_window()
 		elseif result == nil or result == "" then
 			return
@@ -4512,11 +4535,11 @@ end
 	end
 
 	function deprecated_xset_font_size()
-		InfoNote("Changing font size is now done by right clicking on the top bar of the targets window and choosing 'Change Font'\n")
+		InfoNote("Changing font size is now done by right clicking on the title bar of the targets window and choosing 'Change Font'\n")
 	end
 
 	function deprecated_xset_line_space(name, line, wildcards)
-		InfoNote("Line spacing is automatically picked up from the font which can be changed by right clicking on the top bar of the targets window and choosing 'Change Font'\n")
+		InfoNote("Line spacing is automatically picked up from the font which can be changed by right clicking on the title bar of the targets window and choosing 'Change Font'\n")
 	end
 
 	function OnPluginSaveState()

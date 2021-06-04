@@ -4931,7 +4931,7 @@ end
 	end
 
 	function download_plugin(version, callback)
-		DebugNote("Downloading plugin version %s", version)
+		DebugNote(string.format("Downloading plugin version %s", version))
 		local url = string.format("https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/%s/Search_and_Destroy.xml", version)
 		download_file(url, callback)
 	end

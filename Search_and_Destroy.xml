@@ -2770,19 +2770,19 @@ end
 	end
 
 	function qw_match(name, line, wildcards)
-		local mob = wildcards.mobname
+		local mob = Trim(wildcards.mobname):lower()
 		local room = wildcards.roomname
 		local parts
 		local found = false
 		qw.index = qw.index or 1
 		if (qw.exact == true) then	-- tells this function to look for an exact match for the current xcp target mob name.
-			if (Trim(mob) == Trim(string.sub(full_mob_name, 1, 30))) then
+			if mob == Trim(string.sub(full_mob_name, 1, 30)):lower() then
 				found = true
 			end
 		else
 			parts = split(string.lower(short_mob_name), "[^ ]+")
 			for i=1, #parts do
-				if (string.find(string.lower(mob), parts[i], 1, true) ~= nil) then
+				if (string.find(mob, parts[i], 1, true) ~= nil) then
 					found = true
 					break -- leave loop
 				end
@@ -2807,7 +2807,7 @@ end
 			full_mob_name = quest_target.mob
 		else
 			for i, target in ipairs(main_target_list) do
-				if current_room.arid == target.arid and Trim(mob):lower() == target.mob:lower():sub(1, 30) then
+				if current_room.arid == target.arid and mob == target.mob:lower():sub(1, 30) then
 					full_mob_name = target.mob
 					xcp_index = i
 					break
@@ -2815,7 +2815,10 @@ end
 			end
 		end
 		xg_draw_window()
-		search_rooms(room, 'area', Trim(mob))
+		search_rooms(room, 'area', Trim(wildcards.mobname))
+		if go_after then
+			goto_number(nil, nil, {})
+		end
 	end
 
 	function qw_no_match()	-- responds to "There is no <mob name> around here."
@@ -4943,7 +4946,7 @@ end
 
 	function download_file(url, callback)
 		DebugNote("Starting download of ", url)
-		--async_ok, async = pcall (require, "async")		
+		--async_ok, async = pcall (require, "async")
 		if async_ok then
 			plugin_page = async.doAsyncRemoteRequest(url, callback, "HTTPS")
 		else

@@ -6547,7 +6547,7 @@ end
 	<alias enabled="y" match="^xhelp(?:\s(.*))?$" regexp="y" script="onHelp" sequence="100">
 	</alias>
 
-	<alias enabled="y" match="^snd force update( ?<branch>\w+)?$" script="force_update_plugin" regexp="y" sequence="100">
+	<alias enabled="y" match="^snd force update( ?<branch>\S+)?$" script="force_update_plugin" regexp="y" sequence="100">
 	</alias>
 
 	<alias enabled="y" match="snd check_update" script="toggle_automatic_update_checking" sequence="100">

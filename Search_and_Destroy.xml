@@ -2692,14 +2692,10 @@ end
 	end
 
 --	[[ quick where ]]
-	function qw_reset(bool)
+	function qw_reset(exact)
 		EnableTrigger("trg_quick_where_match", false)
 		EnableTrigger("trg_quick_where_no_match", false)
-		if (bool == true) then
-			qw = { index = 1, exact = true }
-		else
-			qw = { index = 1, exact = false }
-		end
+		qw = { index = 1, exact = exact }
 	end
 
 	function qw_noarg()
@@ -2824,7 +2820,71 @@ end
 	end
 
 	function qw_no_match()	-- responds to "There is no <mob name> around here."
+		DebugNote("Couldn't find ", short_mob_name, " trying to find ", full_mob_name)
 		qw_reset(qw.exact)
+		if type(full_mob_name) == 'string' then
+			lookup_not_found_mob()
+		end
+	end
+
+	function lookup_not_found_mob()
+		local full_name = full_mob_name:lower()
+		local search_name = short_mob_name -- needed?
+		local arid = current_room.arid
+		local found = false
+		local query = string.format("SELECT room, roomid, count FROM mobs WHERE zone = %s AND mob = %s;",
+			fixsql(arid), fixsql(full_name))
+
+		local db = assert(sqlite3.open(snd_db_file))
+		local possible_rooms = {}
+		local roomids= {}
+		local total_count = 0
+
+		for row in db:nrows(query) do
+			found = true
+			table.insert(possible_rooms, {
+				rmid = row.roomid,
+				name = row.room,
+				arid = arid,
+				count = row.count,
+			})
+			total_count = total_count + row.count
+			table.insert(roomids, row.roomid)
+		end
+		db:close_vm()
+
+		if not found then
+			return
+		end
+
+		query = string.format("SELECT uid, notes FROM bookmarks WHERE uid in (%s);", table.concat(roomids, ","))
+		db = assert(sqlite3.open(mapper_db_file))
+
+		for row in db:nrows(query) do
+			for i, room in ipairs(possible_rooms) do
+				if tostring(room.rmid) == row.uid then
+					room.notes = row.notes
+					break
+				end
+			end
+		end
+
+		for i, room in ipairs(possible_rooms) do
+			if total_count > 0 then
+				room.percentage = (room.count / total_count)
+			else
+				room.percentage = 0
+			end
+		end
+
+		table.sort(possible_rooms, sort_rooms_by_count)
+
+		InfoNote("\nMob not found. There are multiple possibilities for this:")
+		InfoNote("  * It might be dead")
+		InfoNote("  * You might be using the wrong keyword (use `xset kw` to update if needed)")
+		InfoNote("  * It might be flagged nowhere")
+		InfoNote("You have previously seen ", full_mob_name, " in:")
+		search_rooms_results(possible_rooms)
 	end
 
 --	[[ Hunt trick ]]
@@ -3047,20 +3107,20 @@ end
 					end
 				end
 
-				function sort_by_count(a, b)
-					if a.count > b.count then
-						return true
-					elseif	a.count < b.count then
-						return false
-					else
-						return a.rmid < b.rmid
-					end
-				end
-
-				table.sort(results, sort_by_count)
+				table.sort(results, sort_rooms_by_count)
 			end
 
 			search_rooms_results(results)
+		end
+	end
+
+	function sort_rooms_by_count(a, b)
+		if a.count > b.count then
+			return true
+		elseif	a.count < b.count then
+			return false
+		else
+			return a.rmid < b.rmid
 		end
 	end
 

@@ -224,6 +224,22 @@
 -- [[ S&D window color data]]
 	local win_bgcolor = 0x000000
 
+	NOTE_COLORS = {
+		INFO 					= "#FF5000",
+		INFO_HIGHLIGHT 			= "#00C040",
+
+		IMPORTANT 				= "#FFFFFF",
+		IMPORTANT_HIGHLIGHT 	= "#00FF00",
+		IMPORTANT_BACKGROUND 	= "#000080",
+
+		ERROR 					= "#FFFFFF",
+		ERROR_HIGHLIGHT 		= "#FFE32E",
+		ERROR_BACKGROUND 		= "#650101",
+
+		DEBUG					= "#87CEFA",
+		DEBUG_HIGHLIGHT			= "#FFD700",
+	}
+
 	TEXT_COLOR_DETAILS = {
 		{ key = "normal",			default = "#E0E0E0", menu_name = "Normal mobs",
 			desc = "normal mobs" },
@@ -1076,7 +1092,7 @@
 
 	function area_index_start()		-- called by trigger for "Showing areas from 0 to 300" line at start of areas list.
 		area_range_index = {}
-		ColourNote("#FF5000", "", "*** Indexing area levels")
+		InfoNote("*** Indexing area levels")
 	end
 
 function area_index_line(name, line, wildcards) -- 1055
@@ -1119,8 +1135,8 @@ function area_index_line(name, line, wildcards) -- 1055
 			sqlQuery = sqlQuery:format(areaName, arid, minLvl, maxLvl, levelLock, areaDefaultStartRooms[arid].start, noQuest, vidblain, arid)
 		else
 			sqlQuery = sqlQuery:format(areaName, arid, minLvl, maxLvl, levelLock, -1, noQuest, vidblain, arid)
-			ColourNote("#002800", "", "*** Missing default start room - " .. areaName)
-			ColourNote("#002800", "", "*** Please update by manually running to the area and using 'xset mark'.")
+			ErrorNote("*** Missing default start room - ", areaName)
+			ErrorNote("*** Please update by manually running to the area and using '", "xset mark", "'.")
 		end
 
 		SnDdb:exec(sqlQuery)
@@ -1131,7 +1147,7 @@ end
 
 	function area_index_end(name, line, wildcards)
 		SetVariable("mcvar_area_range", serialize.save_simple(area_range_index))
-		ColourNote("#FF5000", "", "\n*** Area levels indexed!")
+		InfoNote("\n*** Area levels indexed!")
 		Execute("xset resume page size")
 		DoAfterSpecial(0.1, "cp info", sendto.execute)
 	end
@@ -1380,7 +1396,7 @@ end
 		local area
 
 		if (short_mob_name == nil) or (short_mob_name == "") or (short_mob_name == "-1") or (short_mob_name == -1) then
-			ColourNote("#FF5000", "", "\nSearch and Destroy: 'kw' has no target.  Use 'ht', 'qw', or 'xcp' to select a target, or use 'xset kw' with no arguments.")
+			InfoNote("\nSearch and Destroy: 'kw' has no target.  Use 'ht', 'qw', or 'xcp' to select a target, or use 'xset kw' with no arguments.")
 		else
 			if quest_target.mob and quest_target.mob == full_mob_name then
 				area = quest_target.arid
@@ -1391,7 +1407,7 @@ end
 			end
 
 			if not area then
-				ColourNote("#FF5000", "", "\nSearch and Destroy: Target's area could not be identified. Try visiting its area and trying again.")
+				InfoNote("\nSearch and Destroy: Target's area could not be identified. Try visiting its area and trying again.")
 				return
 			end
 
@@ -1419,14 +1435,7 @@ end
 		db:exec(query)
 		db:close_vm()
 
-		ColourNote(
-			"", "", "Updated keyword for ",
-			"lime", "", mob_name,
-			"", "", " to ",
-			"lime", "", keyword,
-			"", "", " in area ",
-			"lime", "", area .. "\n"
-		)
+		InfoNote("Updated keyword for ", mob_name, " to ", keyword, " in area ", area .. "\n")
 		return true
 	end
 
@@ -1444,7 +1453,7 @@ end
 		db:close_vm()
 
 		if guess then
-			DebugNote(string.format("Found custom keyword for '%s': %s", s, guess))
+			DebugNote("Found custom keyword for '", s, "': ", guess)
 			return guess
 		end
 
@@ -1529,9 +1538,9 @@ end
 			target_quest_mob(true)
 			xg_draw_window()
 		elseif quest_target.qstat == "3" then
-			ColourNote("#FF5000", "", "\nSearch and Destroy: You have already killed your quest target!\n")
+			InfoNote("\nSearch and Destroy: You have already killed your quest target!\n")
 		else
-			ColourNote("#FF5000", "", "\nSearch and Destroy: You are not on a quest.\n")
+			InfoNote("\nSearch and Destroy: You are not on a quest.\n")
 		end
 	end
 
@@ -1545,14 +1554,11 @@ end
 			qt.areaName = GetVariable("mcvar_qt_areaName")
 			qt.room = GetVariable("mcvar_qt_mob")
 			if (bool == true) then
-				ColourNote("#FF1010", "", "\n'Target quest mob' (xq) not done - the mob is currently dead, or you can't see it (check detects).")
-				ColourNote("#FF1010", "", "\n'The last known location, before it went missing, was:\n")
-				ColourNote("#FF5000", "", "mob : ",
-							"#00C040", "", qt.mob.." ")
-				ColourNote("#FF5000", "", "area: ",
-							"#00C040", "", qt.areaName .. " ("..qt.arid..")")
-				ColourNote("#FF5000", "", "room: ",
-							"#00C040", "", qt.room)
+				InfoNote("\n'Target quest mob' (xq) not done - the mob is currently dead, or you can't see it (check detects).")
+				InfoNote("\n'The last known location, before it went missing, was:\n")
+				InfoNote("mob : ", qt.mob.." ")
+				InfoNote("area: ", qt.areaName .. " ("..qt.arid..")")
+				InfoNote("room: ", qt.room)
 			end
 		else
 			full_mob_name = qt.mob
@@ -1562,13 +1568,10 @@ end
 			SetVariable("mcvar_qt_areaName", qt.areaName)
 			SetVariable("mcvar_qt_room", qt.room)
 			if (bool == true) then
-				ColourNote("#FF5000", "", "\nYour quest mob is: \n")
-				ColourNote("#FF5000", "", "mob : ",
-						"#00C040", "", qt.mob.." ")
-				ColourNote("#FF5000", "", "area: ",
-						"#00C040", "", qt.areaName .. " ("..qt.arid..")")
-				ColourNote("#FF5000", "", "room: ",
-						"#00C040", "", qt.room)
+				InfoNote("\nYour quest mob is: \n")
+				InfoNote("mob : ", qt.mob.." ")
+				InfoNote("area: ", qt.areaName .. " ("..qt.arid..")")
+				InfoNote("room: ", qt.room)
 			end
 		end
 		search_rooms(string.format("%s|%s", qt.room, qt.arid), "area", qt.mob)
@@ -1597,16 +1600,16 @@ end
 			-- in all of these, the action is "status"
 			elseif (q.action == "status" and q.target == "killed") then		-- on quest, qmob has been killed (do not confuse q.target with q.targ above!)
 				quest_target.qstat = "3"
-				ColourNote("#FF5000", "", "\nSearch and Destroy: You have already killed your quest target!\n")
+				InfoNote("\nSearch and Destroy: You have already killed your quest target!\n")
 			--elseif (q.action == "status" and q.targ and q.timer) then		-- on quest, qmob not yet killed
 			--	quest_target = { qstat="2", mob = q.targ, areaName = q.area, arid = areaNameXref[q.area], room = (string.gsub(q.room, "@[bcgmrwyBCDGMRWY]", "")) }
 			--	target_quest_mob(true)
 			elseif (q.action == "status" and (q.wait)) then					-- off quest, must wait before requesting new
 				quest_target = { qstat="1"}
-				ColourNote("#FF5000", "", "\nSearch and Destroy: Not on quest - must wait before requesting new.\n")
+				InfoNote("\nSearch and Destroy: Not on quest - must wait before requesting new.\n")
 			elseif (q.action == "status" and q.status == "ready") then		-- off quest, can request new quest immediately
 				quest_target = { qstat="0"}
-				ColourNote("#FF5000", "", "\nSearch and Destroy: Not on quest - can request new quest immediately. \n")
+				InfoNote("\nSearch and Destroy: Not on quest - can request new quest immediately. \n")
 			end
 			SetVariable("mcvar_qt_mob", "")
 			SetVariable("mcvar_qt_arid", "")
@@ -1691,7 +1694,7 @@ end
 		current_activity = "cp"
 		xg_draw_window()
 		if (noexp_onoff == "on") and (anex_tnl_cutoff > 0) then
-			ColourNote("#FF5000", "#000000", "Search and Destroy: Turning 'noexp' OFF (you have started a new CP)")
+			InfoNote("Search and Destroy: Turning 'noexp' OFF (you have started a new CP)")
 			anex_set_noexp("off")
 		end
 		do_cp_info()
@@ -1893,7 +1896,6 @@ end
 		-- do 'xcp' again (with or without arg), which works normally now that
 		-- table data is available.
 		if (xcp_retry_stat == 2) then
-			DebugNote(string.format("last_kill_index: %i xcp_index_attempt: %i", last_kill_index, xcp_index_attempt))
 			xcp_index = xcp_index_attempt
 			if last_kill_index < xcp_index_attempt then
 				xcp_index = math.max(1, xcp_index_attempt - 1)
@@ -2010,7 +2012,7 @@ end
 		xcp_clear_target(true)
 
 		if (player_on_cp == "yes") then
-			DoAfterSpecial(0.4, [[ ColourNote("#FF5000", "#000000", "Reloading your cp targets....")
+			DoAfterSpecial(0.4, [[ InfoNote("Reloading your cp targets....")
 								do_cp_info() ]], sendto.script)
 		end
 	end
@@ -2227,7 +2229,6 @@ end
 						end
 					end
 				elseif #possibilities == 1 then
-					DebugNote(string.format("Mob %s is high chance as %s was only found in one area", possibilities[1].mob, possibilities[1].roomName))
 					table.insert(high_chance, possibilities[1])
 				end
 			else	-- no results were returned: either the mob is dead, or the location is unknown.
@@ -2309,7 +2310,7 @@ end
 					ColourNote("#808080", "", string.rep("-", 90))
 					ColourNote("#808080", "", "Type 'xcp <index>' or click link to go to that target.")
 			else
-				ColourNote("#FF5000", "", "   No target items to show.")
+				InfoNote("   No target items to show.")
 			end
 		end
 	end
@@ -2332,9 +2333,9 @@ end
 			target_quest_mob(true)
 			xg_draw_window()
 		elseif (area_room_type == "none") then	-- abort if not on cp
-			ColourNote("#FF5000", "", "\nSearch and Destroy: 'xcp' aborted - you're not on a cp.\n")
+			InfoNote("\nSearch and Destroy: 'xcp' aborted - you're not on a cp.\n")
 		elseif (#t == 0) then	-- abort if on a cp, but target list is empty
-			ColourNote("#FF5000", "", "\nSearch and Destroy: 'xcp' aborted - cp is active but target list is empty.\n")
+			InfoNote("\nSearch and Destroy: 'xcp' aborted - cp is active but target list is empty.\n")
 		else
 			for i,v in ipairs (t) do	-- loop through list and try to find something to kill.
 				if (v.is_dead == "no") and (v.link_type == "area" or v.link_type == "room") then	-- if mob is alive and location known, go to it.
@@ -2345,7 +2346,7 @@ end
 				else
 					local index = i + 1
 					if (index > #t) then 	-- if we reach this step, all mobs are dead and/or unknown.
-						ColourNote("#FF5000", "", "\nSearch and Destroy: 'xcp' aborted - lack of targets (dead, or location unknown)")
+						InfoNote("\nSearch and Destroy: 'xcp' aborted - lack of targets (dead, or location unknown)")
 					end
 				end
 			end
@@ -2356,16 +2357,16 @@ end
 		local index = tonumber(wildcards.index)
 		local cp_list = main_target_list
 		if (area_room_type == "none") then
-			ColourNote("#FF5000", "", "\nSearch and Destroy: 'xcp' aborted - you're not on a cp.\n")
+			InfoNote("\nSearch and Destroy: 'xcp' aborted - you're not on a cp.\n")
 		elseif (#cp_list == 0) then
-			ColourNote("#FF5000", "", "\nSearch and Destroy: 'xcp' aborted - cp is active but target list is empty.\n")
+			InfoNote("\nSearch and Destroy: 'xcp' aborted - cp is active but target list is empty.\n")
 		elseif (index > #cp_list) or (index < 0) then	-- index doesn't exist
-			ColourNote("#FF5000", "", "\nSearch and Destroy: 'xcp' aborted - index doesn't exist (".. index .. ")\n")
+			InfoNote("\nSearch and Destroy: 'xcp' aborted - index doesn't exist (".. index .. ")\n")
 		elseif (index == 0) then	-- clear xcp target
 			xcp_clear_target(true)
-			ColourNote("#FF5000", "", "\nSearch and Destroy: 'xcp' current target cleared.\n")
+			InfoNote("\nSearch and Destroy: 'xcp' current target cleared.\n")
 		elseif (cp_list[index].link_type == "unknown") then -- or (cp_list[index].link_type == "unknown_room") then	-- abort if unknown
-			ColourNote("#FF5000", "", "\nSearch and Destroy: 'xcp' aborted - no mapper data for target (#" .. index .. ").\n")
+			InfoNote("\nSearch and Destroy: 'xcp' aborted - no mapper data for target (#" .. index .. ").\n")
 		else	-- everything is in order, so go to mob.
 			local ch_state = current_character_state
 			if (ch_state == "3") then
@@ -2373,9 +2374,9 @@ end
 				xg_draw_window()
 				xcp_goto_target(index)
 			elseif (ch_state == "8") then
-				ColourNote("#FF5000", "", "\nNot while you're fighting!")
+				InfoNote("\nNot while you're fighting!")
 			elseif (ch_state == "12") then
-				ColourNote("#FF5000", "", "\nYou are already running!")
+				InfoNote("\nYou are already running!")
 			end
 		end
 	end
@@ -2399,7 +2400,7 @@ end
 						local func = function() Execute("ht " .. t.kw) end
 						execute_in_area(t.arid, func)
 					elseif (action == "off") then	-- do nothing
-						ColourNote("#FF5000", "", "Xcp action is off - no additional action\n")
+						InfoNote("Xcp action is off - no additional action\n")
 					end
 					if (ri.arid ~= t.arid) then	-- if you're not in target area, xrunto target area.
 						--Execute("xrt " .. t.arid)
@@ -2409,7 +2410,7 @@ end
 					search_rooms(t.roomName .. "|" .. t.arid, "area", t.mob)
 				end
 			else
-				ColourNote("#FF5000", "", "No item exists, or data is busy")
+				InfoNote("No item exists, or data is busy")
 			end
 		else
 			xcp_index_attempt = index
@@ -2439,12 +2440,12 @@ end
 			if (opt == "ht") or (opt == "qw") or (opt == "off") then
 				xcp_action_mode = opt
 				SetVariable("mcvar_xcp_action_mode", opt)
-				ColourNote("#00C040", "", "Set 'xcp' mode to: " .. options[opt] .. ".")
+				InfoNote("", "Set 'xcp' mode to: ", options[opt], ".")
 			elseif (opt == "") then
-				ColourNote("#FF5000", "", "Current 'xcp' mode: " .. options[xcp_action_mode] .. ".")
-				ColourNote("#FF5000", "", "Syntax: 'xcp mode [ht|qw|off]'")
+				InfoNote("Current 'xcp' mode: " .. options[xcp_action_mode] .. ".")
+				InfoNote("Syntax: 'xcp mode [ht|qw|off]'")
 			else
-				ColourNote("#FF5000", "", "Invalid 'xcp' mode given.  Syntax: 'xcp mode [ht|qw|off]'")
+				InfoNote("Invalid 'xcp' mode given.  Syntax: 'xcp mode [ht|qw|off]'")
 			end
 			print("")
 	end
@@ -2457,8 +2458,7 @@ end
 		end
 		SetVariable("mcvar_xcp_targets_quest_onoff", xcp_targets_quest_onoff)
 
-		ColourNote("#FF5000", "", "\nxcp quest targeting is now ",
-			"#00C040", "", string.upper(xcp_targets_quest_onoff))
+		InfoNote("\nxcp quest targeting is now ", string.upper(xcp_targets_quest_onoff))
 	end
 
 -- [[  Goto area (xrt), goto room (go), goto next (nx), goto previous (nx-) ]]
@@ -2471,10 +2471,10 @@ end
 		if (arid == "ft2") then arid = "ftii" end
 		local rmid = get_start_room(arid)
 		if (rmid == "-1") then		-- area has no start room defined.
-			ColourNote("#FF5000", "", "X-runto: No default start room is defined for area: " .. arid .. ".\n")
+			InfoNote("X-runto: No default start room is defined for area: " .. arid .. ".\n")
 			SendNoEcho("areas 1 299 keywords " .. arid)
 		else
-			ColourNote("#FF5000", "", "X-runto: " .. arid .. ", room ID: " .. rmid .. " (" .. start_room_type .. ")\n")
+			InfoNote("X-runto: " .. arid .. ", room ID: " .. rmid .. " (" .. start_room_type .. ")\n")
 			goto_room_id(rmid, arid)
 		end
 	end
@@ -2522,14 +2522,14 @@ end
 					action_on_destination_arrived()
 				end
 			else
-				ColourNote("#FF5000", "", "Goto room result (go) aborted - No destination yet.")
+				InfoNote("Goto room result (go) aborted - No destination yet.")
 			end
 		elseif (ch_state == "8") then
-			ColourNote("#FF5000", "", "\nNot while you're fighting!")
+			InfoNote("\nNot while you're fighting!")
 		elseif (ch_state == "12") then
-			ColourNote("#FF5000", "", "\nYou are already running!")
+			InfoNote("\nYou are already running!")
 		else
-			ColourNote("#FF5000", "", "\nGoto room result (go):  Can't do that now - you must be standing and ready.")
+			InfoNote("\nGoto room result (go):  Can't do that now - you must be standing and ready.")
 		end
 	end
 
@@ -2537,26 +2537,26 @@ end
 		local ch_state = current_character_state
 		if (ch_state == "3") then
 			if (next_room == nil) or (next_room == "") or (not tonumber(next_room)) then
-				ColourNote("#FF5000", "", "Goto next (nx) aborted - No data yet.")
+				InfoNote("Goto next (nx) aborted - No data yet.")
 			else
 				if (tonumber(next_room) == tonumber(gmcp("room.info.num"))) and (gotoIndex < #gotoList) then
 					gotoIndex = gotoIndex + 1
 				end
 				if gotoList[gotoIndex] then
-					ColourNote("#00C040", "", "Next room (nx) - " .. gotoIndex .. " of " .. #gotoList)
+					InfoNote("Next room (nx) - ", gotoIndex, " of ", #gotoList)
 					next_room = gotoList[gotoIndex]
 					do_mapper_goto(next_room)
 					action_on_destination_arrived()
 				else
-					ColourNote("#FF5000", "", "Goto next (nx) aborted - No more rooms.")
+					InfoNote("Goto next (nx) aborted - No more rooms.")
 				end
 			end
 		elseif (ch_state == "8") then
-			ColourNote("#FF5000", "", "\nNot while you're fighting!")
+			InfoNote("\nNot while you're fighting!")
 		elseif (ch_state == "12") then
-			ColourNote("#FF5000", "", "\nYou are already running!")
+			InfoNote("\nYou are already running!")
 		else
-			ColourNote("#FF5000", "", "\nGoto next room (nx):  Can't do that now - you must be standing and ready.")
+			InfoNote("\nGoto next room (nx):  Can't do that now - you must be standing and ready.")
 		end
 	end
 
@@ -2564,26 +2564,26 @@ end
 		local ch_state = current_character_state
 		if (ch_state == "3") then
 			if (next_room == nil) or (next_room == "") or (not tonumber(next_room)) then
-				ColourNote("#FF5000", "", "Goto previous (nx-) aborted - No data yet.")
+				InfoNote("Goto previous (nx-) aborted - No data yet.")
 			else
 				if (tonumber(next_room) == tonumber(gmcp("room.info.num"))) and (gotoIndex > 1) then
 					gotoIndex = gotoIndex - 1
 				end
 				if gotoList[gotoIndex] then
-					ColourNote("#00C040", "", "Previous room (nx-) - " .. gotoIndex .. " of " .. #gotoList)
+					InfoNote("Previous room (nx-) - ", gotoIndex, " of ", #gotoList)
 					next_room = gotoList[gotoIndex]
 					do_mapper_goto(next_room)
 					quick_scan()
 				else
-					ColourNote("#FF5000", "", "Goto previous (nx-) aborted - No more rooms.")
+					InfoNote("Goto previous (nx-) aborted - No more rooms.")
 				end
 			end
 		elseif (ch_state == "8") then
-			ColourNote("#FF5000", "", "\nNot while you're fighting!")
+			InfoNote("\nNot while you're fighting!")
 		elseif (ch_state == "12") then
-			ColourNote("#FF5000", "", "\nYou are already running!")
+			InfoNote("\nYou are already running!")
 		else
-			ColourNote("#FF5000", "", "\nGoto previous room (nx-):  Can't do that now - you must be standing and ready.")
+			InfoNote("\nGoto previous room (nx-):  Can't do that now - you must be standing and ready.")
 		end
 	end
 
@@ -2608,7 +2608,7 @@ end
 				if (vnt.i > 200) then
 					EnableTimer("vidblain_nav_timer", false)
 					xcp_clear_target(true)
-					ColourNote("#FF5000", "", "** vidblain nav:  abort timer - took too long to get to destination.")
+					InfoNote("** vidblain nav:  abort timer - took too long to get to destination.")
 					vidblain_nav_tbl = { i=0, j=0, rmid="", arid="", stat=1 }
 				end
 			else  -- arrived in vidblain proper
@@ -2659,7 +2659,7 @@ end
 				if (eiat.i > 200) then
 					EnableTimer("execute_in_area_timer", false)
 					xcp_clear_target(true)
-					ColourNote("#FF5000", "", "** execute-in-area:  abort timer - took too long to get to destination.")
+					InfoNote("** execute-in-area:  abort timer - took too long to get to destination.")
 					execute_in_area_tbl = { i=0, j=0, arid="", f="", stat=1 }
 				end
 			else
@@ -2673,7 +2673,7 @@ end
 				else
 					eiat.stat = ch_state
 					if (ch_state == "8") then
-						EnableTimer("execute_in_area_timer", false)	--ColourNote("#FF5000", "", "** execute-in-area:  in combat -> reduce timer rate")
+						EnableTimer("execute_in_area_timer", false)
 						DoAfterSpecial(1.5, [[ EnableTimer("execute_in_area_timer", true) ]], 12)
 					end
 				end
@@ -2704,8 +2704,8 @@ end
 		local ix = qw.index or 1
 		local s = short_mob_name or -1
 		if (s == -1) then
-			ColourNote("#FF5000", "", "\nSearch and Destroy: 'Quick-where' has no target.")
-			ColourNote("#FF5000", "", "Use 'xcp', 'qw <mob>, or 'ht <mob>' to get target info.\n")
+			InfoNote("\nSearch and Destroy: 'Quick-where' has no target.")
+			InfoNote("Use 'xcp', 'qw <mob>, or 'ht <mob>' to get target info.\n")
 		else
 			if (qw.exact == true) then
 				qw_exact()
@@ -2835,8 +2835,8 @@ end
 		local s = short_mob_name or -1
 		local ix = ht.index or 1
 		if (s == -1) then
-			ColourNote("#FF5000", "", "\nSearch and Destroy: 'Hunt trick' has no target.")
-			ColourNote("#FF5000", "", "Use 'xcp', ht <mob>', or 'qw <mob>' to pick a target.\n")
+			InfoNote("\nSearch and Destroy: 'Hunt trick' has no target.")
+			InfoNote("Use 'xcp', ht <mob>', or 'qw <mob>' to pick a target.\n")
 			return
 		end
 		do_hunt_trick(ix, s)
@@ -2880,7 +2880,7 @@ end
 	function ht_abort(name, line, wildcards)
 		EnableTriggerGroup("HuntTrick", false)
 		ht = {}
-		ColourNote("#FF5000", "", "Search and Destroy:  Hunt trick cancelled.")
+		InfoNote("Search and Destroy:  Hunt trick cancelled.")
 	end
 
 -- [[ quick scan, quick kill ("kk") ]]
@@ -2895,7 +2895,7 @@ end
 	function quick_kill(name, line, wildcards)
 		local targName = ""
 		if (short_mob_name == nil) or (short_mob_name == "") or (short_mob_name == "-1") or (short_mob_name == -1) then
-			ColourNote("#FF5000", "", "\nSearch and Destroy: 'Quick-kill' has no target.  Use 'ht', 'qw', or 'xcp' to select a target.\n")
+			InfoNote("\nSearch and Destroy: 'Quick-kill' has no target.  Use 'ht', 'qw', or 'xcp' to select a target.\n")
 		else
 			for command in quick_kill_command:gmatch("[%a%s%p]+[^;]?") do
 				if not notarg then
@@ -2916,35 +2916,25 @@ end
 		end
 
 		SetVariable("mcvar_quick_kill_notarg", tostring(notarg))
-		DebugNote("Quick kill notarg variable set to " .. GetVariable("mcvar_quick_kill_notarg"))
+		DebugNote("Quick kill notarg variable set to ", GetVariable("mcvar_quick_kill_notarg"))
 
 		if (wildcards.arg == "") then
-			ColourNote("#FF5000", "", "Search and Destroy: Quick-kill command currently set to: '" .. quick_kill_command .. "'")
+			InfoNote("Search and Destroy: Quick-kill command currently set to: '", quick_kill_command, "'")
 		else
 			quick_kill_command = wildcards.arg:gsub(" notarg", "")
 			--quick_kill_command = wildcards.arg
 			SetVariable("mcvar_quick_kill_command", quick_kill_command)
-			ColourNote("#FF5000", "", "Search and Destroy: Quick-kill command is now set to: '" .. quick_kill_command .. "'")
+			InfoNote("Search and Destroy: Quick-kill command is now set to: '", quick_kill_command, "'")
 		end
 	end
 
---[[	function xset_quick_kill_command(name, line, wildcards)		-- user-defined attack to use with qk/kk
-		if (wildcards.arg == "") then
-			ColourNote("#FF5000", "", "Search and Destroy: Quick-kill command currently set to: '" .. quick_kill_command .. "'")
-		else
-			quick_kill_command = wildcards.arg
-			SetVariable("mcvar_quick_kill_command", quick_kill_command)
-			ColourNote("#FF5000", "", "Search and Destroy: Quick-kill command is now set to: '" .. quick_kill_command .. "'")
-		end
-	end]]--
-
 	function xset_silentMode(name, line, wildcards)
 		if (not wildcards[1] or wildcards[1] == "") then
-			ColourNote("#FF5000", "", "Search and Destroy: Silent mode currently set to: '" .. silentMode .. "'")
+			InfoNote("Search and Destroy: Silent mode currently set to: '", silentMode, "'")
 		else
 			silentMode = wildcards[1]:lower()
 			SetVariable("mcvar_silentMode_command", silentMode)
-			ColourNote("#FF5000", "", "Search and Destroy: Silent mode is now set to: '" .. silentMode .. "'")
+			InfoNote("Search and Destroy: Silent mode is now set to: '", silentMode, "'")
 		end
 	end
 
@@ -2980,7 +2970,7 @@ end
 				if (current_room ~= nil) then
 					arid = ri.arid
 				else
-					ColourNote("#FF5000", "", "Area not known, falling back to mapper list")
+					InfoNote("Area not known, falling back to mapper list")
 					Execute("mapper list " .. parts[1])
 				end
 			end
@@ -3134,7 +3124,7 @@ end
 			mapper_area_index = mapper_area_index + 1
 		end
 		if (mapper_area_index == 0) then
-			ColourNote("#FF5000", "", "No matching rooms found.")
+			InfoNote("No matching rooms found.")
 		end
 		ColourNote("#808080", "", string.rep("-", dashes))
 		ColourNote("#808080", "", "Type 'go <index>' or click link to go to that room.\n")
@@ -3169,13 +3159,13 @@ end
 		local n2 = tonumber(wildcards.n2) or ""
 		local mob = wildcards.mob or ""
 		if (mob == "") then						-- user entered no numbers, no mobname, or no args at all
-			ColourNote("#FF5000", "", "\nSearch and Destroy: 'xwhere' required parameter missing.\n")
-			ColourNote("#FF5000", "", "              Syntax: 'xwhere <mobname>'")		-- default to 10
-			ColourNote("#FF5000", "", "                      'xwhere <n1> <mobname>'")	-- where 1.mobname to n1.mobname
-			ColourNote("#FF5000", "", "                      'xwhere <n1> <n2> <mobname>'")	-- where 1.mobname to n2.mobname
+			InfoNote("\nSearch and Destroy: 'xwhere' required parameter missing.\n")
+			InfoNote("              Syntax: 'xwhere <mobname>'")		-- default to 10
+			InfoNote("                      'xwhere <n1> <mobname>'")	-- where 1.mobname to n1.mobname
+			InfoNote("                      'xwhere <n1> <n2> <mobname>'")	-- where 1.mobname to n2.mobname
 			return
 		elseif (n2 == "") then	-- user entered one number (n1) and a mobname, but no second number (n2)
-			ColourNote("#00C040", "", "\nSearch and Destroy: 'xwhere" .. " " .. n1 .. " " .. mob .. "'")
+			InfoNote("\nSearch and Destroy: 'xwhere ", n1, " ", mob, "'")
 			for i = 1, n1, 1 do
 				if (i == 1) then
 					Send("where " .. mob)
@@ -3184,7 +3174,7 @@ end
 				end
 			end
 		elseif (mob ~= "") and (n2 ~= "") then	-- user entered n1, n2, and mobname
-			ColourNote("#00C040", "", "Search and Destroy: 'xwhere" .. " " .. n1 .. " " .. n2 .. " " .. mob .. "'")
+			InfoNote("Search and Destroy: 'xwhere ", n1, " ", n2, " ", mob, "'")
 			for i = n1, n2, 1 do
 				if (i == 1) then
 					Send("where " .. mob)
@@ -3193,7 +3183,7 @@ end
 				end
 			end
 		else
-			ColourNote("#FF1000", "", "Search and Destroy: 'xwhere' data entry problem!")
+			InfoNote("Search and Destroy: 'xwhere' data entry problem!")
 		end
 	end
 
@@ -3211,17 +3201,17 @@ end
 
 	function auto_hunt_abort()
 		auto_hunt_reset()
-		ColourNote("#FF5000", "", "Search and Destroy:  Auto-hunt cancelled.\n")
+		InfoNote("Search and Destroy:  Auto-hunt cancelled.\n")
 	end
 
 	function auto_hunt_complete()
 		auto_hunt_reset()
-		ColourNote("#00C040", "", "Search and Destroy: Auto-hunt complete.\n")
+		InfoNote("Search and Destroy: Auto-hunt complete.\n")
 	end
 
 	function auto_hunt_lowskill()
-		ColourNote("#FF5000", "", "\nSearch and Destroy:  Autohunt not available - hunt skill is too low.")
-		ColourNote("#FF5000", "", "                     If hunt skill is available, practice it to 85% or higher.")
+		InfoNote("\nSearch and Destroy:  Autohunt not available - hunt skill is too low.")
+		InfoNote("                     If hunt skill is available, practice it to 85% or higher.")
 		auto_hunt_reset()
 	end
 
@@ -3257,7 +3247,7 @@ end
 	end
 
 	function auto_hunt_portal()
-		ColourNote("#00C040", "", "\nSearch and Destroy: Auto-hunt through portals not working yet.  Enter portal manually and then autohunt again.")
+		InfoNote("\nSearch and Destroy: Auto-hunt through portals not working yet.  Enter portal manually and then autohunt again.")
 		auto_hunt_reset()
 	end
 
@@ -3274,24 +3264,23 @@ end
 		if (anex_automatic_onoff == "on") then
 			if (wildcards.arg == "-1") or (wildcards.arg == "") or (wildcards.arg == nil) then
 				if (anex_tnl_cutoff == 0) then
-					ColourNote("#FF5000", "", "Search and Destroy: Auto 'noexp' is currently OFF.")
+					InfoNote("Search and Destroy: Auto 'noexp' is currently OFF.")
 				else
-					ColourNote("#FF5000", "", "Search and Destroy: Auto 'noexp' is ON and set to " .. anex_tnl_cutoff .. " TNL.\n")
+					InfoNote("Search and Destroy: Auto 'noexp' is ON and set to ", anex_tnl_cutoff, " TNL.\n")
 				end
 			elseif (wildcards.arg == "off") or (wildcards.arg == "0") then	-- "xset noexp off" and "xset noexp 0" turn auto-noexp off.
 				EnableTrigger("trg_anex_mobdeath_xp1", false)
 				anex_tnl_cutoff = 0
 				SetVariable("mcvar_anex_tnl_cutoff", anex_tnl_cutoff)
-				ColourNote("#FF5000", "", "\nSearch and Destroy: Auto 'noexp' is now OFF.\n")
+				InfoNote("\nSearch and Destroy: Auto 'noexp' is now OFF.\n")
 			else											-- xset with any other (positive) number turns auto-noexp on.
 				EnableTrigger("trg_anex_mobdeath_xp1", true)
 				anex_tnl_cutoff = tonumber(set_tnl)
 				SetVariable("mcvar_anex_tnl_cutoff", anex_tnl_cutoff)
-				ColourNote("#FF5000", "", "\nSearch and Destroy: Auto 'noexp' now set to " .. anex_tnl_cutoff .. " TNL.\n")
+				InfoNote("\nSearch and Destroy: Auto 'noexp' now set to ", anex_tnl_cutoff, " TNL.\n")
 			end
 		else
-			ColourNote("#FF5000", "", "\nSearch and Destroy: 'noexp' is *manually* OFF." ..
-									"\nType 'noexp' again to turn it back on.")
+			InfoNote("\nSearch and Destroy: 'noexp' is *manually* OFF.\nType 'noexp' again to turn it back on.")
 		end
 		xg_draw_window()
 	end
@@ -3317,20 +3306,20 @@ end
 					local tnl = tonumber(gmcp("char.status.tnl"))
 					if (tnl < anex_tnl_cutoff) and (noexp_onoff == "off") then		-- tnl less than set point and noexp is off --> turn that shit on
 						anex_set_noexp("on")
-						ColourNote("#FF5000", "", "\nSearch and Destroy: Turning 'noexp' ON (Your TNL is less than " .. anex_tnl_cutoff .. ")")
+						InfoNote("\nSearch and Destroy: Turning 'noexp' ON (Your TNL is less than ", anex_tnl_cutoff, ")")
 					elseif (tnl > anex_tnl_cutoff) and (noexp_onoff == "on") then	-- if over min TNL and noexp is on --> turn noexp off regardless
 						anex_set_noexp("off")
-						ColourNote("#FF5000", "", "\nSearch and Destroy: Turning 'noexp' OFF (your TNL is greater than " .. anex_tnl_cutoff .. ")")
+						InfoNote("\nSearch and Destroy: Turning 'noexp' OFF (your TNL is greater than ", anex_tnl_cutoff, ")")
 					end
 				else
 					if (noexp_onoff == "on") then
 						anex_set_noexp("off")
-						ColourNote("#FF5000", "#000000", "\nSearch and Destroy: Turning noexp OFF (you have reached level ".. plevel ..")")
+						InfoNote("\nSearch and Destroy: Turning noexp OFF (you have reached level ", plevel, ")")
 					end
 				end
 			else 	-- feature is turned off, just show reminder
 				anex_tnl_cutoff = 0	-- set to 0 if somehow negative
-				ColourNote("#FF5000", "", "Automatic 'noexp' is currently turned OFF.\n")
+				InfoNote("Automatic 'noexp' is currently turned OFF.\n")
 			end
 		end
 	end
@@ -3341,13 +3330,13 @@ end
 				local level = tonumber(gmcp("char.status.level"))
 				if (level < 200) then
 					if (noexp_onoff == "on") and (player_on_cp == "yes") then
-						ColourNote("#FF5000", "", "Search and Destroy: Turning noexp OFF (must level to get new cp)")
+						InfoNote("Search and Destroy: Turning noexp OFF (must level to get new cp)")
 						anex_set_noexp("off")
 					end
 				else
 					if (noexp_onoff == "on") then
 						anex_set_noexp("off")
-						ColourNote("#FF5000", "", "Search and Destroy: Turning noexp OFF (you have reached level ".. level ..")")
+						InfoNote("Search and Destroy: Turning noexp OFF (you have reached level ", level, ")")
 					end
 				end
 			end
@@ -3363,8 +3352,8 @@ end
 				else
 					if (noexp_onoff == "on") then
 						anex_set_noexp("off")
-						ColourNote("#FF5000", "", "Search and Destroy: Turning noexp OFF (you have reached level ".. level ..")")
-						ColourNote("#FF5000", "", "                    Use 'xset noexp off' to override.")
+						InfoNote("Search and Destroy: Turning noexp OFF (you have reached level ", level, ")")
+						InfoNote("                    Use 'xset noexp off' to override.")
 					end
 				end
 			end
@@ -3378,18 +3367,18 @@ end
 			if (tnl < anex_tnl_cutoff) then
 				if (noexp_onoff == "off") then
 					anex_set_noexp("on")
-					ColourNote("#FF5000", "", "\nSearch and Destroy: Turning 'noexp' ON (your TNL is less than " .. anex_tnl_cutoff .. ")")
+					InfoNote("\nSearch and Destroy: Turning 'noexp' ON (your TNL is less than ", anex_tnl_cutoff, ")")
 				end
 			else
 				if (noexp_onoff == "on") then
 					anex_set_noexp("off")
-					ColourNote("#FF5000", "", "\nSearch and Destroy: Turning 'noexp' OFF (your TNL is greater than " .. anex_tnl_cutoff .. ")")
+					InfoNote("\nSearch and Destroy: Turning 'noexp' OFF (your TNL is greater than ", anex_tnl_cutoff, ")")
 				end
 			end
 		else
 			if (noexp_onoff == "on") then
 				anex_set_noexp("off")
-				ColourNote("#FF5000", "", "\nSearch and Destroy: Turning 'noexp' OFF (you must level before taking a new campaign)")
+				InfoNote("\nSearch and Destroy: Turning 'noexp' OFF (you must level before taking a new campaign)")
 			end
 		end
 		end
@@ -3428,18 +3417,6 @@ end
 		xg_draw_window()
 	end
 
---	[[ ****** WHERE TRICK FUNCTIONS ***** ]]
-	--[[local wt = { index = 1, name = "", match = "" }
-		function wt_continue(name, line, wildcards)
-			wt.index = wt.index + 1
-			Send("wt " .. wt.index .. "." .. wt.name)
-		end
-		function wt_fail(name, line, wildcards)
-			EnableTriggerGroup("wt", false)
-			Note("Search and Destroy: Aborting where trick...")
-		end	]]
-
-
 	function xset_to_mark(name, line, wildcards)
 		local ri = current_room
 		area_start_rooms[ri.arid] = {}
@@ -3447,11 +3424,7 @@ end
 		tprint(area_start_rooms)
 		local serial = serialize.save_simple(area_start_rooms)
 		SetVariable("mcvar_areaStartRooms", serial)
-		ColourNote("#FF5000", "", "\nxset mark: Room ",
-				"#00C040", "", ri.rmid,
-				"#FF5000", "", " set as start of area ",
-				"#00C040", "", ri.arid,
-				"#FF5000", "", ".\n")
+		InfoNote("\nxset mark: Room ", ri.rmid, " set as start of area ", ri.arid, ".\n")
 	end
 
 	function get_start_room(area_id)
@@ -3483,24 +3456,21 @@ end
 		x = (x == "on") and "off" or "on"
 		xset_vidblain_onoff = x
 		SetVariable("mcvar_xset_vidblain_onoff", x)
-		ColourTell ("#FF5000", "", "\nVidblain navigation is now ",
-					"#00C040", "", string.upper(x) .. "\n")
+		InfoNote("\nVidblain navigation is now ", string.upper(x), "\n")
 	end
 
 	function xset_vidblain_setlevel(name, line, wildcards)
 		local x = tonumber(wildcards.level) or "check"
 		if (x == "check") then
-			ColourTell ("#FF5000", "", "\n'xset vidblain' portal level is ",
-						"#00C040", "", xset_vidblain_level .. "\n")
+			InfoNote("\n'xset vidblain' portal level is ", xset_vidblain_level, "\n")
 		else
 			xset_vidblain_level = x
 			SetVariable("mcvar_xset_vidblain_level", x)
-			ColourTell ("#FF5000", "", "\n'xset vidblain' portal level set to ",
-						"#00C040", "", x .. "\n")
+			InfoNote("\n'xset vidblain' portal level set to ", x, "\n")
 		end
 	end
 
-	local is_vidblain_area_sql = "SELECT area " .. "FROM rooms " .. "WHERE uid = %s "
+	local is_vidblain_area_sql = "SELECT area FROM rooms WHERE uid = %s "
 
 	function is_vidblain_area(roomid)
 		local level = tier_level()--tonumber(gmcp("char.status.level")) + 10 * tonumber(gmcp("char.base.tier"))
@@ -3592,7 +3562,7 @@ end
 		local status = wildcards.status
 		if #status == 0 then status = "status" end
 
-		Note("Simulating quest with status " .. status)
+		InfoNote("Simulating quest with status ", status)
 
 		if status == "start" then
 			result.action = "start"
@@ -3638,13 +3608,13 @@ end
 	function room_note(name, line, wildcards)
 		--get_notes(nil, current_room.rmid)
 		if not get_notes(nil, gmcp("room.info.num")) then
-			ColourNote("#FF3030", "", "No notes found for room this room.\n")
+			InfoNote("No notes found for room this room.\n")
 		end
 	end
 
 	function room_note_room(name, line, wildcards)
 		if not get_notes(nil, wildcards.roomid) then
-			ColourNote("#FF3030", "", string.format("No notes found for room %s.\n", wildcards.roomid))
+			InfoNote(string.format("No notes found for room %s.\n", wildcards.roomid))
 		end
 	end
 
@@ -3773,7 +3743,7 @@ end
 	function suspend_page_size(name, line, wildcards)
 		if (page_size_suspended == false) then
 			page_size_suspended = true
-			ColourNote("#FF3030", "", "\nSearch and Destroy: Temporarily disabling pagesize (area index process)\n")
+			InfoNote("\nSearch and Destroy: Temporarily disabling pagesize (area index process)\n")
 			EnableTrigger("trg_capture_page_size", true)
 			EnableTrigger("trg_pagesize_gag_1", true)
 			SendNoEcho("pagesize")
@@ -3781,7 +3751,7 @@ end
 	end
 
 	function resume_page_size(name, line, wildcards)
-		ColourNote("#FF3030", "", "\nSearch and Destroy: Area index complete. Pagesize re-enabled (if >0)\n")
+		InfoNote("\nSearch and Destroy: Area index complete. Pagesize re-enabled (if >0)\n")
 		EnableTrigger("trg_capture_page_size", false)
 		if (page_size ~= 0) then
 			SendNoEcho("pagesize " .. page_size)
@@ -3793,7 +3763,7 @@ end
 		local r = wildcards.roomid
 		local s = wildcards.speed
 		if (r == "-1") then
-			ColourNote("#FF5000", "", "\nSearch and Destroy:  Can't go to room id -1 (nomap room)\n")
+			InfoNote("\nSearch and Destroy:  Can't go to room id -1 (nomap room)\n")
 		elseif (r ~= "") then
 			do_mapper_goto(r, s)
 		end
@@ -3908,7 +3878,7 @@ end
 		-- Note(encoded)
 
 		if not WindowLoadImageMemory(win, "gear", mime.unb64(gear_base64)) then
-			ColourNote("#FF5000", "", "Image could not be decoded")
+			ErrorNote("Image could not be decoded")
 		end
 	end
 
@@ -4453,7 +4423,7 @@ end
 			SetVariable("mcvar_window_font_underline", win_font_underline)
 
 			xg_draw_window()
-			ColourNote("", "", "Window font changed to ", "white", "", string.format("%s Size %i (%s)", win_font, win_font_size, new_font.style))
+			InfoNote("Window font changed to ", string.format("%s Size %i (%s)", win_font, win_font_size, new_font.style))
 		elseif (result == "Bring To Front") then
 			CallPlugin(plugin_id_z_order,"boostMe", win)
 		elseif (result == "Send To Back") then
@@ -4490,7 +4460,7 @@ end
 				end
 			end
 			if not color_details then
-				ColourNote("tomato", "", "Invalid menu option ", "darkgray", "", result, "tomato", "", ". How did you even do that?")
+				ErrorNote("Invalid menu option ", result, ". How did you even do that?")
 				return
 			end
 			local new_color = PickColour(ColourNameToRGB(text_colors[color_details.key]))
@@ -4540,54 +4510,11 @@ end
 	end
 
 	function deprecated_xset_font_size()
-		ColourNote("Tomato", "", "Changing font size is now done by right clicking on the top bar of the targets window and choosing 'Change Font'\n")
+		InfoNote("Changing font size is now done by right clicking on the top bar of the targets window and choosing 'Change Font'\n")
 	end
 
 	function deprecated_xset_line_space(name, line, wildcards)
-		ColourNote("Tomato", "", "Line spacing is automatically picked up from the font which can be changed by right clicking on the top bar of the targets window and choosing 'Change Font'\n")
-	end
-
-	function xset_check_colors()
-		local longest_key = 7
-		for key, val in pairs(text_colors) do
-			longest_key = math.max(#key, longest_key)
-		end
-
-		padding = longest_key + 2
-
-		ColourNote("darkgray", "", string.format("Subject%sColor", string.rep(" ", padding - 7)))
-		ColourNote("darkgray", "", string.rep("-", padding + 8))
-
-		for key, val in pairs(text_colors) do
-			ColourNote("white", "", key,
-				"", "", string.rep(" ", padding - #key),
-				val, "", val)
-		end
-
-		ColourNote("", "", "\nSee ", "white", "", "xhelp color", "", "", " for details on the individual color subjects.\n")
-	end
-
-	function check_color(subject, pad)
-		subject = subject:lower()
-		ColourNote("white", "", subject,
-			"", "", " color is ",
-			text_colors[subject], "", text_colors[subject])
-	end
-
-	function xset_check_color(name, line, wildcards)
-		check_color(wildcards.subject)
-		print("")
-	end
-
-	function xset_color(name, line, wildcards)
-		local subject = wildcards.subject:lower()
-		local color = "#" .. wildcards.color:upper()
-		text_colors[subject] = color
-		SetVariable("colors_" .. subject, color)
-
-		check_color(subject)
-		print()
-		xg_draw_window()
+		InfoNote("Line spacing is automatically picked up from the font which can be changed by right clicking on the top bar of the targets window and choosing 'Change Font'\n")
 	end
 
 	function OnPluginSaveState()
@@ -4620,7 +4547,7 @@ end
 				speed = "walk"
 			end
 		end
-		ColourNote("#FF5000", "", "Move speed:" .. speed)
+		InfoNote("Move speed:", speed)
 	end
 
 -- Internal Utilities
@@ -4633,10 +4560,6 @@ end
 	--	return new_t
 	--end
 
-	function cprint(c1, txt)		-- colournote abbreviation
-		ColourNote(c1, "", txt)
-	end
-
 	function dbcheck(code, query)
 		if (code ~= sqlite3.OK) and    -- no error
 		(code ~= sqlite3.ROW) and   -- completed OK with another row of data
@@ -4645,14 +4568,6 @@ end
 			err = err.."\n\nCODE: "..code.."\nQUERY: "..query.."\n"
 			db:exec("ROLLBACK")      -- rollback any transaction to unlock the database
 			error (err, 2)            -- show error in caller's context
-		end
-	end
-
-	function fixbool(b)
-		if b then
-			return 1
-		else
-			return 0
 		end
 	end
 
@@ -4888,23 +4803,43 @@ end
 
 	function xtest_debug(name, line, wildcards)
 		if debug_mode == "on" then
-			ColourNote("gold", "", "Debug mode ", "tomato", "", "disabled\n")
+			InfoNote("Debug mode ", "disabled\n")
 			debug_mode = "off"
 		else
-			ColourNote("gold", "", "Debug mode ", "lime", "", "enabled\n")
+			InfoNote("Debug mode ", "enabled\n")
 			debug_mode = "on"
 		end
 		SetVariable("debug_mode", debug_mode)
 	end
 
+	function InfoNote(...)
+		print_alternating_note({...}, NOTE_COLORS.INFO, NOTE_COLORS.INFO_HIGHLIGHT)
+	end
+
+	function ErrorNote(...)
+		print_alternating_note({...}, NOTE_COLORS.ERROR, NOTE_COLORS.ERROR_HIGHLIGHT, NOTE_COLORS.ERROR_BACKGROUND)
+	end
+
+	function ImportantNote(...)
+		print_alternating_note({...}, NOTE_COLORS.IMPORTANT, NOTE_COLORS.IMPORTANT_HIGHLIGHT, NOTE_COLORS.IMPORTANT_BACKGROUND)
+	end
+
 	function DebugNote(...)
 		if debug_mode == "on" then
-			ColourTell("gold", "", "DEBUG: ")
-			for i, v in ipairs({...}) do
-				ColourTell("lightskyblue", "", tostring(v))
-			end
-			print("")
+			ColourTell(NOTE_COLORS.DEBUG_HIGHLIGHT, "", "DEBUG: ")
+			print_alternating_note({...}, NOTE_COLORS.DEBUG, NOTE_COLORS.DEBUG_HIGHLIGHT)
 		end
+	end
+
+	function print_alternating_note(messages, regular_color, highlight_color, background)
+		local current_color, other_color = regular_color, highlight_color
+		background = background or ""
+
+		for i, message in ipairs(messages) do
+			ColourTell(current_color, background, message)
+			current_color, other_color = other_color, current_color
+		end
+		print("")
 	end
 
 -- [[ New code ]]
@@ -4915,7 +4850,7 @@ end
 
 	function force_update_plugin(name, line, wildcards)
 		local branch = wildcards.branch or "master"
-		DebugNote("Forcing update from " .. branch)
+		DebugNote("Forcing update from ", branch)
 		download_plugin(branch, callback_update_plugin)
 	end
 
@@ -4934,7 +4869,7 @@ end
 	end
 
 	function download_plugin(version, callback)
-		DebugNote(string.format("Downloading plugin version %s", version))
+		DebugNote("Downloading plugin version ", version)
 		local url = string.format("https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/%s/Search_and_Destroy.xml", version)
 		download_file(url, callback)
 	end
@@ -4951,7 +4886,7 @@ end
 		if async_ok then
 			plugin_page = async.doAsyncRemoteRequest(url, callback, "HTTPS")
 		else
-			ColourNote("white", "blue", "Error on file download")
+			ImportantNote("Error on file download")
 		end
 	end
 
@@ -4960,7 +4895,7 @@ end
 			if status ~= 200 then
 				DebugNote("check_version_callback got ", status)
 				if log_no_updates then
-					ColourNote("white", "blue", "Error while fetching latest version number")
+					ErrorNote("Error while fetching latest version number")
 				end
 				return
 			end
@@ -4968,7 +4903,7 @@ end
 			if upstream_version ~= tostring(PLUGIN_VERSION) then
 				callback(upstream_version)
 			elseif log_no_updates then
-				ColourNote("orangered", "", "Search&Destroy: No new updates available")
+				InfoNote("Search&Destroy: No new updates available")
 			end
 		end
 	end
@@ -4981,11 +4916,11 @@ end
 	function callback_update_plugin(retval, page, status, headers, full_status, request_url)
 		if status ~= 200 then
 			DebugNote("callback_update_plugin got ", status)
-			ColourNote("white", "blue", "Error while fetching latest plugin version")
+			ErrorNote("Error while fetching latest plugin version")
 			return
 		end
 		local upstream_version = tonumber(string.match(page, '<plugin version="([0-9%.]+)"'))
-		ColourNote("white", "blue", "Updating from version " .. PLUGIN_VERSION .. " to " .. upstream_version .. ". Do not touch anything!")
+		ImportantNote("Updating from version ", PLUGIN_VERSION, " to ", upstream_version, ". Do not touch anything!")
 		local file = io.open(GetPluginInfo(GetPluginID(), 6), "w")
 		file:write(page)
 		file:close()
@@ -4993,11 +4928,11 @@ end
 			SetAlphaOption("script_prefix", "\\\\\\")
 		end
 		Execute(GetAlphaOption("script_prefix") .. "DoAfterSpecial(1, \"ReloadPlugin('" .. GetPluginID() .. "')\", sendto.script)")
-		ColourNote("white", "blue", "Update complete!")
+		ImportantNote("Update complete!")
 	end -- end Update code
 
 	function show_update_banner(upstream_version)
-		ColourNote("orangered", "", "\n+=================================================================+")
+		ColourNote(NOTE_COLORS.INFO, "", "\n+=================================================================+")
 		ColourNote("silver", "", "              Search & Destroy ",
 			"lime", "", "New Version Available")
 		print("")
@@ -5009,7 +4944,7 @@ end
 		ColourNote("silver", "", "         Use ", "lime", "", "snd update", "silver", "", " to upgrade to the latest version.")
 		print("")
 		ColourNote("silver", "", "     Use ", "tomato", "", "snd check_update", "silver", "", " to disable automatic version checks.")
-		ColourNote("orangered", "", "+=================================================================+\n")
+		ColourNote(NOTE_COLORS.INFO, "", "+=================================================================+\n")
 	end
 
 	function toggle_automatic_update_checking()
@@ -5024,8 +4959,7 @@ end
 		SetVariable("mcvar_automatic_update_checks", automatic_update_checks)
 
 
-		ColourNote ("#FF5000", "", "\nSearch&Destroy automatic update checking is now ",
-			"#00C040", "", string.upper(automatic_update_checks))
+		InfoNote("\nSearch&Destroy automatic update checking is now ", string.upper(automatic_update_checks))
 	end
 
 	function download_sounds(callback)
@@ -5059,7 +4993,7 @@ end
 			end
 
 			for i, filename in ipairs(files_to_download) do
-				ColourNote("", "", "Downloading ", "white", "", filename)
+				ImportantNote("Downloading ", filename)
 				async.doAsyncRemoteRequest(string.format(download_path, filename), download_sounds_callback(filename, callbackWrapper), "HTTPS")
 			end
 
@@ -5067,7 +5001,7 @@ end
 				callback(true)
 			end
 		else
-			ColourNote("tomato", "", "Error downloading sounds: async could not be initialized.")
+			ErrorNote("Error downloading sounds: async could not be initialized.")
 			callback(false)
 		end
 	end
@@ -5081,12 +5015,14 @@ end
 				Note(string.format("Wrote %s successfully to sounds directory", filename))
 				callback(true)
 			else
-				ColourNote("tomato", "", string.format("Couldn't download %s", filename))
+				ErrorNote("Couldn't download ", filename)
 				DebugNote("HTTP Status: ", status)
 				DebugNote("Full status: ", full_status)
 				DebugNote("Headers: ", require('json').encode(headers))
 				if page and #page > 200 then
-					SetClipboard(page)
+					if debug_mode == "on" then
+						SetClipboard(page)
+					end
 					DebugNote("Page data was too large for display and has been save to the clipboard")
 				else
 					DebugNote("Page: ", page)
@@ -5466,18 +5402,18 @@ end
 	end
 
 	function copyPwarWarn()
-		ColourNote("cyan", "", "Are you sure you want to do this? It will wipe out your existing mob and keyword data. Type ",
-			"lime", "", "snd migrate confirm",
-			"cyan", "", " to migrate data from your pwar database.")
+		InfoNote("Are you sure you want to do this? It will wipe out your existing mob and keyword data. Type ",
+			"snd migrate confirm",
+			" to migrate data from your pwar database.")
 	end
 
 	function copyPwarDB()
 		local success, err = pcall(rawCopyPwarDB)
 
 		if success then
-			ColourNote("cyan", "", "Finished migrating! You can now resume play!")
+			InfoNote("Finished migrating! You can now resume play!")
 		else
-			ColourNote("tomato", "", err)
+			ErrorNote(err)
 		end
 	end
 
@@ -5487,7 +5423,7 @@ end
 		if not f then
 			error("To start migration process, please locate the file 'WinkleGold_Database.db' and move it to the plugins folder. Then try again.")
 		else
-			ColourNote("cyan", "", "Now rebuilding the database with data from Pwar's Search & Destroy.")
+			InfoNote("Now rebuilding the database with data from Pwar's Search & Destroy.")
 
 			os.remove(snd_db_file)
 			migrate_database()
@@ -5680,7 +5616,7 @@ end
 			mob, zone, room, rid = mshow[tonumber(args[1])][1], mshow[tonumber(args[1])][2], mshow[tonumber(args[1])][3], mshow[tonumber(args[1])][4]
 			Execute(args[2] .. " " .. string.format(showStr, mob, zone, room, rid))
 		else
-			ColourNote("orange", "", "No results loaded. Try searching for your mob first.")
+			InfoNote("No results loaded. Try searching for your mob first.")
 		end
 	end
 
@@ -5688,7 +5624,7 @@ end
 		if #mshow ~= 0 then
 			Execute("mapper goto " .. mshow[tonumber(args[1])][3])
 		else
-			ColourNote("orange", "", "No results loaded. Try searching for your mob first.")
+			InfoNote("No results loaded. Try searching for your mob first.")
 		end
 	end
 
@@ -5709,7 +5645,7 @@ end
 				zone = "all"
 				sendit = true
 			 elseif #name >= 1 and #name < 2 then
-				ColourNote("#802800", "", "*** You need at least 2 characters of the mob name!")
+				InfoNote("*** You need at least 2 characters of the mob name!")
 			else
 				sendit = true
 			end
@@ -5721,7 +5657,7 @@ end
 					mobLookup(name, zone)
 				end
 			else
-				ColourNote("#802800", "", "*** Syntax error! Use: ", "green", "", "msearch <areakey|here|all> <mob>")
+				InfoNote("*** Syntax error! Use: ", "msearch <areakey|here|all> <mob>")
 			end
 		end
 	end
@@ -5735,7 +5671,7 @@ end
 	end
 
 	function xset_nx_check()
-		ColourNote("", "", "xset nx is set to ", "white", "", xset_nx_action)
+		InfoNote("xset nx is set to ", xset_nx_action)
 		print_xset_nx_desc()
 	end
 
@@ -5747,29 +5683,17 @@ end
 
 	function print_xset_nx_desc()
 		if xset_nx_action == "conscan" then
-			ColourNote("", "", "You will ",
-				"white", "", "consider",
-				"", "", " every room upon arrival after nx or go, followed by a ",
-				"white", "", "scan",
-				"", "", " if your target is not here.\n")
+			InfoNote("You will ", "consider", " every room upon arrival after nx or go, followed by a ", "scan", " if your target is not here.\n")
 		elseif xset_nx_action == "con" then
-			ColourNote("", "", "You will ",
-				"white", "", "consider",
-				"", "", " every room upon arrival after nx or go.\n")
+			InfoNote("You will ", "consider", " every room upon arrival after nx or go.\n")
 		elseif xset_nx_action == "scan" then
-			ColourNote("", "", "You will ",
-				"white", "", "scan",
-				"", "", " surrounding rooms upon arrival after nx or go.\n")
+			InfoNote("You will ", "scan", " surrounding rooms upon arrival after nx or go.\n")
 		elseif xset_nx_action == "scanhere" then
-			ColourNote("", "", "You will ",
-				"white", "", "scan the current room",
-				"", "", " upon arrival after nx or go.\n")
+			InfoNote("You will ", "scan the current room", " upon arrival after nx or go.\n")
 		elseif xset_nx_action == "qs" then
-			ColourNote("", "", "You will ",
-				"white", "", "quick scan",
-				"", "", " every room upon arrival after nx or go, looking only for your target mob.\n")
+			InfoNote("You will ", "quick scan", " every room upon arrival after nx or go, looking only for your target mob.\n")
 		else
-			Note("You will take no action upon arrival after nx or go.\n")
+			InfoNote("You will take no action upon arrival after nx or go.\n")
 		end
 	end
 
@@ -5997,9 +5921,9 @@ end
 
 		execute_in_transaction(db, writes)
 
-		if debug_mode then
+		if debug_mode == "on" then
 			if db:errcode() > 0 then
-				ColourNote("tomato", "", "Db error: " .. db:error_message())
+				ErrorNote("Db error: " .. db:error_message())
 			else
 				DebugNote("Successfully inserted or updated ", #mobs_here, " in the mobs database")
 			end
@@ -6012,8 +5936,7 @@ end
 		xset_sound_onoff = new_val
 		SetVariable("mcvar_xset_sound_onoff", xset_sound_onoff)
 
-		ColourNote ("#FF5000", "", "\nSearch&Destroy Sounds are now ",
-			"#00C040", "", string.upper(xset_sound_onoff))
+		InfoNote("\nSearch&Destroy Sounds are now ", string.upper(xset_sound_onoff))
 	end
 
 	function xset_sound()
@@ -6025,7 +5948,7 @@ end
 					xset_sound_onoff = "on"
 					update_sounds_onoff_value("on")
 				else
-					ColourNote("Tomato", "", "Sound could not be enabled")
+					ErrorNote("Sound could not be enabled")
 				end
 			end)
 		end

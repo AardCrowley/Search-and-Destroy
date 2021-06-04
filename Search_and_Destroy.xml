@@ -4536,8 +4536,31 @@ end
 		elseif (arg == "off") or (arg == "hide") or (arg == "0") then
 			WindowShow(win, false)
 			SetVariable("mcvar_xgui_window_onoff", "off")
-		end
+        else
+            if (arg == "max") or (arg == "maximize") or (arg == "expand") then
+                win_state = "max"
+                win_height = win_height_max
+            elseif (arg == "min") or (arg == "minimize") or (arg == "collapse") then
+                win_state = "min"
+                win_height = win_height_min
+            end
+
+            WindowResize(win, win_width, win_height, ColourNameToRGB("black"))
+            xg_draw_window()
+            Redraw()
+        end
 	end
+
+	--[[function xset_ToggleWindowDisplay(name, line, wildcards)
+		local arg = wildcards.onoff
+		if (arg == "on") or (arg == "show") or (arg == "1") then
+			WindowShow(win, true)
+			SetVariable("mcvar_xgui_window_onoff", "on")
+		elseif (arg == "off") or (arg == "hide") or (arg == "0") then
+			WindowShow(win, false)
+			SetVariable("mcvar_xgui_window_onoff", "off")
+		end
+	end]]--
 
 	function deprecated_xset_font_size()
 		ColourNote("Tomato", "", "Changing font size is now done by right clicking on the top bar of the targets window and choosing 'Change Font'\n")
@@ -6770,7 +6793,7 @@ end
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" >
 				<send>	win_init = false	</send> </alias>
 
-	<alias	match="^xset (?:window|win) (?<onoff>on|off|show|hide|0|1|true|false)$"
+	<alias	match="^xset (?:window|win) (?<onoff>on|off|show|hide|0|1|true|false|max(?:imize)?|min(?:imize)?|expand|collapse)$"
 			script="xset_ToggleWindowDisplay"
 			enabled="y" regexp="y" sequence="100" > </alias>
 

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.68" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="5.67" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -4911,7 +4911,7 @@ end
 	end
 
 	function force_update_plugin(name, line, wildcards)
-		DebugNote("Forcing update")
+		DebugNote("Forcing update from " .. wildcards.branch)
 		download_plugin(wildcards.branch, callback_update_plugin)
 	end
 
@@ -6543,7 +6543,7 @@ end
 	<alias enabled="y" match="^xhelp(?:\s(.*))?$" regexp="y" script="onHelp" sequence="100">
 	</alias>
 
-	<alias enabled="y" match="snd force update( ?<branch>\w+)?" script="force_update_plugin" sequence="100">
+	<alias enabled="y" match="snd force update( ?<branch>\w+)?" script="force_update_plugin" regexp="y" sequence="100">
 	</alias>
 
 	<alias enabled="y" match="snd check_update" script="toggle_automatic_update_checking" sequence="100">

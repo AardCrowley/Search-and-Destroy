@@ -2908,6 +2908,7 @@ end
 		end
 
 		SetVariable("mcvar_quick_kill_notarg", tostring(notarg))
+		DebugNote("Quick kill notarg variable set to " .. GetVariable("mcvar_quick_kill_notarg"))
 
 		if (wildcards.arg == "") then
 			ColourNote("#FF5000", "", "Search and Destroy: Quick-kill command currently set to: '" .. quick_kill_command .. "'")

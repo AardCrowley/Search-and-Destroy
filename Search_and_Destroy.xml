@@ -3355,6 +3355,9 @@ end
 	end
 
 	function anex_mobdeath_xp1(name, line, wildcards)	-- called when mob kill awards xp
+		print(line)
+		print(line-1)
+		print(GetLineInfo(line-1).text)
 		if (anex_automatic_onoff == "on") then
 			local level = tonumber(gmcp("char.status.level"))
 			if (anex_tnl_cutoff > 0) then

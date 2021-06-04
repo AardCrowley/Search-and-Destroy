@@ -154,7 +154,7 @@
 	local autoHuntData = {}
 
 -- [[ hunt trick ]]
-	local ht = { index = 1 }
+	local ht = { index = 1, first_target = true }
 
 -- [[ quick where ]]
 	local qw = { index = 1 }
@@ -2399,7 +2399,7 @@ end
 						local func = function() qw_exact(t.kw) end
 						execute_in_area(t.arid, func)
 					elseif (action == "ht") then		-- do hunt trick or quick where after arriving in area.
-						local func = function() Execute("ht " .. t.kw) end
+						local func = function() do_hunt_trick(1, t.kw) end
 						execute_in_area(t.arid, func)
 					elseif (action == "off") then	-- do nothing
 						InfoNote("Xcp action is off - no additional action\n")
@@ -2820,7 +2820,6 @@ end
 	end
 
 	function qw_no_match()	-- responds to "There is no <mob name> around here."
-		DebugNote("Couldn't find ", short_mob_name, " trying to find ", full_mob_name)
 		qw_reset(qw.exact)
 		if type(full_mob_name) == 'string' then
 			lookup_not_found_mob()
@@ -2879,7 +2878,7 @@ end
 
 		table.sort(possible_rooms, sort_rooms_by_count)
 
-		InfoNote("\nMob not found. There are multiple possibilities for this:")
+		InfoNote("\nMob not found. There are multiple possible reasons for this:")
 		InfoNote("  * It might be dead")
 		InfoNote("  * You might be using the wrong keyword (use `xset kw` to update if needed)")
 		InfoNote("  * It might be flagged nowhere")
@@ -2890,7 +2889,7 @@ end
 --	[[ Hunt trick ]]
 	function ht_reset()
 		EnableTriggerGroup("HuntTrick", false)
-		ht = { index = 1 }
+		ht = { index = 1, first_target = true }
 	end
 
 	function ht_noarg()
@@ -2928,6 +2927,7 @@ end
 	function ht_continue()
 		local s = short_mob_name
 		local ix = (ht.index + 1) or 1
+		ht.first_target = false
 		do_hunt_trick(ix, s)
 	end
 
@@ -2939,9 +2939,23 @@ end
 		ht_reset()
 	end
 
+	function ht_fail()
+		local first_target = ht.first_target
+		EnableTriggerGroup("HuntTrick", false)
+		ht_reset()
+
+
+		if first_target and type(full_mob_name) == 'string' then
+			InfoNote("Search and Destroy:  Hunt trick failed. Attempting quick where.")
+			qw_exact()
+		else
+			InfoNote("Search and Destroy:  Hunt trick failed.")
+		end
+	end
+
 	function ht_abort(name, line, wildcards)
 		EnableTriggerGroup("HuntTrick", false)
-		ht = {}
+		ht_reset()
 		InfoNote("Search and Destroy:  Hunt trick cancelled.")
 	end
 
@@ -3585,6 +3599,8 @@ end
 			Simulate("You still have to kill * the spirit of Bakarne (The Empire of Aiighialla)\n")
 			Simulate("You still have to kill * a sinister vandal (The Three Pillars of Diatz)\n") -- noscan
 			Simulate("You still have to kill * a hideously hairy spider (The Temple of Shouggoth)\n") -- nowhere
+			Simulate("You still have to kill * Don Crumble (Zangar's Demonic Grotto)\n") -- nohunt
+			Simulate("You still have to kill * A very large firefly (Kobold Siege Camp)\n") -- nohunt/nowhere
 		else
 			Simulate("You still have to kill * a former court jester (The Labyrinth)\n")
 			Simulate("You still have to kill * the iron golem (Audience Chamber)\n")
@@ -6306,7 +6322,12 @@ end
 		script="ht_continue"
 		enabled="n" regexp="y" sequence="100" > </trigger>
 
-	<trigger match="^No one in this area by the name '\w.+'\.|Not while you are fighting\!|You can't hunt while (?:resting|sitting)\.|You dream about going on a nice hunting trip, with pony rides, and campfires too\.$"
+	<trigger match="^No one in this area by the name '\w.+'\.$"
+		name="trg_hunt_trick_fail" group="HuntTrick"
+		script="ht_fail"
+		enabled="n" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+
+	<trigger match="^Not while you are fighting\!|You can't hunt while (?:resting|sitting)\.|You dream about going on a nice hunting trip, with pony rides, and campfires too\.$"
 		name="trg_hunt_trick_abort" group="HuntTrick"
 		script="ht_abort"
 		enabled="n" regexp="y" sequence="100" keep_evaluating="y" > </trigger>

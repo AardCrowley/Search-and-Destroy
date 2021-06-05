@@ -4077,6 +4077,15 @@ end
 	end
 
 --	[[ Former plugin - S&D GUI ]]
+	function clear_window_menu_hotspots()
+		DebugNote("trying to clear all menu hotspots")
+		for k, v in pairs(win_hotspots) do
+			DebugNote("Deleting hotspot ", k)
+			WindowDeleteHotspot(win, k)
+		end
+		win_hotspots = {}
+	end
+
 	local window_fonts = {
 		["title"]	= { f="Consolas",				 s=10, 				b=false, 	i=false, 	u=false },
 		["bt1"]	 	= { f="Segoe",					 s=10, 				b=true, 	i=false, 	u=false },
@@ -4402,7 +4411,7 @@ end
 	end
 
 	function xg_show_target_links()
-		for i,v in ipairs (win_target_hotspots) do
+		for i,v in ipairs(win_target_hotspots) do
 			WindowDeleteHotspot(win, v)
 		end
 		win_target_hotspots = {}
@@ -4760,13 +4769,13 @@ end
 			if win_hide_settings_button == "off" then
 				win_hide_settings_button = "on"
 				InfoNote("\nSettings button will be ", "hidden", ". You can still access settings by right clicking on the title bar.")
-				WindowDeleteHotspot(win, "config")
-				win_hotspots.config = nil
 			else
 				win_hide_settings_button = "off"
 				InfoNote("\nSettings button will be ", "shown")
 			end
 			SetVariable("mcvar_window_hide_settings_button", xcp_targets_quest_onoff)
+
+			clear_window_menu_hotspots()
 			xg_draw_window()
 		elseif result == "Help" then
 			Execute("xhelp")

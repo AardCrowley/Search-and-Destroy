@@ -35,17 +35,15 @@
 <script>
 <![CDATA[
 --Line 152
-	-- This script was originally improved upon by Starling. Credit is due to Starling for the job she did on the plugin in the past, but in order to ensure future compliance with Aardwolf and MUSHclient, maintenance will now be provided by me. If you have any questions, feel free to shoot me a message on Personal or through tells. I'll make changes as I see fit to the code. // Crowley
+	--[[ This script was originally improved upon by Starling, and as such, she deserves credit for the work put into the plugin. In order to ensure future compliance 
+	     with Aardwolf and MUSHclient, maintenance will now be provided by Crowley and Naricain. If you have any questions, feel free to shoot us a message on Personal
+		 or through tells. We will make changes as we see fit to the code. // Crowley and Naricain
 
-	--[[ ToDo List:
-		* Add ability to keyword mobs, tie in with mob database
-		* Change way XRT works - if no shortname found, run to best matching area
 
 		Fix gq: You are no longer part of Global Quest # 4683 and will be unable to rejoin. -- gq quit
 				"You have now joined Global Quest # 4685. See 'help gquest' for available commands.", "You may win 2 more gquests at this level.", "You can be rewarded for 50 more kills this level."
 		]]--
 
-	--require "copytable"
 	require "movewindow"
 	require "serialize"
 	require "tprint"
@@ -56,8 +54,6 @@
 	function mapFind(query)
 		return CallPlugin("b6eae87ccedd84f510b74714", "map_find_query", query)
 	end
-
---line 171
 
 	mshow                           = {}
 	showStr                         = "@W%s @wis found in @Y%s @win/around @G%s @w(@Cmapper goto %s@w)"
@@ -4825,6 +4821,18 @@ end
 		elseif (arg == "off") or (arg == "hide") or (arg == "0") then
 			WindowShow(win, false)
 			SetVariable("mcvar_xgui_window_onoff", "off")
+		else
+			if (arg == "max") or (arg == "maximize") or (arg == "expand") then
+				win_state = "max"
+				win_height = win_height_max
+			elseif (arg == "min") or (arg == "minimize") or (arg == "collapse") then
+				win_state = "min"
+				win_height = win_height_min
+			end
+
+			WindowResize(win, win_width, win_height, ColourNameToRGB("black"))
+			xg_draw_window()
+			Redraw()
 		end
 	end
 
@@ -7058,7 +7066,7 @@ end
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" >
 				<send>	win_init = false	</send> </alias>
 
-	<alias	match="^xset (?:window|win) (?<onoff>on|off|show|hide|0|1|true|false)$"
+	<alias	match="^xset (?:window|win) (?<onoff>on|off|show|hide|0|1|true|false|max(?:imize)?|expand|min(?:imize)?|collapse)$"
 			script="xset_ToggleWindowDisplay"
 			enabled="y" regexp="y" sequence="100" > </alias>
 

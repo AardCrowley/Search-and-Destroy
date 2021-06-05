@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<<<<<<< Updated upstream
-<plugin version="5.7" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
-=======
 <plugin version="5.71" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley and Naricain" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
->>>>>>> Stashed changes
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -39,20 +35,11 @@
 <script>
 <![CDATA[
 --Line 152
-<<<<<<< Updated upstream
-	-- This script was originally improved upon by Starling. Credit is due to Starling for the job she did on the plugin in the past, but in order to ensure future compliance with Aardwolf and MUSHclient, maintenance will now be provided by me. If you have any questions, feel free to shoot me a message on Personal or through tells. I'll make changes as I see fit to the code. // Crowley
-
-	--[[ ToDo List:
-		* Add ability to keyword mobs, tie in with mob database
-		* Change way XRT works - if no shortname found, run to best matching area
-
-=======
 	--[[ This script was originally improved upon by Starling. Credit is due to Starling for the great job she did in the past. In order to ensure future compliance with Aardwolf
 	     and MUSHclient, maintenance will now be provided by Crowley and Naricain. If you have any questions, feel free to shoot us a message on Personal or through tells. We'll
 		 make changes as we see fit to the code. // Crowley and Naricain
 
 	 ToDo List:
->>>>>>> Stashed changes
 		Fix gq: You are no longer part of Global Quest # 4683 and will be unable to rejoin. -- gq quit
 				"You have now joined Global Quest # 4685. See 'help gquest' for available commands.", "You may win 2 more gquests at this level.", "You can be rewarded for 50 more kills this level."
 		]]--
@@ -429,15 +416,13 @@
 						"Updated the green for secondary note colors to a light blue.",
 					},
 				},
-<<<<<<< Updated upstream
-=======
+
 		[5.71] = {
 					features = {
 						"Added optional 'x' to 'ms' and 'mgo'. Players can now use either 'xms|xmgo' or 'ms|mgo' for mob searches."
 						"Added command line arguments of 'min(imize)|collapse' and 'max(imize)|expand' to 'xset win'.
 					}
-		}
->>>>>>> Stashed changes
+			},
 	}
 
 
@@ -630,11 +615,9 @@
 			DebugNote("No updates to show in changelog")
 			return
 		end
-<<<<<<< Updated upstream
-		table.sort(versions)
-=======
+
+		--table.sort(versions)
 		table.sort(versions, function(a, b) return a > b end)
->>>>>>> Stashed changes
 
 		local function write_notes(lines)
 			for i, line in ipairs(lines) do
@@ -4850,25 +4833,20 @@ function xset_ToggleWindowDisplay(name, line, wildcards)
 		elseif (arg == "off") or (arg == "hide") or (arg == "0") then
 			WindowShow(win, false)
 			SetVariable("mcvar_xgui_window_onoff", "off")
-<<<<<<< Updated upstream
-		end
-	end
-=======
-        else
-            if (arg == "max") or (arg == "maximize") or (arg == "expand") then
-                win_state = "max"
-                win_height = win_height_max
-            elseif (arg == "min") or (arg == "minimize") or (arg == "collapse") then
-                win_state = "min"
-                win_height = win_height_min
-            end
+        	else
+        	    	if (arg == "max") or (arg == "maximize") or (arg == "expand") then
+                		win_state = "max"
+                		win_height = win_height_max
+            		elseif (arg == "min") or (arg == "minimize") or (arg == "collapse") then
+                		win_state = "min"
+                		win_height = win_height_min
+            		end
 
-            WindowResize(win, win_width, win_height, ColourNameToRGB("black"))
-            xg_draw_window()
-            Redraw()
-        end
+            		WindowResize(win, win_width, win_height, ColourNameToRGB("black"))
+            		xg_draw_window()
+            		Redraw()
+        	end
 end
->>>>>>> Stashed changes
 
 	function deprecated_xset_font_size()
 		InfoNote("Changing font size is now done by right clicking on the title bar of the targets window and choosing 'Change Font'\n")
@@ -5189,8 +5167,6 @@ end
 		if debug_mode == "on" then
 			ColourTell(NOTE_COLORS.DEBUG_HIGHLIGHT, "", "DEBUG: ")
 			print_alternating_note({...}, NOTE_COLORS.DEBUG, NOTE_COLORS.DEBUG_HIGHLIGHT)
-<<<<<<< Updated upstream
-=======
 		end
 	end
 
@@ -5201,7 +5177,6 @@ end
 		for i, message in ipairs(messages) do
 			ColourTell(current_color, background, message)
 			current_color, other_color = other_color, current_color
->>>>>>> Stashed changes
 		end
 		print("")
 	end
@@ -7114,11 +7089,7 @@ end
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" >
 				<send>	win_init = false	</send> </alias>
 
-<<<<<<< Updated upstream
-	<alias	match="^xset (?:window|win) (?<onoff>on|off|show|hide|0|1|true|false)$"
-=======
 	<alias	match="^xset (?:window|win) (?<onoff>on|off|show|hide|0|1|true|false|min(?:imize)?|collapse|max(?:imize)?|expand)$"
->>>>>>> Stashed changes
 			script="xset_ToggleWindowDisplay"
 			enabled="y" regexp="y" sequence="100" > </alias>
 
@@ -7186,7 +7157,7 @@ end
 
 <!-- New commands -->
   <alias
-   match="^m(?:ob)?s(?:earch)? ([\p{P}\w]+)(?:\s([^0-9]+))?(?:\s+(\d+))?$"
+   match="^x?m(?:ob)?s(?:earch)? ([\p{P}\w]+)(?:\s([^0-9]+))?(?:\s+(\d+))?$"
    enabled="y"
    group="Mob_Database"
    regexp="y"
@@ -7196,7 +7167,7 @@ end
   </alias>
 
   <alias
-   match="^mgo(?:to)? (\d+)$"
+   match="^x?mgo(?:to)? (\d+)$"
    enabled="y"
    regexp="y"
    script="mobGo"

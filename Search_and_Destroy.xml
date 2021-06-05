@@ -609,7 +609,7 @@
 			DebugNote("No updates to show in changelog")
 			return
 		end
-		table.sort(versions, function(a, b) return a > b end)
+		table.sort(versions)
 
 		local function write_notes(lines)
 			for i, line in ipairs(lines) do

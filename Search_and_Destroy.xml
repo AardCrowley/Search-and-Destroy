@@ -35,11 +35,12 @@
 <script>
 <![CDATA[
 --Line 152
-	--[[ This script was originally improved upon by Starling. Credit is due to Starling for the great job she did in the past. In order to ensure future compliance with Aardwolf
-	     and MUSHclient, maintenance will now be provided by Crowley and Naricain. If you have any questions, feel free to shoot us a message on Personal or through tells. We'll
-		 make changes as we see fit to the code. // Crowley and Naricain
+	-- This script was originally improved upon by Starling. Credit is due to Starling for the job she did on the plugin in the past, but in order to ensure future compliance with Aardwolf and MUSHclient, maintenance will now be provided by me. If you have any questions, feel free to shoot me a message on Personal or through tells. I'll make changes as I see fit to the code. // Crowley
 
-	 ToDo List:
+	--[[ ToDo List:
+		* Add ability to keyword mobs, tie in with mob database
+		* Change way XRT works - if no shortname found, run to best matching area
+
 		Fix gq: You are no longer part of Global Quest # 4683 and will be unable to rejoin. -- gq quit
 				"You have now joined Global Quest # 4685. See 'help gquest' for available commands.", "You may win 2 more gquests at this level.", "You can be rewarded for 50 more kills this level."
 		]]--
@@ -416,13 +417,6 @@
 						"Updated the green for secondary note colors to a light blue.",
 					},
 				},
-
-		[5.71] = {
-					features = {
-						"Added optional 'x' to 'ms' and 'mgo'. Players can now use either 'xms|xmgo' or 'ms|mgo' for mob searches."
-						"Added command line arguments of 'min(imize)|collapse' and 'max(imize)|expand' to 'xset win'.
-					}
-			},
 	}
 
 
@@ -458,7 +452,7 @@
 -- [[ Plugin installation ]]
 	function OnPluginInstall()
 		ColourNote("#808080", "", "\n+=================================================================+")
-		ColourNote("#FF3000", "", "    " .. current_sd_version .. " installed at " .. os.date() )
+		ColourNote("#FF3000", "", "    " .. current_sd_version .. " installed at " .. os.time() )
 		print("")
 		ColourNote("#FF3000", "", "    " .. "For support, contact Crowley and Naricain" )
 		ColourNote("#FF3000", "", "    " .. "Note: It's beneficial to run 'xset index areas' if you have never run it before." )
@@ -615,9 +609,7 @@
 			DebugNote("No updates to show in changelog")
 			return
 		end
-
-		--table.sort(versions)
-		table.sort(versions, function(a, b) return a > b end)
+		table.sort(versions)
 
 		local function write_notes(lines)
 			for i, line in ipairs(lines) do
@@ -4825,7 +4817,7 @@ end
 		mouseup_drag(0, "hsMaximize")
 	end
 
-function xset_ToggleWindowDisplay(name, line, wildcards)
+	function xset_ToggleWindowDisplay(name, line, wildcards)
 		local arg = wildcards.onoff
 		if (arg == "on") or (arg == "show") or (arg == "1") then
 			WindowShow(win, true)
@@ -4833,20 +4825,8 @@ function xset_ToggleWindowDisplay(name, line, wildcards)
 		elseif (arg == "off") or (arg == "hide") or (arg == "0") then
 			WindowShow(win, false)
 			SetVariable("mcvar_xgui_window_onoff", "off")
-        	else
-        	    	if (arg == "max") or (arg == "maximize") or (arg == "expand") then
-                		win_state = "max"
-                		win_height = win_height_max
-            		elseif (arg == "min") or (arg == "minimize") or (arg == "collapse") then
-                		win_state = "min"
-                		win_height = win_height_min
-            		end
-
-            		WindowResize(win, win_width, win_height, ColourNameToRGB("black"))
-            		xg_draw_window()
-            		Redraw()
-        	end
-end
+		end
+	end
 
 	function deprecated_xset_font_size()
 		InfoNote("Changing font size is now done by right clicking on the title bar of the targets window and choosing 'Change Font'\n")
@@ -5168,17 +5148,6 @@ end
 			ColourTell(NOTE_COLORS.DEBUG_HIGHLIGHT, "", "DEBUG: ")
 			print_alternating_note({...}, NOTE_COLORS.DEBUG, NOTE_COLORS.DEBUG_HIGHLIGHT)
 		end
-	end
-
-	function print_alternating_note(messages, regular_color, highlight_color, background)
-		local current_color, other_color = regular_color, highlight_color
-		background = background or ""
-
-		for i, message in ipairs(messages) do
-			ColourTell(current_color, background, message)
-			current_color, other_color = other_color, current_color
-		end
-		print("")
 	end
 
 	function print_alternating_note(messages, regular_color, highlight_color, background)
@@ -7089,7 +7058,7 @@ end
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" >
 				<send>	win_init = false	</send> </alias>
 
-	<alias	match="^xset (?:window|win) (?<onoff>on|off|show|hide|0|1|true|false|min(?:imize)?|collapse|max(?:imize)?|expand)$"
+	<alias	match="^xset (?:window|win) (?<onoff>on|off|show|hide|0|1|true|false)$"
 			script="xset_ToggleWindowDisplay"
 			enabled="y" regexp="y" sequence="100" > </alias>
 

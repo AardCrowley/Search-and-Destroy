@@ -1,5 +1,12 @@
 # CHANGELOG
 
+**v5.72**<br>
+*fix* : Fixed a bug where disabling/enabling the settings button and then click on one of the other buttons would cause a copy to appear offset.<br>
+
+**v5.71**<br>
+*feature* : 'xset win' now accepts 'min(imize)', 'collapse', 'max(imize)', and 'expand' as optional arguments to shrink or expand the window.<br>
+*change* : Added an optional leading 'x' to 'ms' and 'mgo'.<br>
+
 **v5.7**<br>
 *feature* : The mob database is used to more intelligently track down nohunt and nowhere mobs.<br>
 *feature* : Added an in-game changelog.<br>

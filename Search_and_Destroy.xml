@@ -228,7 +228,7 @@
 
 	NOTE_COLORS = {
 		INFO 					= "#FF5000",
-		INFO_HIGHLIGHT 			= "#00C040",
+		INFO_HIGHLIGHT 			= "#00B4E0",
 
 		IMPORTANT 				= "#FFFFFF",
 		IMPORTANT_HIGHLIGHT 	= "#00FF00",
@@ -563,6 +563,7 @@
 			changes_to_show = CHANGELOG
 		elseif last_installed_version then
 			last_installed_version = tonumber(last_installed_version)
+			DebugNote("Last installed version ", last_installed_version)
 
 			for version, notes in pairs(CHANGELOG) do
 				if version > last_installed_version then
@@ -586,17 +587,17 @@
 	end
 
 	function display_changes(changes_to_show)
+		local line_width = 80
 		local versions = {}
 		for version, notes in pairs(changes_to_show) do
 			table.insert(versions, version)
 		end
 		if #versions == 0 then
-			Note("No versions")
+			DebugNote("No updates to show in changelog")
 			return
 		end
 		table.sort(versions, function(a, b) return a > b end)
 
-		local output = {}
 		local function write_notes(lines)
 			for i, line in ipairs(lines) do
 				local indent_length = line:match("^>") and 8 or 4
@@ -604,39 +605,42 @@
 				local indent = string.rep(" ", indent_length)
 				local indent1 = string.rep(" ", indent_length - 4) .. "  * "
 
-				line = helpWrap(line, 76, indent, indent1):gsub("\n", "\r\n" .. indent)
-				table.insert(output, line)
+				line = helpWrap(line, 76, indent, indent1):gsub("\n", "\n" .. indent)
+				ColourNote(NOTE_COLORS.INFO, "", line)
 			end
 		end
 
+		InfoNote(string.rep("=", 25), " Search and Destroy Changelog ", string.rep("=", 25), "\n")
 		for i, version in ipairs(versions) do
-			local head = string.format("*** Version %s ***", tostring(version))
+			local head = string.format(" Version %s ", tostring(version))
+			ColourTell(NOTE_COLORS.INFO, "", "===")
+			ColourTell(NOTE_COLORS.INFO_HIGHLIGHT, "", head)
+			ColourNote(NOTE_COLORS.INFO, "", string.rep("=", line_width - #head - 3))
 			local notes = changes_to_show[version]
-			table.insert(output, head)
-			table.insert(output, "")
 
 			if notes.features then
-				table.insert(output, "FEATURES:")
+				ColourNote(NOTE_COLORS.INFO_HIGHLIGHT, "", "FEATURES:")
 				write_notes(notes.features)
-				table.insert(output, "")
+				print("")
 			end
 
 			if notes.changes then
-				table.insert(output, "CHANGES:")
+				ColourNote(NOTE_COLORS.INFO_HIGHLIGHT, "", "CHANGES:")
 				write_notes(notes.changes)
-				table.insert(output, "")
+				print("")
 			end
 
 			if notes.fixes then
-				table.insert(output, "FIXES:")
+				ColourNote(NOTE_COLORS.INFO_HIGHLIGHT, "", "FIXES:")
 				write_notes(notes.fixes)
-				table.insert(output, "")
+				print("")
 			end
-			table.insert(output, "\r\n")
+			print("")
 		end
 
-		utils.editbox("", "Changelog", table.concat(output, "\r\n"), win_font, win_font_size,
-			{ read_only = true, cancel_button = "Close" , prompt_height = 12, box_width = 1000})
+		if changes_to_show ~= CHANGELOG then
+			InfoNote("To see changes from all versions select ", "Changelog", " from the settings menu in the S&D window.\n")
+		end
 	end
 
 	local init_called = 0

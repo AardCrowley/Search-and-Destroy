@@ -1,5 +1,9 @@
 # CHANGELOG
 
+**v5.71**<br>
+*feature* : Can now shrink or expand the snd window with `xset win &lt;min(imize)|max(imize)|collapse|expand&gt;.
+*change*  : There is an optional leading `x` to the `ms` and `mgo` comamnds.<br>
+
 **v5.7**<br>
 *feature* : The mob database is used to more intelligently track down nohunt and nowhere mobs.<br>
 *feature* : Added an in-game changelog.<br>

@@ -92,6 +92,9 @@ Commands:<br>
 **xset nx &lt;conscan|con|scan|scanhere|qs|none&gt;**<br>
 	&gt;Set the action to take upon arriving in a <br>
 	&gt;room via 'nx' or 'go'.<br>
+**&lt;xset con_overwrite&gt;**<br>
+	&gt;Toggle the updated consider display with.<br>
+	&gt;level ranges and target tags.<br>
 **&lt;xrt|xrun&gt;&lt;area&gt;**<br>
 	&gt;Runs to the area matching the argument.<br>
 <br>

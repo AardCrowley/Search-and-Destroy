@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.67" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="5.7" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley, branched from Starling" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -402,6 +402,19 @@
 		[5.66] ={
 					fixes = {
 						"A previous change broke the 'xm' command. It should be fixed now.",
+					},
+				},
+		[5.7] =	{
+					features = {
+						"The mob database is used to more intelligently track down nohunt and nowhere mobs.",
+						"Added an in-game changelog (you're looking at it!)",
+						"Added an option to hide the settings button from the targets window.",
+						"Added the option 'xset con_overwrite' that disables the updated consider results, primarily for when another plugin is doing the same thing."
+					},
+					changes = {
+						"Added a link to the help in the settings menu.",
+						"Changed note colors to be more consistent.",
+						"Updated the green for secondary note colors to a light blue.",
 					},
 				},
 	}

@@ -1,4 +1,9 @@
 {
+    "5.75": {
+        "changes": [
+            "Automatically will perform 'xset index areas' upon plugin installation if it has never been run before."
+        ]
+    },
     "5.74": {
         "changes": [
             "Changed how changelog is accessed.",

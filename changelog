@@ -1,167 +1,139 @@
-[[
-[5.74] =    {
-                    changes =   {
-                        "Reintroduced kill counting and made it smarter at detecting kills.",
-                    },
-                },
-
-    [5.73] =    {
-                    features =  {
-                        "Can now type 'snd changelog' to show this changelog."
-                    },
-                    changes = {
-                        "Code cleanup."
-                    }
-                },
-
-    [5.72] =    {
-                   changes =   {
-                     "Shorten table widths so they're at most 80 characters."
-                    },  
-                    fixes   =   {
-                        "Fixed a bug where disabling/enabling the settings button and then clicking one of the other buttons would cause a copy to appear offset.",
-                        "Fixed 'xset kw' breaking after using 'qw' or 'ht'.",
-                    },
-                },
-
-    [5.71] =    {
-                    features = {
-                        "'xset win' now accepts 'min(imize)', 'collapse', 'max(imize)', and 'expand' as optional arguments to shrink or expand the window."
-                    },
-                    changes = {
-                        "Added an optional leading 'x' to 'ms' and 'mgo'."
-                    }
-                }, 
-
-    [5.7] =	    {
-                    features = {
-                        "The mob database is used to more intelligently track down nohunt and nowhere mobs.",
-                        "Added an in-game changelog (you're looking at it!)",
-                        "Added an option to hide the settings button from the targets window.",
-                        "Added the option 'xset con_overwrite' that disables the updated consider results, primarily for when another plugin is doing the same thing."
-                    },
-                    changes = {
-                        "Added a link to the help in the settings menu.",
-                        "Changed note colors to be more consistent.",
-                        "Updated the green for secondary note colors to a light blue.",
-                    },
-                },
-
-    [5.67] =    {
-                    fixes = {
-                        "A previous change broke the 'xm' command. It should be fixed now.",
-                    },
-                },                
-
-    [5.66] =    {
-                    features = {
-                        "Added a settings button to the target list. It opens the same menu as right clicking on the top bar, this should just be more discoverable.",
-                        "When setting quick kill command, can optionally add 'notarg' to the command to prevent snd from attaching a target to your command. This is useful if you have plugin or script that already captures the mob's name and an alias to act upon it. Probably a niche feature, but it is added for the few that can find it helpful.",
-    
-                    },
-                    changes = {
-                        "Beautify and improve tables shown in the mud. No underlines, adding alternating background colors (customizable), show room notes on the rooms table.",
-                    },
-                },
-
-    [5.65] =    {
-                    features = {
-                        "Added the ability to customize the target window colors. You can do this by right clicking on the top of the window and selecting a color in the 'Change colors' submenu.",
-    
-                    },
-                    changes = {
-                        "Tweak version checking behaviour.",
-                    },
-                },
-
-    [5.63] =    {
-                    features = {
-                        "Added more customization options for the action to take when arriving in a room via nx or go. Use 'help xset nx' for details. The 'xset autocon' option was removed as this is much more flexible.",
-                        "Added the ability to customize the target window font. You can do this by right clicking on the top of the window and choosing 'Change font'.",
-                        "Search & Destroy will automatically check for new updates every hour and prompt you to get the update. This can be disabled with 'snd check_update'.",
-                        "Add a line between quest targets and campaign/gquest targets."
-    
-                    },
-                    fixes = {
-                        "Downloading sounds should now work.",
-                        "Initialize the hide windows setting so people's windows don't disappear on update.",
-                    },
-                },
-
-    [5.62] = {
-                    features = {
-                        "Will now automatically download the sounds set up by Naricain for snd events.",
-                        "Changes to the sorting of room-based CPs and GQs to better highlight when a particular area is likely to have your target and when it is not when more than one area matches. It also makes it more clear when there are multiple, possible targets in different areas."
-                    },
-                    fixes = {
-                        "Some time ago, a change was made to how MUSHclient handled GMCP data. This was never reflected in SnD, so it broke a few things, namely 'xq' and 'noexp'. This has now been fixed."
-                    },
-                },
-
-    [5.61] =    {
-                    features = {
-                        "Will now automatically download the sounds set up by Naricain for snd events.",
-                        "Changes to the sorting of room-based CPs and GQs to better highlight when a particular area is likely to have your target and when it is not when more than one area matches. It also makes it more clear when there are multiple, possible targets in different areas."
-                    },
-                    fixes = {
-                        "Some time ago, a change was made to how MUSHclient handled GMCP data. This was never reflected in SnD, so it broke a few things, namely 'xq' and 'noexp'. This has now been fixed."
-                    },
-                },
-
-    [5.6] =	    {
-                    features = {
-                        "Ability to change mob keywords with 'xset kw <mob name>'. When given a mob name it will update the keyword for the currently targeted mob. Without supplying a mob name it will open a series of dialog boxes to rename any mob.",
-                        "Reorder the list of rooms to look for a mob based on the number of times you have seen it there already.",
-                        "Scan and consider improvements:",
-                        ">Added a new setting, 'xset autocon', to enable automatically doing a consider when travelling to a room with 'nx' or 'go'. If your current target is not found it will then perform a scan. Any mobs found in the current room are added to the mobs database.",
-                        ">Tag mobs in scan and consider with [GQ] when part of a gquest, [CP] when part of a campaign, and [Q] when part of a quest",
-                        ">If autocon is disabled, it will now perform a full scan instead of a quick scan. The new tags should make this more informative.",
-                        ">Play a sound when your current target is found in the current room (via scan or consider), a different sound when a non-active target is found in the current room, and a third sound if a target is found nearby according to scan. Toggled with 'xset sound' and expects soundpack to be enabled for full functionality.",
-                        "Quest targets show up in the target window when you're on a quest, and quest status shows up when you've either killed the target or when you can take a quest.",
-                        "'xcp' with no arguments optionally targets the quest mob. Toggle this behaviour with 'xcp quest'",
-                        "New command 'xqt' will target the quest mob",
-                    },
-                    fixes = {
-                        "Migrating Pwar's database should be nearly instantaneous."
-                    },
-                },
-
-    [5.5] =	    {
-                    features = {
-                        "'xhelp summary' will provide a summary of all commands. For more details, visit each help file.",
-                    },
-                    fixes = {
-                        "Migrating Pwar's database would not work because the SnDdb database was not created yet. Fixed.",
-                        "Quick kill commands would not accept multiple word commands.",
-                    },
-                },
-
-    [5.4] =	    {
-                    fixes = {
-                        "The quick kill command was not executing single letter commands. Now fixed.",
-                    },
-                },
-
-    [5.3] =	    {
-                    fixes = {
-                        "Fixed (hopefully) instances where the mob is killed in one hit and not added to mob database.",
-                    },
-                },
-
-    [5.2] =	    {
-                    fixes = {
-                        "Fixed indexing error bugs.",
-                        "Added 'ak' back to the public version and fixed the bug that would split commands erroneously.",
-                    },
-                },
-
-    [5.0] = 	{
-                    features = {
-                        "Added long-awaited mob database!",
-                        "Added 'snd reload' so you do not have to open Plugins to reinstall.",
-                    },
-                    changes = {
-                        "Changed how the help files look. See 'xhelp' for more info."
-                    },
-                },
-]]
+"5.73": {
+    "features": [
+        "Can now type 'snd changelog' to show this changelog."
+    ],
+    "changes": [
+        "Some code cleanup."
+    ]
+},
+"5.72": {
+    "fixes": [
+        "Fixed a bug where disabling/enabling the settings button and then click on one of the other buttons would cause a copy to appear offset.",
+        "Fix 'xset kw' breaking after using 'qw' or 'ht'."
+    ],
+    "changes": [
+        "Shorten table widths so they're at most 80 characters."
+    ]
+},
+"5.71": {
+    "features": [
+        "'xset win' now accepts 'min(imize)', 'collapse', 'max(imize)', and 'expand' as optional arguments to shrink or expand the window."
+    ],
+    "changes": [
+        "Added an optional leading 'x' to 'ms' and 'mgo'."
+    ]
+},
+"5.7": {
+    "features": [
+        "The mob database is used to more intelligently track down nohunt and nowhere mobs.",
+        "Added an in-game changelog (you're looking at it!)",
+        "Added an option to hide the settings button from the targets window.",
+        "Added the option 'xset con_overwrite' that disables the updated consider results, primarily for when another plugin is doing the same thing."
+    ],
+    "changes": [
+        "Added a link to the help in the settings menu.",
+        "Changed note colors to be more consistent.",
+        "Updated the green for secondary note colors to a light blue."
+    ]
+},
+"5.67": {
+        "fixes": [
+            "A previous change broke the 'xm' command. It should be fixed now."
+        ]
+    },
+"5.65": {
+        "features": [
+            "Added the ability to customize the target window colors. You can do this by right clicking on the top of the window and selecting a color in the 'Change colors' submenu."
+        ],
+        "changes": [
+            "Tweak version checking behaviour."
+        ]
+    },
+"5.63": {
+        "features": [
+            "Added more customization options for the action to take when arriving in a room via nx or go. Use 'help xset nx' for details. The 'xset autocon' option was removed as this is much more flexible.",
+            "Added the ability to customize the target window font. You can do this by right clicking on the top of the window and choosing 'Change font'.",
+            "Search & Destroy will automatically check for new updates every hour and prompt you to get the update. This can be disabled with 'snd check_update'.",
+            "Add a line between quest targets and campaign/gquest targets."
+        ],
+        "fixes": [
+            "Downloading sounds should now work.",
+            "Initialize the hide windows setting so people's windows don't disappear on update."
+        ]
+    },
+"5.62": {
+        "features": [
+            "Will now automatically download the sounds set up by Naricain for snd events.",
+            "Changes to the sorting of room-based CPs and GQs to better highlight when a particular area is likely to have your target and when it is not when more than one area matches. It also makes it more clear when there are multiple, possible targets in different areas."
+        ],
+        "fixes": [
+            "Some time ago, a change was made to how MUSHclient handled GMCP data. This was never reflected in SnD, so it broke a few things, namely 'xq' and 'noexp'. This has now been fixed."
+        ]
+    },
+"5.61": {
+        "features": [
+            "Will now automatically download the sounds set up by Naricain for snd events.",
+            "Changes to the sorting of room-based CPs and GQs to better highlight when a particular area is likely to have your target and when it is not when more than one area matches. It also makes it more clear when there are multiple, possible targets in different areas."
+        ],
+        "fixes": [
+            "Some time ago, a change was made to how MUSHclient handled GMCP data. This was never reflected in SnD, so it broke a few things, namely 'xq' and 'noexp'. This has now been fixed."
+        ]
+    },
+"5.6": {
+        "features": [
+            "Ability to change mob keywords with 'xset kw <mob name>'. When given a mob name it will update the keyword for the currently targeted mob. Without supplying a mob name it will open a series of dialog boxes to rename any mob.",
+            "Reorder the list of rooms to look for a mob based on the number of times you have seen it there already.",
+            "Scan and consider improvements:",
+            ">Added a new setting, 'xset autocon', to enable automatically doing a consider when travelling to a room with 'nx' or 'go'. If your current target is not found it will then perform a scan. Any mobs found in the current room are added to the mobs database.",
+            ">Tag mobs in scan and consider with [GQ] when part of a gquest, [CP] when part of a campaign, and [Q] when part of a quest",
+            ">If autocon is disabled, it will now perform a full scan instead of a quick scan. The new tags should make this more informative.",
+            ">Play a sound when your current target is found in the current room (via scan or consider), a different sound when a non-active target is found in the current room, and a third sound if a target is found nearby according to scan. Toggled with 'xset sound' and expects soundpack to be enabled for full functionality.",
+            "Quest targets show up in the target window when you're on a quest, and quest status shows up when you've either killed the target or when you can take a quest.",
+            "'xcp' with no arguments optionally targets the quest mob. Toggle this behaviour with 'xcp quest'",
+            "New command 'xqt' will target the quest mob"
+        ],
+        "fixes": [
+            "Migrating Pwar's database should be nearly instantaneous."
+        ]
+    },
+"5.5":
+    {
+        "features":
+        [
+            "'xhelp summary' will provide a summary of all commands. For more details, visit each help file."
+        ],
+        "fixes":
+        [
+            "Migrating Pwar's database would not work because the SnDdb database was not created yet. Fixed.",
+            "Quick kill commands would not accept multiple word commands."
+        ]
+    },
+"5.4": {
+        "fixes": [
+            "The quick kill command was not executing single letter commands. Now fixed."
+        ]
+    },
+"5.3": {
+        "fixes": [
+            "Fixed (hopefully) instances where the mob is killed in one hit and not added to mob database."
+        ]
+    },
+"5.2": {
+        "fixes": [
+            "Fixed indexing error bugs.",
+            "Added 'ak' back to the public version and fixed the bug that would split commands erroneously."
+        ]
+    },
+"5":
+    {
+        "features":
+        [
+            "Added long-awaited mob database!",
+            "Added 'snd reload' so you do not have to open Plugins to reinstall."
+        ],
+        "changes":
+        [
+            "Changed how the help files look. See 'xhelp' for more info."
+        ]
+    },
+}

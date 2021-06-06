@@ -5255,7 +5255,7 @@ end
 	end
 
 	function download_sounds(callback)
-		local download_path = "https://raw.githubusercontent.com/AardNaricain/Search-and-Destroy/download-sounds/%s"
+		local download_path = soundsURL
 		local sounds = {
 			other_target_here_sound,
 			target_nearby_sound,

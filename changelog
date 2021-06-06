@@ -75,12 +75,9 @@
     },
     "5.62": {
         "features": [
-            "Will now automatically download the sounds set up by Naricain for snd events.",
-            "Changes to the sorting of room-based CPs and GQs to better highlight when a particular area is likely to have your target and when it is not when more than one area matches. It also makes it more clear when there are multiple, possible targets in different areas."
+            "Toggling 'xset win on|off' never saved across reloads. This has been changed. Whether this is a fix or a feature, I couldn't tell you.",
+            "There is a new, hidden command of 'snd force update' that will redownload the current version from the website. This can be used if you think you *accidentally* made changes to your copy of snd that broke it."
         ],
-        "fixes": [
-            "Some time ago, a change was made to how MUSHclient handled GMCP data. This was never reflected in SnD, so it broke a few things, namely 'xq' and 'noexp'. This has now been fixed."
-        ]
     },
     "5.61": {
         "features": [

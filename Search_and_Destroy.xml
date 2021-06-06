@@ -297,7 +297,7 @@
 
     versionURL      = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/VERSION"
 	pluginURL       = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/%s/Search_and_Destroy.xml"
-	changelogURL    = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/blob/v%s/changelog"
+	changelogURL    = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/v%s/changelog"
 	soundsURL       = "https://raw.githubusercontent.com/AardNaricain/Search-and-Destroy/download-sounds/%s"
 
 --	[[ Plugin broadcast/receive process ]]

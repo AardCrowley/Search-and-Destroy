@@ -5360,7 +5360,7 @@ end
 			"mark",
 			"index areas",
 			"silent",
-			"xm",
+			"xm|xmall|rlh",
 			"xmap",
 			"roomnote",
 			"qw",
@@ -5382,12 +5382,13 @@ end
 			"xcp",
 			"xcp mode",
 			"quest|xcp quest",
-			"ms|msearch",
-			"mgo|mgoto",
+			"ms|msearch|xms|xmsearch",
+			"mgo|mgoto|xmgo|xmgoto",
 			"snd migrate|mergePwar",
 			"snd update",
 			"snd reload",
 			"snd check_update",
+			"snd changelog",
 			"summary",
 		}
 
@@ -5453,7 +5454,7 @@ end
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("This command will turn the display of campaign or global quest targets in the main window on or off. Soneone once mentioned it was redudant to have it in both the miniwindow and the main window, so for the sake of spamreduce, this was included.")}))
 
-		elseif str == "rlh" then
+		elseif str == "xm" or str == "xmall" or str == "rlh" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xm <room name>")
 			ColourNote("antiquewhite", "", "        xmall <room name>")
 			ColourNote("antiquewhite", "", "        xm rlh <#>")
@@ -5580,14 +5581,14 @@ end
 			ColourNote("antiquewhite", "", unpack({helpWrap("Whenever Crowley announces a new version, this command will make it easy to update the Search & Destroy plugin.")}))
 
 		elseif str == "ms" or str == "msearch" then
-			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <ms|msearch> <here|area> <mob name>")
+			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <<x>ms|<x>msearch> <here|area> <mob name>")
 			Note()
-			ColourNote("antiquewhite", "", unpack({helpWrap("This command will search the mob database for the mob name supplied based on the area supplied (here, [area key], defaults to 'all' with no argument), returning the rooms the mob has been found, the area, and the times it has been found in that room.")}))
+			ColourNote("antiquewhite", "", unpack({helpWrap("This command will search the mob database for the mob name supplied based on the area supplied (here, [area key], defaults to 'all' with no argument), returning the rooms the mob has been found, the area, and the times it has been found in that room. The leading 'x' is optional.")}))
 
-		elseif str == "mgo" or str == "mgoto" then
-			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": mgo<to> <idx>")
+		elseif str == "mgo" or str == "mgoto" or str == "xmgo" or str == "xmgoto" then
+			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <x>mgo<to> <idx>")
 			Note()
-			ColourNote("antiquewhite", "", unpack({helpWrap("This command is used after searching for a mob and will go to the room provided by the index number.")}))
+			ColourNote("antiquewhite", "", unpack({helpWrap("This command is used after searching for a mob and will go to the room provided by the index number. The leading 'x' is optional.")}))
 
 		elseif str == "snd reload" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd reload")
@@ -5617,6 +5618,11 @@ end
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset sound")
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("Toggles sounds. Currently this is only used to signify that a target is in a nearby room as determined by scan, or that one of the targets on your campaign/gquest, but not your current target, is in the same room as you. For full functionality, the soundpack plugin is expected to be enabled.")}))
+
+		elseif str == "changelog" then
+			ColourNote("yellow", "", "Syntax", "antiquewhite", "", : snd changelog")
+			Note()
+			ColourNote("antiquewhite", "", unpack({helpWrap("Displays the entire changelog from oldest to newest top to bottom.")}))
 
 		elseif str == "summary" then
 		ColourNote("yellow", "", "Commands:")

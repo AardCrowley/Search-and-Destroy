@@ -5141,7 +5141,12 @@ end
 	end
 
 	function force_update_plugin(name, line, wildcards)
-		local branch = wildcards.branch or "master"
+		local branch == "master"
+
+		if wildcards.branch ~= "" then
+			branch = wildcards.branch
+		end
+
 		DebugNote("Forcing update from ", branch)
 		download_plugin(branch, callback_update_plugin)
 	end

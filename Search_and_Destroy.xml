@@ -341,6 +341,10 @@
 		xg_create_window()
 
 		migrate_database()
+        if not GetVariable("index_already_checked") then
+            area_index_process()
+            SetVariable("index_already_checked", "done")
+        end
 		download_sounds(function() end)
 		--show_changelog(false)
         get_changelog(false)
@@ -1229,6 +1233,7 @@
 
 --	[[ Area index process ]]
 	function area_index_process()
+        DebugNote("Processing area index")
 		Execute("xset suspend page size")
 		DoAfterSpecial(0.1, [[ SendNoEcho("areas 1 300 keyword") ]], sendto.script)
 	end

@@ -434,7 +434,7 @@
 					features = {
 							"Can now type 'snd changelog' to show this changelog."
 					},
-					misc = {
+					changes = {
 						"Some code cleanup."
 					}
 		},

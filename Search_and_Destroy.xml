@@ -430,6 +430,14 @@
 						"Fix 'xset kw' breaking after using 'qw' or 'ht'.",
 					},
 		},
+		[5.73] = {
+					features = {
+							"Can now type 'snd changelog' to show this changelog."
+					},
+					misc = {
+						"Some code cleanup."
+					}
+		},
 	}
 
 

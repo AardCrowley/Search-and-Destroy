@@ -1,7 +1,8 @@
 {
     "5.75": {
         "changes": [
-            "Automatically will perform 'xset index areas' upon plugin installation if it has never been run before."
+            "Automatically will perform 'xset index areas' upon plugin installation if it has never been run before.",
+            "Added some missing help files. Whoops."
         ]
     },
     "5.74": {

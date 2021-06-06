@@ -1,5 +1,9 @@
 # CHANGELOG
 
+**v5.73**<br>
+*feature* : Can now type `snd changelog` as a command to show the entire changelog.
+*misc*    : Code cleanup.
+
 **v5.72**<br>
 *fix* : Fixed a bug where disabling/enabling the settings button and then click on one of the other buttons would cause a copy to appear offset.<br>
 *fix* : Fix `xset kw` breaking after using `qw` or `ht`.<br>

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.72" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley and Naricain" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="5.73" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley and Naricain" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -6577,17 +6577,6 @@ end
 		script=""
 		enabled="y" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="n" send_to="12" > </trigger>
 
-<!-- Xcp next -->
-	<trigger match="^Congratulations, that was one of your CAMPAIGN mobs\!$"
-		name="trg_xcp_next_cp_mob_killed" group="trg_auto"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
-			<send>	EnableTrigger("trg_xcp_next_cp", true) </send> </trigger>
-
-	<trigger match="^Congratulations, that was one of the GLOBAL QUEST mobs\!$"
-		name="trg_xcp_next_gq_mob_killed" group="trg_auto"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
-			<send>	EnableTrigger("trg_xcp_next_gq", true) </send> </trigger>
-
 <!-- QUICK WHERE -->
 	<trigger match="^(?<mobname>\w.{29}) (?<roomname>[^ (0-9].*)$"
 		script="qw_match"
@@ -7182,41 +7171,26 @@ end
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 <!-- New commands -->
-  <alias
-   match="^x?m(?:ob)?s(?:earch)? ([\p{P}\w]+)(?:\s([^0-9]+))?(?:\s+(\d+))?$"
-   enabled="y"
-   group="Mob_Database"
-   regexp="y"
-   script="onSearch"
-   sequence="100"
-  >
-  </alias>
+	<alias	match="^x?m(?:ob)?s(?:earch)? ([\p{P}\w]+)(?:\s([^0-9]+))?(?:\s+(\d+))?$"
+			script="onSearch"
+			group="Mob_Database"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
-  <alias
-   match="^x?mgo(?:to)? (\d+)$"
-   enabled="y"
-   regexp="y"
-   script="mobGo"
-   sequence="100"
-  >
-  </alias>
+	<alias 	match="^x?mgo(?:to)? (\d+)$"
+			script="mobGo"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+	
+	<alias 	match="^(snd migrate|mergePwar)$"
+			script="copyPwarWarn"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+	
+	<alias 	match="^(snd migrate|mergePwar) confirm$"
+			script="copyPwarDB"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
-  <alias
-	match="^(snd migrate|mergePwar)$"
-	enabled="y"
-	regexp="y"
-	script="copyPwarWarn"
-	sequence="100"
-  >
-	</alias>
 
-  <alias
-	match="^(snd migrate|mergePwar) confirm$"
-	enabled="y"
-	regexp="y"
-	script="copyPwarDB"
-	sequence="100"
-  >
-	</alias>
+	<alias	match="snd changelog"
+			enabled="y" sequence="100" ignore_case="y" send_to="10" >
+			<send>show_changelog(true)</send> </alias>
 </aliases>
 </muclient>

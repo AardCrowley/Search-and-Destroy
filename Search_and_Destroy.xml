@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.73" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley and Naricain" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="5.74" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley and Naricain" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -35,7 +35,7 @@
 <script>
 <![CDATA[
 --Line 152
-	--[[ This script was originally improved upon by Starling, and as such, she deserves credit for the work put into the plugin. In order to ensure future compliance 
+	--[[ This script was originally improved upon by Starling, and as such, she deserves credit for the work put into the plugin. In order to ensure future compliance
 	     with Aardwolf and MUSHclient, maintenance will now be provided by Crowley and Naricain. If you have any questions, feel free to shoot us a message on Personal
 		 or through tells. We will make changes as we see fit to the code. // Crowley and Naricain
 
@@ -48,6 +48,9 @@
 	require "serialize"
 	require "tprint"
 	require "wait"
+
+	json = require "json"
+
 
 	async_ok, async = pcall (require, "async")
 
@@ -71,6 +74,11 @@
 	local plugin_id_gmcp_mapper		= "b6eae87ccedd84f510b74714"
 	local plugin_id_z_order 		= "462b665ecb569efbf261422f"
 	local plugin_id_soundpack 		= "23832d1089f727f5f34abad8"
+
+	versionURL      = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/VERSION"
+	pluginURL       = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/%s/Search_and_Destroy.xml"
+	changelogURL    = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/changelog"
+	soundsURL       = "https://raw.githubusercontent.com/AardNaricain/Search-and-Destroy/download-sounds/%s"
 
 	notarg = (GetVariable("mcvar_quick_kill_notarg") == "true" or false)
 
@@ -293,153 +301,6 @@
 -- [[ S&D dev stuff ]]
 	local debug_mode = GetVariable("debug_mode") or "off"
 
-	local CHANGELOG = {
-		[5.0] = 	{
-					features = {
-						"Added long-awaited mob database!",
-						"Added 'snd reload' so you do not have to open Plugins to reinstall.",
-					},
-					changes = {
-						"Changed how the help files look. See 'xhelp' for more info."
-					},
-				},
-		[5.2] =	{
-					fixes = {
-						"Fixed indexing error bugs.",
-						"Added 'ak' back to the public version and fixed the bug that would split commands erroneously.",
-					},
-				},
-		[5.3] =	{
-					fixes = {
-						"Fixed (hopefully) instances where the mob is killed in one hit and not added to mob database.",
-					},
-				},
-		[5.4] =	{
-					fixes = {
-						"The quick kill command was not executing single letter commands. Now fixed.",
-					},
-				},
-		[5.5] =	{
-					features = {
-						"'xhelp summary' will provide a summary of all commands. For more details, visit each help file.",
-					},
-					fixes = {
-						"Migrating Pwar's database would not work because the SnDdb database was not created yet. Fixed.",
-						"Quick kill commands would not accept multiple word commands.",
-					},
-				},
-		[5.6] =	{
-					features = {
-						"Ability to change mob keywords with 'xset kw <mob name>'. When given a mob name it will update the keyword for the currently targeted mob. Without supplying a mob name it will open a series of dialog boxes to rename any mob.",
-						"Reorder the list of rooms to look for a mob based on the number of times you have seen it there already.",
-						"Scan and consider improvements:",
-						">Added a new setting, 'xset autocon', to enable automatically doing a consider when travelling to a room with 'nx' or 'go'. If your current target is not found it will then perform a scan. Any mobs found in the current room are added to the mobs database.",
-						">Tag mobs in scan and consider with [GQ] when part of a gquest, [CP] when part of a campaign, and [Q] when part of a quest",
-						">If autocon is disabled, it will now perform a full scan instead of a quick scan. The new tags should make this more informative.",
-						">Play a sound when your current target is found in the current room (via scan or consider), a different sound when a non-active target is found in the current room, and a third sound if a target is found nearby according to scan. Toggled with 'xset sound' and expects soundpack to be enabled for full functionality.",
-						"Quest targets show up in the target window when you're on a quest, and quest status shows up when you've either killed the target or when you can take a quest.",
-						"'xcp' with no arguments optionally targets the quest mob. Toggle this behaviour with 'xcp quest'",
-						"New command 'xqt' will target the quest mob",
-					},
-					fixes = {
-						"Migrating Pwar's database should be nearly instantaneous."
-					},
-				},
-		[5.61] ={
-					features = {
-						"Will now automatically download the sounds set up by Naricain for snd events.",
-						"Changes to the sorting of room-based CPs and GQs to better highlight when a particular area is likely to have your target and when it is not when more than one area matches. It also makes it more clear when there are multiple, possible targets in different areas."
-					},
-					fixes = {
-						"Some time ago, a change was made to how MUSHclient handled GMCP data. This was never reflected in SnD, so it broke a few things, namely 'xq' and 'noexp'. This has now been fixed."
-					},
-				},
-		[5.62] ={
-					features = {
-						"Will now automatically download the sounds set up by Naricain for snd events.",
-						"Changes to the sorting of room-based CPs and GQs to better highlight when a particular area is likely to have your target and when it is not when more than one area matches. It also makes it more clear when there are multiple, possible targets in different areas."
-					},
-					fixes = {
-						"Some time ago, a change was made to how MUSHclient handled GMCP data. This was never reflected in SnD, so it broke a few things, namely 'xq' and 'noexp'. This has now been fixed."
-					},
-				},
-		[5.63] ={
-					features = {
-						"Added more customization options for the action to take when arriving in a room via nx or go. Use 'help xset nx' for details. The 'xset autocon' option was removed as this is much more flexible.",
-						"Added the ability to customize the target window font. You can do this by right clicking on the top of the window and choosing 'Change font'.",
-						"Search & Destroy will automatically check for new updates every hour and prompt you to get the update. This can be disabled with 'snd check_update'.",
-						"Add a line between quest targets and campaign/gquest targets."
-
-					},
-					fixes = {
-						"Downloading sounds should now work.",
-						"Initialize the hide windows setting so people's windows don't disappear on update.",
-					},
-				},
-		[5.65] ={
-					features = {
-						"Added the ability to customize the target window colors. You can do this by right clicking on the top of the window and selecting a color in the 'Change colors' submenu.",
-
-					},
-					changes = {
-						"Tweak version checking behaviour.",
-					},
-				},
-		[5.66] ={
-					features = {
-						"Added a settings button to the target list. It opens the same menu as right clicking on the top bar, this should just be more discoverable.",
-						"When setting quick kill command, can optionally add 'notarg' to the command to prevent snd from attaching a target to your command. This is useful if you have plugin or script that already captures the mob's name and an alias to act upon it. Probably a niche feature, but it is added for the few that can find it helpful.",
-
-					},
-					changes = {
-						"Beautify and improve tables shown in the mud. No underlines, adding alternating background colors (customizable), show room notes on the rooms table.",
-					},
-				},
-		[5.66] ={
-					fixes = {
-						"A previous change broke the 'xm' command. It should be fixed now.",
-					},
-				},
-		[5.7] =	{
-					features = {
-						"The mob database is used to more intelligently track down nohunt and nowhere mobs.",
-						"Added an in-game changelog (you're looking at it!)",
-						"Added an option to hide the settings button from the targets window.",
-						"Added the option 'xset con_overwrite' that disables the updated consider results, primarily for when another plugin is doing the same thing."
-					},
-					changes = {
-						"Added a link to the help in the settings menu.",
-						"Changed note colors to be more consistent.",
-						"Updated the green for secondary note colors to a light blue.",
-					},
-				},
-		[5.71] = {
-					features = {
-						"'xset win' now accepts 'min(imize)', 'collapse', 'max(imize)', and 'expand' as optional arguments to shrink or expand the window."
-					},
-					changes = {
-						"Added an optional leading 'x' to 'ms' and 'mgo'."
-					}
-		},
-		[5.72] = {
-					changes = {
-						"Shorten table widths so they're at most 80 characters."
-					},
-					fixes = {
-						"Fixed a bug where disabling/enabling the settings button and then click on one of the other buttons would cause a copy to appear offset.",
-						"Fix 'xset kw' breaking after using 'qw' or 'ht'.",
-					},
-		},
-		[5.73] = {
-					features = {
-							"Can now type 'snd changelog' to show this changelog."
-					},
-					changes = {
-						"Some code cleanup."
-					}
-		},
-	}
-
 
 --	[[ Plugin broadcast/receive process ]]
 	function OnPluginBroadcast(msg, id, name, text)
@@ -473,7 +334,7 @@
 -- [[ Plugin installation ]]
 	function OnPluginInstall()
 		ColourNote("#808080", "", "\n+=================================================================+")
-		ColourNote("#FF3000", "", "    " .. current_sd_version .. " installed at " .. os.time() )
+		ColourNote("#FF3000", "", "    " .. current_sd_version .. " installed at " .. os.date() )
 		print("")
 		ColourNote("#FF3000", "", "    " .. "For support, contact Crowley and Naricain" )
 		ColourNote("#FF3000", "", "    " .. "Note: It's beneficial to run 'xset index areas' if you have never run it before." )
@@ -483,7 +344,8 @@
 
 		migrate_database()
 		download_sounds(function() end)
-		show_changelog(false)
+		--show_changelog(false)
+		get_changelog(false)
 	end
 
 	function migrate_database()
@@ -590,6 +452,7 @@
 		]])
 	end
 
+	--[[ Deprecated show_changelog
 	function show_changelog(all_changes)
 		local changes_to_show = {}
 
@@ -618,7 +481,7 @@
 
 		last_installed_version = PLUGIN_VERSION
 		SetVariable("last_installed_version", tostring(PLUGIN_VERSION))
-	end
+	end]]--
 
 	function display_changes(changes_to_show)
 		local line_width = 80
@@ -4820,7 +4683,8 @@ end
 		elseif result == "Help" then
 			Execute("xhelp")
 		elseif result == "Changelog" then
-			show_changelog(true)
+			--show_changelog(true)
+			get_changelog(true)
 		elseif result == nil or result == "" then
 			return
 		else
@@ -5187,11 +5051,11 @@ end
 
 	function xtest_debug(name, line, wildcards)
 		if debug_mode == "on" then
-			InfoNote("Debug mode ", "disabled\n")
+			DebugNote("Debug mode ", "disabled\n")
 			debug_mode = "off"
 		else
-			InfoNote("Debug mode ", "enabled\n")
 			debug_mode = "on"
+			DebugNote("Debug mode ", "enabled\n")
 		end
 		SetVariable("debug_mode", debug_mode)
 	end
@@ -5254,19 +5118,18 @@ end
 
 	function download_plugin(version, callback)
 		DebugNote("Downloading plugin version ", version)
-		local url = string.format("https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/%s/Search_and_Destroy.xml", version)
+		local url = string.format(pluginURL, version)
 		download_file(url, callback)
 	end
 
 	function download_version_file(callback, log_no_updates)
 		DebugNote("Attempting to download master")
-		local url = string.format("https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/VERSION")
+		local url = versionURL
 		download_file(url, check_version_callback(callback, log_no_updates))
 	end
 
 	function download_file(url, callback)
 		DebugNote("Starting download of ", url)
-		--async_ok, async = pcall (require, "async")
 		if async_ok then
 			plugin_page = async.doAsyncRemoteRequest(url, callback, "HTTPS")
 		else
@@ -5314,6 +5177,51 @@ end
 		Execute(GetAlphaOption("script_prefix") .. "DoAfterSpecial(1, \"ReloadPlugin('" .. GetPluginID() .. "')\", sendto.script)")
 		ImportantNote("Update complete!")
 	end -- end Update code
+
+	function get_changelog(all_changes)
+    	show_all_changes = all_changes or false
+    	DebugNote("Attempting to download changelog")
+    	download_file(changelogURL, show_changelog)
+	end
+
+	function show_changelog(retval, page, status, headers, full_status, request_url)
+		DebugNote("Page is defined as type ", type(page))
+    	if status ~= 200 then
+        	DebugNote("show_changelog got status ", status)
+        	ErrorNote("Error while fetching changelog")
+	        return
+    	end
+
+		local CHANGELOG = json.decode(page)
+
+    	local changes_to_show = {}
+
+	    if show_all_changes then
+	        changes_to_show = CHANGELOG
+    	elseif last_installed_version then
+        	last_installed_version = tonumber(last_installed_version)
+        	DebugNote("Last installed version ", last_installed_version)
+
+        	for version, notes in pairs(CHANGELOG) do
+        	    if tonumber(version) > tonumber(last_installed_version) then
+    	            changes_to_show[version] = notes
+	            end
+        	end
+    	else
+        	-- show only the latest changes
+        	local latest_change_num = -1
+        	for version, notes in pairs(CHANGELOG) do
+            	if tonumber(version) > latest_change_num then
+    	            latest_change_num = version
+	            end
+        	end
+	        changes_to_show[latest_change_num] = CHANGELOG[latest_change_num]
+    	end
+    	display_changes(changes_to_show)
+
+    	last_installed_version = PLUGIN_VERSION
+    	SetVariable("last_installed_version", tostring(PLUGIN_VERSION))
+	end
 
 	function show_update_banner(upstream_version)
 		ColourNote(NOTE_COLORS.INFO, "", "\n+=================================================================+")
@@ -6378,6 +6286,20 @@ end
 	function is_sound_enabled()
 		return xset_sound_onoff == "on"
 	end
+
+	local last_mob_damaged = nil
+	function trigger_receive_xp()
+		if last_mob_damaged then
+			DebugNote("I suspect you just killed ", last_mob_damaged, " in room ", current_room.rmid, " (", current_room.arid, ")")
+		else
+			ErrorNote("****** I don't know which mob you just killed***")
+		end
+		last_mob_damaged = nil
+	end
+
+	function trigger_damage_done(name, line, wildcards)
+		last_mob_damaged = Trim(wildcards.mob_name)
+	end
 ]]>
 </script>
 <triggers>
@@ -6876,6 +6798,243 @@ end
 	<trigger match="^[\s\S]*$"
 		name="trg_gag_everything"
 		enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="y" > </trigger>
+
+<!-- Receive xp -->
+	<trigger match="^You (?:don't )?receive \d+(?:\+\d+)* experience points\."
+		script="trigger_receive_xp" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+<!-- Damage triggers -->
+	<trigger match="^.+tickles +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+bruises +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+scratches +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+grazes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+nicks +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+scars +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+hits +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+injures +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+wounds +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+mauls +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+maims +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+mangles +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+mars +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+LACERATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+DECIMATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+DEVASTATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+ERADICATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+OBLITERATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+EXTIRPATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+INCINERATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+MUTILATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+DISEMBOWELS +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+MASSACRES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+DISMEMBERS +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+RENDS +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+- BLASTS - +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+-= DEMOLISHES =- +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\*\* SHREDS \*\* +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\*\*\*\* DESTROYS \*\*\*\* +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\*\*\*\*\* PULVERIZES \*\*\*\*\* +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+-=- VAPORIZES -=- +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+<-==-> ATOMIZES <-==-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+<-:-> ASPHYXIATES <-:-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+<-\*-> RAVAGES <-\*-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+<>\*<> FISSURES <>\*<> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+<\*><\*> LIQUIDATES <\*><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+<\*><\*><\*> EVAPORATES <\*><\*><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+<-=-> SUNDERS <-=-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+<=-=><=-=> TEARS INTO <=-=><=-=> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+<->\*<=> WASTES <=>\*<-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+<-\+-><-\*-> CREMATES <-\*-><-\+-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+<\*><\*><\*><\*> ANNIHILATES <\*><\*><\*><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+<--\*--><--\*--> IMPLODES <--\*--><--\*--> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+<-><-=-><-> EXTERMINATES <-><-=-><-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+<-==-><-==-> SHATTERS <-==-><-==-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+<\*><-:-><\*> SLAUGHTERS <\*><-:-><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+<-\*-><-><-\*-> RUPTURES <-\*-><-><-\*-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+<-\*-><\*><-\*-> NUKES <-\*-><\*><-\*-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+-<\[=-\+-=\]<:::<>:::> GLACIATES <:::<>:::>\[=-\+-=\]>- +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+<-=-><-:-\*-:-><\*--\*> METEORITES <\*--\*><-:-\*-:-><-=-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+<-:-><-:-\*-:-><-\*-> SUPERNOVAS <-\*-><-:-\*-:-><-:-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+does UN\w+ things to +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w damages +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +shreds +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +destroys +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +pulverizes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +vaporizes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +atomizes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +asphyxiates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +ravages +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +fissures +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +liquidates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +evaporates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +sunders +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +into +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +wastes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +cremates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +annihilates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +implodes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +exterminates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +shatters +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +slaughters +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +ruptures +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +nukes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +glaciates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +meteorites +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
+	<trigger match="^.+\w +supernovas +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+
 </triggers>
 
 <aliases>
@@ -7187,11 +7346,11 @@ end
 	<alias 	match="^x?mgo(?:to)? (\d+)$"
 			script="mobGo"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-	
+
 	<alias 	match="^(snd migrate|mergePwar)$"
 			script="copyPwarWarn"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-	
+
 	<alias 	match="^(snd migrate|mergePwar) confirm$"
 			script="copyPwarDB"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
@@ -7199,6 +7358,6 @@ end
 
 	<alias	match="snd changelog"
 			enabled="y" sequence="100" ignore_case="y" send_to="12" >
-			<send>show_changelog(true)</send> </alias>
+			<send>get_changelog(true)</send> </alias>
 </aliases>
 </muclient>

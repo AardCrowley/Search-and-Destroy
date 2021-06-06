@@ -4,7 +4,7 @@
             "Changed how changelog is accessed.",
             "Beta warning: Re-introduced kill logging into mob database. Improved mechanic, still a work-in-progress. Please notify us if anything wonky occurs. Type 'xtest debug' to display debug messages."
         ]
-    }
+    },
     "5.73": {
         "features": [
             "Can now type 'snd changelog' to show this changelog."

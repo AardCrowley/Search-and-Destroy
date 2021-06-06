@@ -7198,7 +7198,7 @@ end
 
 
 	<alias	match="snd changelog"
-			enabled="y" sequence="100" ignore_case="y" send_to="10" >
+			enabled="y" sequence="100" ignore_case="y" send_to="12" >
 			<send>show_changelog(true)</send> </alias>
 </aliases>
 </muclient>

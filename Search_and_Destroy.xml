@@ -297,7 +297,7 @@
 
     versionURL      = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/VERSION"
 	pluginURL       = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/%s/Search_and_Destroy.xml"
-	changelogURL    = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/changelog"
+	changelogURL    = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/blob/v%s/changelog"
 	soundsURL       = "https://raw.githubusercontent.com/AardNaricain/Search-and-Destroy/download-sounds/%s"
 
 --	[[ Plugin broadcast/receive process ]]
@@ -489,7 +489,7 @@
     function get_changelog(all_changes)
     	show_all_changes = all_changes or false
     	DebugNote("Attempting to download changelog")
-    	download_file(changelogURL, show_changelog)
+    	download_file(string.format(changelogURL, PLUGIN_VERSION), show_changelog)
 	end
 
 	function show_changelog(retval, page, status, headers, full_status, request_url)
@@ -511,7 +511,7 @@
         	DebugNote("Last installed version ", last_installed_version)
 
         	for version, notes in pairs(CHANGELOG) do
-        	    if tonumber(version) > tonumber(last_installed_version) and tonumber(version) <= PLUGIN_VERSION then
+        	    if tonumber(version) > tonumber(last_installed_version) then
     	            changes_to_show[version] = notes
 	            end
         	end
@@ -519,7 +519,7 @@
         	-- show only the latest changes
         	local latest_change_num = -1
         	for version, notes in pairs(CHANGELOG) do
-            	if tonumber(version) > latest_change_num and tonumber(version) <= PLUGIN_VERSION then
+            	if tonumber(version) > latest_change_num then
     	            latest_change_num = version
 	            end
         	end

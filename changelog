@@ -2,7 +2,7 @@
     "5.74": {
         "changes": [
             "Changed how changelog is accessed.",
-            "Re-introduced kill logging into mob database. Improved mechanic, still a work-in-progress. Please notify us if anything wonky occurs."
+            "Beta warning: Re-introduced kill logging into mob database. Improved mechanic, still a work-in-progress. Please notify us if anything wonky occurs."
         ]
     }
     "5.73": {

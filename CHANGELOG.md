@@ -2,6 +2,8 @@
 
 **v5.72**<br>
 *fix* : Fixed a bug where disabling/enabling the settings button and then click on one of the other buttons would cause a copy to appear offset.<br>
+*fix* : Fix `xset kw` breaking after using `qw` or `ht`.<br>
+*change* : Shorten table widths so they're at most 80 characters.<br>
 
 **v5.71**<br>
 *feature* : 'xset win' now accepts 'min(imize)', 'collapse', 'max(imize)', and 'expand' as optional arguments to shrink or expand the window.<br>

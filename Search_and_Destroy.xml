@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.71" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley and Naricain" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="5.72" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley and Naricain" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -420,6 +420,15 @@
 					changes = {
 						"Added an optional leading 'x' to 'ms' and 'mgo'."
 					}
+		},
+		[5.72] = {
+					changes = {
+						"Shorten table widths so they're at most 80 characters."
+					},
+					fixes = {
+						"Fixed a bug where disabling/enabling the settings button and then click on one of the other buttons would cause a copy to appear offset.",
+						"Fix 'xset kw' breaking after using 'qw' or 'ht'.",
+					},
 		},
 	}
 
@@ -1614,14 +1623,12 @@ end
 		local keyword = Trim(wildcards.keyword)
 		local area
 
-		if (short_mob_name == nil) or (short_mob_name == "") or (short_mob_name == "-1") or (short_mob_name == -1) then
-			InfoNote("\nSearch and Destroy: 'kw' has no target.  Use 'ht', 'qw', or 'xcp' to select a target, or use 'xset kw' with no arguments.")
+		if type(full_mob_name) ~= 'string' and xcp_index < 1 then
+			InfoNote("\nSearch and Destroy: 'kw' has no target.  Use 'xcp' to select a target, or use 'xset kw' with no arguments.")
 		else
-			if quest_target.mob and quest_target.mob == full_mob_name then
+			if is_quest_mob_targeted() then
 				area = quest_target.arid
-			end
-
-			if not area then
+			elseif main_target_list[xcp_index] then
 				area = main_target_list[xcp_index].arid
 			end
 
@@ -2489,44 +2496,47 @@ end
 		end
 		if silentMode == "off" then
 			if (#list > 0) then
-				ColourNote("#808080", "", string.rep("-", 90))
+				ColourNote("#808080", "", string.rep("-", 80))
 				--[[if list[1].link_type == "room" then
 					for _,v in ipairs(list) do
 						if string.match(v.roomName, "^Hiding from") then
 							v.arid = "zz" .. v.arid ]]--
 
 				for i,v in ipairs (list) do
-					local mob_text = string.format("%s%s",  ((v.is_dead == "no") and "" or "[Dead] "), v.mob):sub(1, 32)
+					local mob_text = string.format("%s%s",  ((v.is_dead == "no") and "" or "[D] "), v.mob)
 					local arid = v.arid:sub(1, 10)
 					local background = (i % 2) == 0 and text_colors.alternating_row or ""
 					local link_text
 					local tooltip = "Target cp mob " .. i .. " - " .. mob_text .. " (" .. v.arid .. ")"
 					local notehelp = "Show notes for item " .. i
 					local color = color_for_target(v)
+					mob_text = ellipsify(mob_text, 32)
 					if (v.link_type == "area") then
-						link_text = string.format(" %2d  %-32s - %-10s", i, mob_text, arid)
+						link_text = string.format("%2d  %-32s - %-10s", i, mob_text, arid)
 						Hyperlink("xcp " .. i, link_text, tooltip, color, background, 0, 1)
-						Hyperlink("roomnote area " .. v.arid, string.format("  %-38s", "[notes]"), notehelp, ((v.is_dead == "yes") and "#006000" or "lightgreen"), background, 0, 1)
+						Hyperlink("roomnote area " .. v.arid, string.format("  %-29s", "[notes]"), notehelp, ((v.is_dead == "yes") and "#006000" or "lightgreen"), background, 0, 1)
 					elseif v.link_type == "room" and v.unlikely then
 						ColourNameToRGB(text_colors.unlikely_tag)
-						Hyperlink("xcp " .. i, string.format(" %2d ", i), tooltip, color, background, 0, 1)
-						Hyperlink("xcp " .. i, "(unlikely)", tooltip, text_colors.unlikely_tag, background, 0, 1)
-						mob_text = mob_text:sub(1,22)
-						link_text = string.format(" %-22s - %-10s  %-38s", mob_text, v.arid, roomText)
+						Hyperlink("xcp " .. i, string.format("%2d  ", i), tooltip, color, background, 0, 1)
+						Hyperlink("xcp " .. i, "(U) ", tooltip, text_colors.unlikely_tag, background, 0, 1)
+						mob_text = ellipsify(mob_text, 28)
+						local roomText = string.format("'%s'", ellipsify(v.roomName, 27))
+						link_text = string.format("%-28s - %-10s  %-29s", mob_text, v.arid, roomText)
 						Hyperlink("xcp " .. i, link_text, tooltip, color, background, 0, 1)
 					elseif v.link_type == "room" then
-						local roomText = string.format("%5s", v.roomid) .. ": '" .. v.roomName
-						roomText = roomText:sub(1, 39) .. "'"
-						link_text = string.format(" %2d  %-32s - %-10s  %-38s", i, mob_text, v.arid, roomText)
+						local roomText = string.format("'%s'", ellipsify(v.roomName, 27))
+						link_text = string.format("%2d  %-32s - %-10s  %-29s", i, mob_text, v.arid, roomText)
 						Hyperlink("xcp " .. i, link_text, tooltip, color, background, 0, 1)
 					elseif (v.link_type == "unknown") then
-						link_text = string.format(" %2d  %-32s - unknown: '%s'%s", i, mob_text, v.location, string.rep(" ", 39 - #v.location))
+						local location = ellipsify(v.location, 30)
+						link_text = string.format("%2d  %-32s - unknown: '%s'%s", i, mob_text, location, string.rep(" ", 30 - #location))
 						tooltip = "Location not found in mapper database"
 						Hyperlink(" ", link_text, tooltip, color, background, 0, 1)
+
 					end
 					print("")
 				end
-					ColourNote("#808080", "", string.rep("-", 90))
+					ColourNote("#808080", "", string.rep("-", 80))
 					ColourNote("#808080", "", "Type 'xcp <index>' or click link to go to that target.")
 			else
 				InfoNote("   No target items to show.")
@@ -2534,11 +2544,19 @@ end
 		end
 	end
 
+	function ellipsify(str, max_length)
+		if #str <= max_length then
+			return str
+		else
+			return str:sub(1, max_length - 1) .. "…"
+		end
+	end
+
 	function print_room_links_ignored()
 		local ig = room_targets_ignored
-		ColourNote("#808080", "", string.rep("-", 90))
+		ColourNote("#808080", "", string.rep("-", 80))
 		for i,v in ipairs (ig) do
-			local link = string.format(" ** Ignoring due to level: %s - %5s '%s' (%s) [%s-%s]", v.mob, v.roomid, v.roomName, v.arid, v.minlvl, v.maxlvl)
+			local link = string.format(" ** Ignoring due to level: %s - '%s' (%s) [%s-%s]", v.mob, v.roomName, v.arid, v.minlvl, v.maxlvl)
 			Hyperlink("xmapper move " .. v.roomid, link, "Move to room " .. v.roomid, "#002460", "", 0, 1)
 			print("")
 		end
@@ -3363,27 +3381,28 @@ end
 		local line_num = 0
 		local last_area = ""
 		local has_chance = #results > 0 and results[1].percentage
-		local dashes = 74
-		ColourTell("#808080", "", string.format("\nIndex   Location %38s", "(uid)"))
+		local width = 69
+		ColourTell("#808080", "", string.format("\nXCP  Location %36s", "(uid)"))
 		if has_chance then
-			dashes = 85
+			width = 80
 			ColourTell("#808080", "", string.format("%20s", "(chance)"))
 		end
 		print("")
-		ColourNote("#808080", "", string.rep("-", dashes))
+		ColourNote("#808080", "", string.rep("-", width))
 		for i,v in ipairs (results) do
 			line_num = line_num + 1
 			local background = (line_num % 2) == 0 and text_colors.alternating_row or ""
 			local instruction = "go " .. mapper_area_index
 			if (last_area ~= v.arid) then
+				local padding = string.rep(" ", width - 5 - #v.arid)
 				if (mapper_area_index == 0) then
-					local areaLine = string.format("%3d     %-76s", mapper_area_index, v.arid)
+					local areaLine = string.format("%2d   %s%s", mapper_area_index, v.arid, padding)
 					Hyperlink("go " .. mapper_area_index, areaLine, "go to area " .. v.arid, "silver", background, 0, 1)
 					gotoList[mapper_area_index] = v.arid
 					gotoArea = v.arid
 					mapper_area_index = mapper_area_index + 1
 				else
-					local areaLine = string.format("        %-76s", v.arid)
+					local areaLine = string.format("     %s%s", v.arid, padding)
 					Hyperlink("xrt " .. v.arid, areaLine, "go to area " .. v.arid, "silver", background, 0, 1)
 				end
 				print("")
@@ -3391,8 +3410,8 @@ end
 				last_area = v.arid
 			end
 			background = (line_num % 2) == 0 and text_colors.alternating_row or ""
-			local name = string.gsub(v.name, "@[a-zA-Z]", ""):sub(1, 40)
-			local text = string.format("%3d     %-40s  %-7s ", mapper_area_index, name, string.format("(%s)", v.rmid))
+			local name = ellipsify(string.gsub(v.name, "@[a-zA-Z]", ""), 38)
+			local text = string.format("%2d   %-38s  %-7s ", mapper_area_index, name, string.format("(%s)", v.rmid))
 			Hyperlink("go " .. mapper_area_index, text, "go to item " .. mapper_area_index, "lightblue", background, 0, 1)
 
 			local instruction = "mapper where " .. v.rmid
@@ -3419,7 +3438,7 @@ end
 		if (mapper_area_index == 0) then
 			InfoNote("No matching rooms found.")
 		end
-		ColourNote("#808080", "", string.rep("-", dashes))
+		ColourNote("#808080", "", string.rep("-", width))
 		ColourNote("#808080", "", "Type 'go <index>' or click link to go to that room.\n")
 	end
 
@@ -3812,6 +3831,7 @@ end
 			Simulate("You still have to kill * a former court jester (The Labyrinth)\n")
 			Simulate("You still have to kill * Parent (A Cold Path - Dead)\n")   --dead and unknown
 			Simulate("You still have to kill * a wealth redistribution specialist (Empyrean, Streets of Downfall)\n") -- long unnknown
+			Simulate("You still have to kill * a wealth redistribution specialist (Empyrean, Streets of Downfall and Upfall and Other Things)\n") -- really long unnknown
 			Simulate("You still have to kill * Laurence, archangel of the sword and shield and other implements of war (The Flying Citadel)\n") -- long known
 			Simulate("You still have to kill * the spirit of Bakarne (The Empire of Aiighialla)\n")
 			Simulate("You still have to kill * a sinister vandal (The Three Pillars of Diatz)\n") -- noscan
@@ -3833,6 +3853,8 @@ end
 			Simulate("You still have to kill * a hideously hairy spider (The Landing)\n") -- nowhere
 			Simulate("You still have to kill * Sssssuper long mob name that should break formatting (This can't be a real room, right)\n") -- long unknown
 			Simulate("You still have to kill * Laurence, archangel of the sword and shield and other implements of war (In the clouds)\n") -- long known
+			Simulate("You still have to kill * a giant bee (An Impossibly Dark Intersection in the Labyrinth)\n") -- long room name
+
 		end
 		Simulate("Note: Dead means that the target is dead, not that you have killed it.\n")
 		Simulate("\n")
@@ -4473,6 +4495,16 @@ end
 		end
 	end
 
+	function is_quest_mob_targeted()
+		if quest_target.qstat ~= "2" then
+			return false
+		elseif xcp_index > 0 then
+			return false
+		else
+			return full_mob_name == quest_target.mob
+		end
+	end
+
 	function xg_show_quest_target_link(targ_list_top, resize_tag, font)
 		if not quest_target.qstat or quest_target.qstat == "1" then
 			return false
@@ -4486,7 +4518,7 @@ end
 			text = " You may now quest again"
 			color = text_colors.quest_available
 		elseif quest_target.qstat == "2" then
-			color = ((full_mob_name == quest_target.mob and xcp_index < 1) and text_colors.targeted or text_colors.normal)
+			color = is_quest_mob_targeted() and text_colors.targeted or text_colors.normal
 			text = string.format(" Q) %s - '%s' (%s)", quest_target.mob, quest_target.room, quest_target.arid)
 		elseif quest_target.qstat == "3" then
 			text = " Quest complete! You may turn it in"

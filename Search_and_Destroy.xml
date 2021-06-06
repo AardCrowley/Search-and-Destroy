@@ -5141,7 +5141,7 @@ end
 	end
 
 	function force_update_plugin(name, line, wildcards)
-		local branch == "master"
+		local branch = "master"
 
 		if wildcards.branch ~= "" then
 			branch = wildcards.branch

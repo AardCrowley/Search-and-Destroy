@@ -511,7 +511,7 @@
         	DebugNote("Last installed version ", last_installed_version)
 
         	for version, notes in pairs(CHANGELOG) do
-        	    if tonumber(version) > tonumber(last_installed_version) then
+        	    if tonumber(version) > tonumber(last_installed_version) and tonumber(version) <= PLUGIN_VERSION then
     	            changes_to_show[version] = notes
 	            end
         	end
@@ -519,7 +519,7 @@
         	-- show only the latest changes
         	local latest_change_num = -1
         	for version, notes in pairs(CHANGELOG) do
-            	if tonumber(version) > latest_change_num then
+            	if tonumber(version) > latest_change_num and tonumber(version) <= PLUGIN_VERSION then
     	            latest_change_num = version
 	            end
         	end

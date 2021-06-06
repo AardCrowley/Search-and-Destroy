@@ -5620,7 +5620,7 @@ end
 			ColourNote("antiquewhite", "", unpack({helpWrap("Toggles sounds. Currently this is only used to signify that a target is in a nearby room as determined by scan, or that one of the targets on your campaign/gquest, but not your current target, is in the same room as you. For full functionality, the soundpack plugin is expected to be enabled.")}))
 
 		elseif str == "changelog" then
-			ColourNote("yellow", "", "Syntax", "antiquewhite", "", : snd changelog")
+			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd changelog")
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("Displays the entire changelog from oldest to newest top to bottom.")}))
 

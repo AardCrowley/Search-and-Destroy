@@ -1,4 +1,3 @@
-CHANGELOG = {
     [5.74] =    {
                     changes =   {
                         "Reintroduced kill counting and made it smarter at detecting kills.",
@@ -164,4 +163,3 @@ CHANGELOG = {
                         "Changed how the help files look. See 'xhelp' for more info."
                     },
                 },
-}

@@ -5415,11 +5415,11 @@ end
 			ColourNote("limegreen", "", unpack({helpWrap(table.concat(helpFiles, ", "))}))
 
 		elseif str == "win" then
-			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset win <on|off|show|hide>")
+			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset win <on|off|show|hide|max<imize>|min<imize>|expand|collapse>")
 			ColourNote("antiquewhite", "", "        xset winreset")
 			Note()
 			ColourNote("limegreen", "", "xset win:")
-			ColourNote("antiquewhite", "", unpack({helpWrap("This command toggles the Search & Destroy miniwindow. Use 'on' or 'show' to show the window, and use 'off' or 'hide' to close the window.")}))
+			ColourNote("antiquewhite", "", unpack({helpWrap("This command toggles the Search & Destroy miniwindow. Use 'on' or 'show' to show the window, and use 'off' or 'hide' to close the window. Use max or expand to expand the window from a collapsed state, or use min or collapse to minimize the window.")}))
 			Note()
 			ColourNote("limegreen", "", "xset winreset:")
 			ColourNote("antiquewhite", "", unpack({helpWrap("If, for any reason, the window goes missing and the previous command does not restore it, this command will reset the window to a default location on top of your windows.")}))

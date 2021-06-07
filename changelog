@@ -2,7 +2,11 @@
     "5.75": {
         "changes": [
             "Automatically will perform 'xset index areas' upon plugin installation if it has never been run before.",
-            "Added some missing help files. Whoops."
+            "Added some missing help files. Whoops.",
+            "When using conscan mode only scan after a con when you have an gq, cp, or quest target"
+        ],
+        "fixes": [
+            "Fixed 'nx' sometimes choosing to go to a room after the first when selecting a new target"
         ]
     },
     "5.74": {
@@ -78,7 +82,7 @@
         "features": [
             "Toggling 'xset win on|off' never saved across reloads. This has been changed. Whether this is a fix or a feature, I couldn't tell you.",
             "There is a new, hidden command of 'snd force update' that will redownload the current version from the website. This can be used if you think you *accidentally* made changes to your copy of snd that broke it."
-        ],
+        ]
     },
     "5.61": {
         "features": [

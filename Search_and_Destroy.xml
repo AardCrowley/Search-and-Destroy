@@ -5916,7 +5916,7 @@ end
 	end
 
 	function showResults(query, msg)
-
+		DebugNote("Exceuting mob search query: ", query)
 		SnDdb = sqlite3.open(snd_db_file)
 		mshow = {}
 		local searchMsg, failure = msg, "No matches found!"

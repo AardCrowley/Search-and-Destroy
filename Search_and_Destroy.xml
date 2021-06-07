@@ -2545,6 +2545,7 @@ end
 			local action = xcp_action_mode
 			gotoArea = -1
 			gotoIndex = 1
+			next_room = -1
 			gotoList = {}
 			if (t ~= nil) and (ri.rmid ~= nil) then
 				full_mob_name = t.mob
@@ -3296,6 +3297,7 @@ end
 	function search_rooms_results(results)	-- Display list of 'go' links from hunt-trick, quick-where, etc.
 		gotoArea = -1
 		gotoIndex = 1
+		next_room = -1
 		gotoList = {}
 		local mapper_area_index = 0
 		local line_num = 0

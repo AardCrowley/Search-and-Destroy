@@ -6,7 +6,8 @@
             "When using conscan mode only scan after a con when you have an gq, cp, or quest target"
         ],
         "fixes": [
-            "Fixed 'nx' sometimes choosing to go to a room after the first when selecting a new target"
+            "Fixed 'nx' sometimes choosing to go to a room after the first when selecting a new target",
+            "Fixed 'xcp' sometimes taking you to manorville when your target is in death's manor"
         ]
     },
     "5.74": {

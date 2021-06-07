@@ -2562,7 +2562,7 @@ end
 					end
 					if (ri.arid ~= t.arid) then	-- if you're not in target area, xrunto target area.
 						--Execute("xrt " .. t.arid)
-						xrun_to("", "", {destination=t.arid})
+						xrun_to(t.arid, true)
 					end
 				else	-- Room cp:  get target room from mapper, but don't move yet.  "go" takes you to room.
 					search_rooms(t.roomName .. "|" .. t.arid, "area", t.mob)
@@ -2623,11 +2623,14 @@ end
 	local xrun_to_sql_uid =  "SELECT r.uid, r.name as room, r.area " .. "FROM rooms r " .. "WHERE r.area like %s " .. "ORDER BY r.name "
 	local xrun_to_sql_name = "SELECT r.uid, r.name as room, r.area " .. "FROM rooms r " .. "INNER JOIN areas a ON a.uid = r.area " .. "WHERE r.area like %s OR a.name like %s " .. "ORDER BY r.name "
 
-	function xrun_to(name, line, wildcards)
+	function xrun_to_alias(name, line, wildcards)
+		xrun_to(wildcards.destination, false)
+	end
+
+	function xrun_to(arid, exact)
 		local ri = current_room
-		local arid = wildcards.destination
 		if (arid == "ft2") then arid = "ftii" end
-		local rmid = get_start_room(arid)
+		local rmid = get_start_room(arid, exact)
 		if (rmid == "-1") then		-- area has no start room defined.
 			InfoNote("X-runto: No default start room is defined for area: " .. arid .. ".\n")
 			SendNoEcho("areas 1 299 keywords " .. arid)
@@ -2672,7 +2675,7 @@ end
 			gotoIndex = tonumber(wildcards.index) or 1
 			if gotoList[gotoIndex] then
 				if (tonumber(gotoList[gotoIndex]) == nil) then
-					xrun_to("", "", {destination=gotoList[gotoIndex]})
+					xrun_to(gotoList[gotoIndex], true)
 					action_on_destination_arrived()
 				else
 					next_room = gotoList[gotoIndex]
@@ -3661,27 +3664,41 @@ end
 		InfoNote("\nxset mark: Room ", ri.rmid, " set as start of area ", ri.arid, ".\n")
 	end
 
-	function get_start_room(area_id)
+	function get_start_room(area_id, exact)
 		local arid = string.lower(area_id)
-		start_room_type = "xset mark"					-- If 'xset mark' was set, xrunto will go there.
-		if (area_start_rooms[arid] ~= nil) then 			-- Function exits as soon as any 'return' statement is encountered.
+		start_room_type = "xset mark"			-- If 'xset mark' was set, xrunto will go there.
+		local possible_room_type
+		if area_start_rooms[arid] then 			-- Function exits as soon as any 'return' statement is encountered.
 			return area_start_rooms[arid].roomid			-- Exact match on area id
 		end
+
+		local possible_match = nil
 		for k,v in pairs (area_start_rooms) do
-			if (string.match(string.lower(k), arid) ~= nil) then
-				return v.roomid	-- string match on key
+			if k:lower() == arid then -- exact match
+				return v.roomid
+			elseif string.match(string.lower(k), arid) then
+				possible_room_type = "xset_mark"
+				possible_match = v.roomid
 			end
 		end
 		start_room_type = "default"						-- If 'xset mark' isn't set, look up start room from the table areaDefaultStartRooms.
-		if (areaDefaultStartRooms[arid] ~= nil) then 	-- Note, Upper/Lower Planes have the same default room.  More development needed here.
+		if areaDefaultStartRooms[arid] then 	-- Note, Upper/Lower Planes have the same default room.  More development needed here.
 			return areaDefaultStartRooms[arid].start		-- exact match on area id
 		end
 		for k,v in pairs (areaDefaultStartRooms) do
-			if (string.match(string.lower(k), arid) ~= nil) then
-				return v.start	-- string match on key
+			if k:lower() == arid then -- exact match
+				return v.roomid
+			elseif string.match(string.lower(k), arid) then
+				possible_room_type = possible_room_type or "default"
+				possible_match = possible_match or v.roomid
 			end
 		end
-		return "-1"
+		if possible_match and not exact then
+			start_room_type = possible_room_type
+			return possible_match
+		else
+			return "-1"
+		end
 	end
 
 --	[[ "xset vidblain" ]]
@@ -7126,7 +7143,7 @@ end
 
 <!-- movement: xrunto, go, nx, etc.  -->
 	<alias	match="^(?:xrt|xrun|xrunto) (?<destination>.+)$"
-			script="xrun_to"
+			script="xrun_to_alias"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 	<alias	match="^(?:go|goto)( (?<index>[0-9]+))?$"

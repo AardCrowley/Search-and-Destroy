@@ -275,12 +275,16 @@
 
 	local consider_destination_room = false
 	local mobs_here = {}
+	local scan_full_display = {}
+	local mobs_in_scanned_room = {}
+	local doors_in_scanned_room = {}
 	local activity_target_found_here = false
 	local quest_target_found_here = false
 	local target_found_nearby = false
 	local other_target_found_here = false
 	local scanning_current_room = false
 	local scan_after_con = false
+	local scan_only_for_targets = false
 
 -- [[ Sound settings ]]
 	-- Defaults on if soundpack is enabled, off otherwise
@@ -1680,7 +1684,7 @@ end
 	end
 
 	function retarget_quest()
-		if quest_target.qstat == "2" then
+		if has_active_quest() then
 			target_quest_mob(true)
 			xg_draw_window()
 		elseif quest_target.qstat == "3" then
@@ -2486,7 +2490,7 @@ end
 -- [[ "xcp" command ]]
 	function xcp_noarg()	-- xcp with no argument given, so find the first available mob (alive, location known) and go to it.
 		local t = main_target_list
-		if xcp_targets_quest_onoff == "on" and quest_target.qstat == "2" then
+		if xcp_targets_quest_onoff == "on" and has_active_quest() then
 			target_quest_mob(true)
 			xg_draw_window()
 		elseif (area_room_type == "none") then	-- abort if not on cp
@@ -3117,10 +3121,18 @@ end
 
 -- [[ quick scan, quick kill ("kk") ]]
 	function quick_scan()
-		if (short_mob_name == nil) or (short_mob_name == "") then
-			SendNoEcho("scan")
+		local no_target = short_mob_name == nil or short_mob_name == ""
+		if has_activity() then
+			if has_target() or no_target then
+				scan_only_for_targets = true
+				Send("scan")
+			else
+				Send(string.format("scan %s", short_mob_name))
+			end
+		elseif no_target then
+			Send("scan")
 		else
-			SendNoEcho(string.format("scan %s", short_mob_name))
+			Send(string.format("scan %s", short_mob_name))
 		end
 	end
 
@@ -4422,7 +4434,7 @@ end
 	end
 
 	function is_quest_mob_targeted()
-		if quest_target.qstat ~= "2" then
+		if not has_active_quest() then
 			return false
 		elseif xcp_index > 0 then
 			return false
@@ -4433,6 +4445,18 @@ end
 
 	function has_target()
 		return is_quest_mob_targeted() or is_cp_or_gq_mob_targeted()
+	end
+
+	function has_activity()
+		return has_active_quest() or has_active_cp_or_gq()
+	end
+
+	function has_active_quest()
+		return quest_target.qstat == "2"
+	end
+
+	function has_active_cp_or_gq()
+		return #main_target_list > 0
 	end
 
 	function xg_show_quest_target_link(targ_list_top, resize_tag, font)
@@ -4447,7 +4471,7 @@ end
 		if quest_target.qstat == "0" then
 			text = " You may now quest again"
 			color = text_colors.quest_available
-		elseif quest_target.qstat == "2" then
+		elseif has_active_quest() then
 			color = is_quest_mob_targeted() and text_colors.targeted or text_colors.normal
 			text = string.format(" Q) %s - '%s' (%s)", quest_target.mob, quest_target.room, quest_target.arid)
 		elseif quest_target.qstat == "3" then
@@ -4467,7 +4491,7 @@ end
 
 		WindowText(win, font, text, hs_left, hs_top, 0, 0, ColourNameToRGB(color), false)
 
-		if quest_target.qstat == "2" then
+		if has_active_quest() then
 			table.insert(win_target_hotspots, 'q')
 			WindowAddHotspot(win, 'q',
 							hs_left-1, hs_top+2, hs_right+2, hs_bottom,
@@ -6153,10 +6177,47 @@ end
 
 	function scan_start()
 		EnableTriggerGroup("scan", true)
+		doors_in_scanned_room = {}
+		scan_full_display = { { doors = doors_in_scanned_room } }
 	end
 
 	function scan_end()
 		EnableTriggerGroup("scan", false)
+
+		local anything_seen = false
+
+		for i, room in ipairs(scan_full_display) do
+			if room.mobs and #room.mobs > 0 then
+				if room.header then
+					for j, style in ipairs(room.header) do
+						ColourTell(style[1], style[2], style[3])
+					end
+					print("")
+				end
+
+				for j, mob in ipairs(room.mobs) do
+					anything_seen = true
+					for k, style in ipairs(mob) do
+						ColourTell(unpack(style))
+					end
+					print("")
+				end
+			end
+
+			if #room.doors > 0 then
+				for j, door in ipairs(room.doors) do
+					for k, style in ipairs(door) do
+						ColourTell(unpack(style))
+					end
+					print("")
+				end
+			end
+		end
+
+		if not anything_seen and scan_only_for_targets then
+			ColourNote(RGBColourToName(GetNormalColour(8)), "", "You see no targets around.")
+		end
+
 		write_current_room_mob_list()
 		if activity_target_found_here then
 			play_target_found_sound()
@@ -6177,38 +6238,74 @@ end
 		quest_target_found_here = false
 		target_found_nearby = false
 		other_target_found_here = false
+		scan_only_for_targets = false
 	end
 
-	function scan_location_current_room()
+	function scan_location_current_room(name, line, wildcards, style)
 		scanning_current_room = true
 		mobs_here = {}
+		setup_scan_room(style)
 	end
 
-	function scan_location_nearby_room()
+	function scan_location_nearby_room(name, line, wildcards, style)
 		scanning_current_room = false
+		setup_scan_room(style)
+	end
+
+	function setup_scan_room(style)
+		mobs_in_scanned_room = {}
+		doors_in_scanned_room = {}
+		table.insert(scan_full_display, { header = convert_full_styles(style), mobs = mobs_in_scanned_room, doors = doors_in_scanned_room })
+	end
+
+	function scan_door_nearby(name, line, wildcards, style)
+		table.insert(doors_in_scanned_room, convert_full_styles(style))
+	end
+
+	function convert_full_styles(styles)
+		local result = {}
+		for i, style in ipairs(styles) do
+			table.insert(result, convert_one_style(style))
+		end
+		return result
+	end
+
+	function convert_one_style(style)
+		return { RGBColourToName(style.textcolour), RGBColourToName(style.backcolour), style.text }
 	end
 
 	function scan_mob(name, line, wildcards, style)
-		local padding = 5
+		local tags = {}
 		if not string.find(wildcards.flags, "(Player)") then
 			local mob_name = wildcards.mob_name
-			local tags = mob_activity_tags(mob_name, scanning_current_room)
+			tags = mob_activity_tags(mob_name, scanning_current_room)
 
 			if scanning_current_room and not scan_after_con then
 				table.insert(mobs_here, mob_name:lower())
 			end
-
-			for i, tag in ipairs(tags) do
-				ColourTell(tag.colour, "", tag.text)
-				padding = padding - #tag.text
-			end
 		end
 
-		for i, s in ipairs(style) do
-			if i == 1 then
-				local text = string.gsub(s.text, "^     ", string.rep(" ", padding))
-				ColourTell(RGBColourToName(s.textcolour), RGBColourToName(s.backcolour), text)
-			else
+		if #tags > 0 or not scan_only_for_targets then
+			local padding = 5
+			local mob_styled_text = {}
+			for i, tag in ipairs(tags) do
+				table.insert(mob_styled_text, {tag.colour, "", tag.text})
+				padding = padding - #tag.text
+			end
+
+			for i, s in ipairs(style) do
+				if i == 1 then
+					s.text = string.gsub(s.text, "^     ", string.rep(" ", padding))
+				end
+				table.insert(mob_styled_text, convert_one_style(s))
+			end
+			table.insert(mobs_in_scanned_room, mob_styled_text)
+		end
+	end
+
+	function scan_empty(name, line, wildcards, style)
+		if not scan_only_for_targets then
+			for i, s in ipairs(style) do
 				ColourTell(RGBColourToName(s.textcolour), RGBColourToName(s.backcolour), s.text)
 			end
 		end
@@ -7025,15 +7122,26 @@ end
 	<trigger match="^Right here you see:$"
 		script="scan_location_current_room"
 		group="scan"
-		enabled="n" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
+		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
-	<trigger match="^(\d )?(North|East|South|West) from here you see:$"
+	<trigger match="^(\d )?(North|East|South|West|Up|Down) from here you see:$"
 		script="scan_location_nearby_room"
 		group="scan"
-		enabled="n" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
+		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="^You see .+\.$"
+		script="scan_door_nearby"
+		group="scan"
+		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
 	<trigger match="^ {5}-(?<flags> [\[\(].+[\]\)])? (?<mob_name>.+)$"
 		script="scan_mob"
+		group="scan"
+		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+
+	<trigger match="^Nothing to see around here, might as well move on\.$"
+		script="scan_empty"
 		group="scan"
 		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 

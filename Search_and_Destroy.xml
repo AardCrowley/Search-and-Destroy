@@ -273,17 +273,27 @@
 	end
 
 -- [[ Con and scan stuff ]]
-	local xset_nx_action = GetVariable("mcvar_xset_nx_action") or (GetVariable("mcvar_xset_autocon_onoff") == "on" and "conscan") or "qs"
+	local xset_nx_action = GetVariable("mcvar_xset_nx_action") or (GetVariable("mcvar_xset_autocon_onoff") == "on" and "smartscan") or "qs"
+	if xset_nx_action == "conscan" then
+		xset_nx_action = "smartscan"
+	end
+
 	local xset_overwrite_con = GetVariable("mcvar_xset_overwrite_con") or "on"
 
-	local consider_destination_room = false
-	local mobs_here = {}
+	local scanned_mobs_here = {}
+	local considered_mobs_here = {}
+	local scan_full_display = {}
+	local mobs_in_scanned_room = {}
+	local doors_in_scanned_room = {}
 	local activity_target_found_here = false
 	local quest_target_found_here = false
 	local target_found_nearby = false
 	local other_target_found_here = false
 	local scanning_current_room = false
-	local scan_after_con = false
+	local running_smart_scan = false
+	local con_after_scan = false
+
+	local mob_count_here = 0
 
 -- [[ Sound settings ]]
 	-- Defaults on if soundpack is enabled, off otherwise
@@ -600,6 +610,8 @@
 			return
 		end
       	SendNoEcho("tags scan on")
+      	SendNoEcho("tags roomchars on")
+
 		send_gmcp_packet("request room")
 		init_called = init_called + 1
 		if (init_called == 2) then
@@ -1683,7 +1695,7 @@ end
 	end
 
 	function retarget_quest()
-		if quest_target.qstat == "2" then
+		if has_active_quest() then
 			target_quest_mob(true)
 			xg_draw_window()
 		elseif quest_target.qstat == "3" then
@@ -2508,7 +2520,7 @@ end
 -- [[ "xcp" command ]]
 	function xcp_noarg()	-- xcp with no argument given, so find the first available mob (alive, location known) and go to it.
 		local t = main_target_list
-		if xcp_targets_quest_onoff == "on" and quest_target.qstat == "2" then
+		if xcp_targets_quest_onoff == "on" and has_active_quest() then
 			target_quest_mob(true)
 			xg_draw_window()
 		elseif (area_room_type == "none") then	-- abort if not on cp
@@ -2678,9 +2690,10 @@ end
 	end
 
 	function action_on_destination_arrived()
-		if xset_nx_action == "conscan" or xset_nx_action == "con" then
+		if xset_nx_action == "smartscan" then
+			smart_scan()
+		elseif xset_nx_action == "con" then
 			EnableTrigger("consider_end_empty", true)
-			consider_destination_room = true
 			SendNoEcho("consider")
 		elseif xset_nx_action == "scan" then
 			SendNoEcho("scan")
@@ -3143,9 +3156,19 @@ end
 -- [[ quick scan, quick kill ("kk") ]]
 	function quick_scan()
 		if (short_mob_name == nil) or (short_mob_name == "") then
+			Send("scan")
+		else
+			Send(string.format("scan %s", short_mob_name))
+		end
+	end
+
+	function smart_scan()
+		if has_activity() then
+			running_smart_scan = true
+			DebugNote("Performing smart scan.")
 			SendNoEcho("scan")
 		else
-			SendNoEcho(string.format("scan %s", short_mob_name))
+			quick_scan()
 		end
 	end
 
@@ -4461,7 +4484,7 @@ end
 	end
 
 	function is_quest_mob_targeted()
-		if quest_target.qstat ~= "2" then
+		if not has_active_quest() then
 			return false
 		elseif xcp_index > 0 then
 			return false
@@ -4472,6 +4495,18 @@ end
 
 	function has_target()
 		return is_quest_mob_targeted() or is_cp_or_gq_mob_targeted()
+	end
+
+	function has_activity()
+		return has_active_quest() or has_active_cp_or_gq()
+	end
+
+	function has_active_quest()
+		return quest_target.qstat == "2"
+	end
+
+	function has_active_cp_or_gq()
+		return #main_target_list > 0
 	end
 
 	function xg_show_quest_target_link(targ_list_top, resize_tag, font)
@@ -4486,7 +4521,7 @@ end
 		if quest_target.qstat == "0" then
 			text = " You may now quest again"
 			color = text_colors.quest_available
-		elseif quest_target.qstat == "2" then
+		elseif has_active_quest() then
 			color = is_quest_mob_targeted() and text_colors.targeted or text_colors.normal
 			text = string.format(" Q) %s - '%s' (%s)", quest_target.mob, quest_target.room, quest_target.arid)
 		elseif quest_target.qstat == "3" then
@@ -4506,7 +4541,7 @@ end
 
 		WindowText(win, font, text, hs_left, hs_top, 0, 0, ColourNameToRGB(color), false)
 
-		if quest_target.qstat == "2" then
+		if has_active_quest() then
 			table.insert(win_target_hotspots, 'q')
 			WindowAddHotspot(win, 'q',
 							hs_left-1, hs_top+2, hs_right+2, hs_bottom,
@@ -5577,10 +5612,11 @@ end
 			ColourNote("antiquewhite", "", unpack({helpWrap("See 'help xset nx' for information about the action that will be taken upon arriving in the room.")}))
 
 		elseif str == "xset nx" then
-			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset nx <conscan|con|scan|scanhere|qs|none>")
+			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset nx <smartscan|con|scan|scanhere|qs|none>")
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("Sets the behaviour when you arrive at a room via nx or go. Without an argument it will display the current action. With an argument, sets your action to:")}))
-			ColourNote("antiquewhite", "", unpack({helpWrap("  * conscan: consider the room. If your target is not here, do a scan.")}))
+			ColourNote("antiquewhite", "", unpack({helpWrap("  * smartscan: scan for just your targets, and fallback on con when")}))
+			ColourNote("antiquewhite", "", unpack({helpWrap("    potential noscan targets are encountered.")}))
 			ColourNote("antiquewhite", "", unpack({helpWrap("  * con: consider the room")}))
 			ColourNote("antiquewhite", "", unpack({helpWrap("  * scan: perform a scan.")}))
 			ColourNote("antiquewhite", "", unpack({helpWrap("  * scanhere: perform a scan of the current room.")}))
@@ -5724,7 +5760,7 @@ end
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("go <index>:  Runs to the first room in the index, or to the index number with argument.")}))
 		Note()
-		ColourNote("antiquewhite", "", unpack({helpWrap("xset nx <conscan|con|scan|scanhere|qs|none>:  Set the action to take upon arriving in a room via 'nx' or 'go'.")}))
+		ColourNote("antiquewhite", "", unpack({helpWrap("xset nx <smartscan|con|scan|scanhere|qs|none>:  Set the action to take upon arriving in a room via 'nx' or 'go'.")}))
 		Note()
 		ColourNote("antiquewhite", "", unpack({helpWrap("xset con_overwrite:  Toggle overwriting the output of consider, for example if you have another plugin that also does this.")}))
 		Note()
@@ -6047,8 +6083,8 @@ end
 	end
 
 	function print_xset_nx_desc()
-		if xset_nx_action == "conscan" then
-			InfoNote("You will ", "consider", " every room upon arrival after nx or go, followed by a ", "scan", " if your target is not here.\n")
+		if xset_nx_action == "smartscan" then
+			InfoNote("You will ", "scan", " every room upon arrival after nx or go, filtering down to just campaign, gquest, and quest targets. If you encounter potential noscan mobs, follow up with a filtered ", "consider", " to check if they are here.\n")
 		elseif xset_nx_action == "con" then
 			InfoNote("You will ", "consider", " every room upon arrival after nx or go.\n")
 		elseif xset_nx_action == "scan" then
@@ -6110,12 +6146,24 @@ end
 		local mob_name = wildcards.mob_name
 		local lower_mob_name = mob_name:lower()
 		local tags = mob_activity_tags(mob_name, true)
+		local mob_scanned = false
 
 		EnableTrigger("consider_end", true)
 
-		table.insert(mobs_here, lower_mob_name)
+		if con_after_scan then
+			for i, scanned_mob in ipairs(scanned_mobs_here) do
+				if scanned_mob == lower_mob_name then
+					mob_scanned = true
+					break
+				end
+			end
+		end
 
-		if is_con_overwritten() then
+		if not mob_scanned then
+			table.insert(considered_mobs_here, lower_mob_name)
+		end
+
+		if is_con_overwritten() and (#tags > 0 or not con_after_scan) then
 			for i, tag in ipairs(tags) do
 				ColourTell(tag.colour, "", tag.text)
 			end
@@ -6139,14 +6187,14 @@ end
 	function consider_end()
 		EnableTriggerGroup("consider_end", false)
 
-		if #mobs_here > 0 then
-			write_current_room_mob_list()
+		if #considered_mobs_here > 0 then
+			write_mob_list_to_db(considered_mobs_here)
 		else
-			DebugNote("No mobs found to update the mobs database")
+			DebugNote("No considered mobs found to update the mobs database")
 		end
 
 		-- Don't play sound when a quest target is here, assume soundpack will already play a sound
-		if not quest_target_found_here then
+		if con_after_scan and not quest_target_found_here then
 			if activity_target_found_here then
 				-- The current target is found in the room, play a sound
 				play_target_found_sound()
@@ -6155,18 +6203,14 @@ end
 				if other_target_found_here then
 					play_other_target_here_sound()
 				end
-
-				if has_target() and consider_destination_room and xset_nx_action == "conscan" then
-					scan_after_con = true
-					SendNoEcho("scan")
-				end
 			end
 		end
 
-		consider_destination_room = false
 		activity_target_found_here = false
 		quest_target_found_here = false
 		other_target_found_here = false
+		con_after_scan = false
+		considered_mobs_here = {}
 	end
 
 	function play_target_found_sound()
@@ -6192,65 +6236,157 @@ end
 
 	function scan_start()
 		EnableTriggerGroup("scan", true)
+		doors_in_scanned_room = {}
+		scan_full_display = { { doors = doors_in_scanned_room } }
 	end
 
 	function scan_end()
 		EnableTriggerGroup("scan", false)
-		write_current_room_mob_list()
+
+		local anything_seen = false
+
+		for i, room in ipairs(scan_full_display) do
+			if room.mobs and #room.mobs > 0 then
+				if room.header then
+					for j, style in ipairs(room.header) do
+						ColourTell(style[1], style[2], style[3])
+					end
+					print("")
+				end
+
+				for j, mob in ipairs(room.mobs) do
+					anything_seen = true
+					for k, style in ipairs(mob) do
+						ColourTell(unpack(style))
+					end
+					print("")
+				end
+			end
+
+			if #room.doors > 0 then
+				for j, door in ipairs(room.doors) do
+					for k, style in ipairs(door) do
+						ColourTell(unpack(style))
+					end
+					print("")
+				end
+			end
+		end
+
+		if not anything_seen and running_smart_scan then
+			ColourNote(RGBColourToName(GetNormalColour(8)), "", "You see no targets around.")
+		end
+
+		write_mob_list_to_db(scanned_mobs_here)
+
 		if activity_target_found_here then
 			play_target_found_sound()
 		else
+			if running_smart_scan and #scanned_mobs_here < mob_count_here then
+				DebugNote("Saw ", mob_count_here, " mobs in the room but only ", #scanned_mobs_here, " on scan")
+				InfoNote("Target not found on smart scan but potential noscan mobs found in this room. Running consider.")
+				con_after_scan = true
+				SendNoEcho("con")
+			end
+
 			if target_found_nearby then
 				play_target_nearby_sound()
 			end
 
-			-- A non-active target on the campaign/gquest list is found in the current room, play a sound
-			-- but only if we didn't already see this mob with con
-			if other_target_found_here and not scan_after_con then
+			if other_target_found_here then
 				play_other_target_here_sound()
 			end
 		end
 		scanning_current_room = false
-		scan_after_con = false
 		activity_target_found_here = false
 		quest_target_found_here = false
 		target_found_nearby = false
 		other_target_found_here = false
+		running_smart_scan = false
 	end
 
-	function scan_location_current_room()
+	function scan_location_current_room(name, line, wildcards, style)
 		scanning_current_room = true
-		mobs_here = {}
+		scanned_mobs_here = {}
+		setup_scan_room(style)
 	end
 
-	function scan_location_nearby_room()
+	function scan_location_nearby_room(name, line, wildcards, style)
 		scanning_current_room = false
+		setup_scan_room(style)
+	end
+
+	function setup_scan_room(style)
+		mobs_in_scanned_room = {}
+		doors_in_scanned_room = {}
+		table.insert(scan_full_display, { header = convert_full_styles(style), mobs = mobs_in_scanned_room, doors = doors_in_scanned_room })
+	end
+
+	function scan_door_nearby(name, line, wildcards, style)
+		table.insert(doors_in_scanned_room, convert_full_styles(style))
+	end
+
+	function convert_full_styles(styles)
+		local result = {}
+		for i, style in ipairs(styles) do
+			table.insert(result, convert_one_style(style))
+		end
+		return result
+	end
+
+	function convert_one_style(style)
+		return { RGBColourToName(style.textcolour), RGBColourToName(style.backcolour), style.text }
 	end
 
 	function scan_mob(name, line, wildcards, style)
-		local padding = 5
+		local tags = {}
 		if not string.find(wildcards.flags, "(Player)") then
 			local mob_name = wildcards.mob_name
-			local tags = mob_activity_tags(mob_name, scanning_current_room)
+			tags = mob_activity_tags(mob_name, scanning_current_room)
 
-			if scanning_current_room and not scan_after_con then
-				table.insert(mobs_here, mob_name:lower())
-			end
-
-			for i, tag in ipairs(tags) do
-				ColourTell(tag.colour, "", tag.text)
-				padding = padding - #tag.text
+			if scanning_current_room then
+				table.insert(scanned_mobs_here, mob_name:lower())
 			end
 		end
 
-		for i, s in ipairs(style) do
-			if i == 1 then
-				local text = string.gsub(s.text, "^     ", string.rep(" ", padding))
-				ColourTell(RGBColourToName(s.textcolour), RGBColourToName(s.backcolour), text)
-			else
+		if #tags > 0 or not running_smart_scan then
+			local padding = 5
+			local mob_styled_text = {}
+			for i, tag in ipairs(tags) do
+				table.insert(mob_styled_text, {tag.colour, "", tag.text})
+				padding = padding - #tag.text
+			end
+
+			for i, s in ipairs(style) do
+				if i == 1 then
+					s.text = string.gsub(s.text, "^     ", string.rep(" ", padding))
+				end
+				table.insert(mob_styled_text, convert_one_style(s))
+			end
+			table.insert(mobs_in_scanned_room, mob_styled_text)
+		end
+	end
+
+	function scan_empty(name, line, wildcards, style)
+		if not running_smart_scan then
+			for i, s in ipairs(style) do
 				ColourTell(RGBColourToName(s.textcolour), RGBColourToName(s.backcolour), s.text)
 			end
 		end
+	end
+
+	function roomchars_start()
+		mob_count_here = 0
+		EnableTrigger("roomchars", true)
+	end
+
+	function roomchars_end()
+		EnableTrigger("roomchars", false)
+		DebugNote("Detected ", mob_count_here, string.format(" mob%s in this room", mob_count_here == 1 and "" or "s"))
+	end
+
+	function roomchars()
+		mob_count_here = mob_count_here + 1
 	end
 
 	function mob_activity_tags(mob_name, checking_current_room)
@@ -6294,8 +6430,8 @@ end
 		return result
 	end
 
-	function write_current_room_mob_list()
-		if #mobs_here < 1 then
+	function write_mob_list_to_db(mob_list)
+		if #mob_list < 1 then
 			DebugNote("No mobs to be written to the database")
 			return
 		end
@@ -6304,7 +6440,7 @@ end
 		local zname = gmcp("room.info.zone")
 		local writes = {}
 		local sql_mobs = {}
-		for i, mob in ipairs(mobs_here) do
+		for i, mob in ipairs(mob_list) do
 			table.insert(sql_mobs, fixsql(mob))
 			table.insert(writes, string.format("INSERT OR IGNORE INTO mobs (mob,room,roomid,zone) VALUES (%s,%s,%i,%s);",
 				fixsql(mob), fixsql(rname), tonumber(current_room.rmid), fixsql(zname)))
@@ -6319,11 +6455,10 @@ end
 			if db:errcode() > 0 then
 				ErrorNote("Db error: " .. db:error_message())
 			else
-				DebugNote("Successfully inserted or updated ", #mobs_here, " in the mobs database")
+				DebugNote("Successfully inserted or updated ", #mob_list, " in the mobs database")
 			end
 		end
 		db:close_vm()
-		mobs_here = {}
 	end
 
 	function update_sounds_onoff_value(new_val)
@@ -7054,26 +7189,52 @@ end
 
 	<trigger match="{scan}"
 		script="scan_start"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+		enabled="y" regexp="n" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
 	<trigger match="{/scan}"
 		script="scan_end"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+		enabled="y" regexp="n" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
 	<trigger match="^Right here you see:$"
 		script="scan_location_current_room"
 		group="scan"
-		enabled="n" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
+		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
-	<trigger match="^(\d )?(North|East|South|West) from here you see:$"
+	<trigger match="^(\d )?(North|East|South|West|Up|Down) from here you see:$"
 		script="scan_location_nearby_room"
 		group="scan"
-		enabled="n" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
+		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="^You see .+\.$"
+		script="scan_door_nearby"
+		group="scan"
+		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
 	<trigger match="^ {5}-(?<flags> [\[\(].+[\]\)])? (?<mob_name>.+)$"
 		script="scan_mob"
 		group="scan"
 		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="^Nothing to see around here, might as well move on\.$"
+		script="scan_empty"
+		group="scan"
+		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+<!-- Roomchars -->
+	<trigger match="^Tag option roomchars turned ON$"
+		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="{roomchars}"
+		script="roomchars_start"
+		enabled="y" regexp="n" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="{/roomchars}"
+		script="roomchars_end"
+		enabled="y" regexp="n" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+
+	<trigger match="^[^{].+$"
+		script="roomchars" name="roomchars"
+		enabled="n" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
 
 <!-- PAGE SIZE -->
 	<trigger match="^You currently display ([0-9]+) lines per page\.|You do not page long messages\.$"
@@ -7309,7 +7470,7 @@ end
 		script="xset_nx_check"
 		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
-	<alias	match="^xset nx (?<action>conscan|con|scan|scanhere|qs|none)$"
+	<alias	match="^xset nx (?<action>smartscan|con|scan|scanhere|qs|none)$"
 		script="xset_nx"
 		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 

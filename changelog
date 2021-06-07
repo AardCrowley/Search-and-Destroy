@@ -7,7 +7,8 @@
         ],
         "fixes": [
             "Fixed 'nx' sometimes choosing to go to a room after the first when selecting a new target",
-            "Fixed 'xcp' sometimes taking you to manorville when your target is in death's manor"
+            "Fixed 'xcp' sometimes taking you to manorville when your target is in death's manor",
+            "Fixed quick kill command not properly executing castings by spell numbers"
         ]
     },
     "5.74": {

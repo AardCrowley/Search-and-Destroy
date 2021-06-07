@@ -1863,7 +1863,7 @@ end
 	end
 
 	function get_last_kill_index()
-		if last_mob_killed == main_target_list[xcp_index].mob then
+		if xcp_index > 0 and last_mob_killed == main_target_list[xcp_index].mob then
 			DebugNote("killed mob is xcp index mob")
 			return xcp_index
 		else

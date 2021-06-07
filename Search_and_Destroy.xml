@@ -1543,9 +1543,7 @@ end
 		local keyword = Trim(wildcards.keyword)
 		local area
 
-		if type(full_mob_name) ~= 'string' and xcp_index < 1 then
-			InfoNote("\nSearch and Destroy: 'kw' has no target.  Use 'xcp' to select a target, or use 'xset kw' with no arguments.")
-		else
+		if has_target() then
 			if is_quest_mob_targeted() then
 				area = quest_target.arid
 			elseif main_target_list[xcp_index] then
@@ -1561,6 +1559,8 @@ end
 				short_mob_name = keyword
 				update_main_target_list_keyword(area, full_mob_name, keyword)
 			end
+		else
+			InfoNote("\nSearch and Destroy: 'kw' has no target.  Use 'xcp' to select a target, or use 'xset kw' with no arguments.")
 		end
 	end
 
@@ -4417,6 +4417,10 @@ end
 		end
 	end
 
+	function is_cp_or_gq_mob_targeted()
+		return xcp_index > 0 and main_target_list[xcp_index]
+	end
+
 	function is_quest_mob_targeted()
 		if quest_target.qstat ~= "2" then
 			return false
@@ -4425,6 +4429,10 @@ end
 		else
 			return full_mob_name == quest_target.mob
 		end
+	end
+
+	function has_target()
+		return is_quest_mob_targeted() or is_cp_or_gq_mob_targeted()
 	end
 
 	function xg_show_quest_target_link(targ_list_top, resize_tag, font)
@@ -6109,7 +6117,7 @@ end
 					play_other_target_here_sound()
 				end
 
-				if consider_destination_room and xset_nx_action == "conscan" then
+				if has_target() and consider_destination_room and xset_nx_action == "conscan" then
 					scan_after_con = true
 					SendNoEcho("scan")
 				end

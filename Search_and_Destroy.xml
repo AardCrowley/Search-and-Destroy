@@ -2144,9 +2144,7 @@ end
 
 	function gq_check_if_extended()
 		EnableTrigger("trg_gqmsg_extended_time", false)
-		if (gqid_extended == gqid_joined) then
-			-- do nothing
-		else
+		if (gqid_extended ~= gqid_joined) then
 			player_not_on_gq()
 		end
 	end
@@ -2163,6 +2161,12 @@ end
 		current_activity = "gq"
 	end
 
+	function gq_ended(name, line, wildcards)
+		if gq_id_joined == wildcards.gq_id then
+			player_not_on_gq()
+		end
+	end
+
 	function player_not_on_gq()
 		EnableTriggerGroup("trg_gq", false)
 		EnableTriggerGroup("trg_gqmsg_2", false)
@@ -2175,8 +2179,6 @@ end
 		main_target_list = {}
 		room_targets_ignored = {}
 
-		gqid_declared = "-1"
-			SetVariable("mcvar_gqid_declared", gqid_declared)
 		gqid_joined = "-1"
 			SetVariable("mcvar_gqid_joined", gqid_joined)
 		gqid_started = "-1"
@@ -6741,7 +6743,7 @@ end
 
 <!-- Gquest operations -->
 	<!-- group: trg_gq -->
-	<trigger match="^Quest Name\.\.\.\.\.\.\.\.\.: \[ Global quest # (?<gq_id>\d{1,4}) \]$"
+	<trigger match="^Quest Name\.\.\.\.\.\.\.\.\.: \[ Global quest # (?<gq_id>\d{1,5}) \]$"
 		script="gq_info_quest_name"
 		name="trg_gq_info_quest_name" 		group="trg_gq"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
@@ -6794,17 +6796,12 @@ end
 					EnableTrigger("trg_gq_check_end", false) </send> </trigger>
 
 	<!-- group: trg_gqmsg_1 -->
-	<trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,4}) has been declared for levels (?<min_lvl>\d{1,3}) to (?<max_lvl>\d{1,3}) (?:- (?:200|10) or fewer wins only)?\.$"
-		script="gqmsg_declared"
-		name="trg_gqmsg_declared" 			group="trg_gqmsg_1"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-
-	<trigger match="^You have now joined Global Quest # (?<gq_id>\d{1,4})\. See 'help gquest' for available commands\.$"
+	<trigger match="^You have now joined Global Quest # (?<gq_id>\d{1,5})\. See 'help gquest' for available commands\.$"
 		script="gqmsg_joined"
 		name="trg_gqmsg_joined" 			group="trg_gqmsg_1"
 		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
-	<trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,4}) for levels (?<min_lvl>\d{1,3}) to (?<max_lvl>\d{1,3})(?: - (?:200|10) or fewer wins only)? has now started\.$"
+	<trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,5}) for levels (?<min_lvl>\d{1,3}) to (?<max_lvl>\d{1,3})(?: - (?:200|10) or fewer wins only)? has now started\.$"
 		script="gqmsg_started"
 		name="trg_gqmsg_started" 			group="trg_gqmsg_1"
 		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
@@ -6815,22 +6812,27 @@ end
 		name="trg_gq_finished_extended" 	group="trg_gqmsg_2"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
-	<trigger match="^Global Quest: Global Quest # (?<gq_id>\d{1,4}) has been won by (?<winner>[A-Z][A-Za-z]+) - \d*(?:1st|2nd|3rd|\dth) win\.$"
+	<trigger match="^Global Quest: Global Quest # (?<gq_id>\d{1,5}) has been won by (?<winner>[A-Z][A-Za-z]+) - \d*(?:1st|2nd|3rd|\dth) win\.$"
 		script="gqmsg_winner"
 		name="trg_gqmsg_winner" 			group="trg_gqmsg_2"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
-	<trigger match="^Global Quest: Global Quest # (?<gq_id>\d{1,4}) will go into extended time for 5 more minutes\.$"
+	<trigger match="^Global Quest: Global Quest # (?<gq_id>\d{1,5}) will go into extended time for 5 more minutes\.$"
 		script="gqmsg_extended_time"
 		name="trg_gqmsg_extended_time" 		group="trg_gqmsg_ext"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
-	<trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,4}) \(extended\) is now over\.$"
-		script="player_not_on_gq"
+	<trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,5})(?: \(extended\))? is now over\.$"
+		script="gq_ended"
 		name="trg_gqmsg_extended_end" 		group="trg_gqmsg_2"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
-	<trigger match="^You are no longer part of Global Quest # (?<gq_id>\d{1,4}) and will be unable to rejoin\.$"
+	<trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,5}) has been cancelled due to lack of activity\.$"
+		script="gq_ended"
+		name="trg_gqmsg_extended_end" 		group="trg_gqmsg_2"
+		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+
+	<trigger match="^You are no longer part of Global Quest # (?<gq_id>\d{1,5}) and will be unable to rejoin\.$"
 		script="player_not_on_gq"
 		name="trg_gqmsg_quit" 				group="trg_gqmsg_2"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
@@ -6850,7 +6852,7 @@ end
 		name="trg_no_gqs_running" 			group="trg_gq_status"
 		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
-	<trigger match="^Global Quest # (?<gq_id>\d{1,4}) has not yet started\.$"
+	<trigger match="^Global Quest # (?<gq_id>\d{1,5}) has not yet started\.$"
 		script="gq_check_not_yet_started"
 		name="trg_gq_check_not_yet_started" group="trg_gq_status"
 		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>

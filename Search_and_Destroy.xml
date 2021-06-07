@@ -3984,15 +3984,15 @@ end
 --	[[ SQL execution ]]
 	function RunSql(name, line, wildcards)
 		local worldPath = GetInfo(66) .. "/worlds/plugins/"
-		local db = assert(sqlite3.open(worldPath .. "sddb.db"))
+		local db = assert(sqlite3.open(snd_db_file))
 		local index = 0
 		local sql = wildcards.sql
 		ColourNote("#00C040", "", "\nrunning sql: " .. sql)
 		for row in db:nrows(sql) do
 			index = index + 1
 			print("----------- record " .. index .. " -----------" )
-			--tprint(row)
-	--		print (serialize.save ("row", row))
+			-- tprint(row)
+			print (serialize.save ("row", row))
 		end
 		db:close_vm()
 	end

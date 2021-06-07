@@ -12,7 +12,8 @@
             "Fixed 'xcp' sometimes taking you to manorville when your target is in death's manor",
             "Fixed quick kill command not properly executing castings by spell numbers",
             "Fixed a runtime error that sometimes happened after killing a campaign mob while it wasn't targeted",
-            "Fixed the wrong mob being crossed off when you killed a campaign target that wasn't your actively targeted one"
+            "Fixed the wrong mob being crossed off when you killed a campaign target that wasn't your actively targeted one",
+            "(Hopefully) Fix for SnD thinking you're not in a gquest anymore after a different gquest finishes. I'm going to go through how it handles gquests in general and try to make it more airtight but that will take a bit of time."
         ]
     },
     "5.74": {

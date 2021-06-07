@@ -4101,8 +4101,8 @@ end
 --[[ 4 ]]	["hsNX"]  = { L= 93, text= "nx", tdx=7, tdy=3, exec1=      "nx", exec2=     "nx-", tooltip="Left click = goto next\nRight click = goto prev" },
 --[[ 5 ]]	["hsQS"]  = { L=124, text= "qs", tdx=8, tdy=3, exec1=      "qs", exec2=      "qs", tooltip="Quick-scan for current target (cp, quest, ht, qw)" },
 --[[ 6 ]]	["hsQW"]  = { L=219, text= "qw", tdx=5, tdy=3, exec1=      "qw", exec2=     "qwx", tooltip="Left click = Quick-where\nRight click = Quick-where exact" },
---[[ 7 ]]	["hsHT"]  = { L=248, text= "ht", tdx=9, tdy=3, exec1=      "ht", exec2=     "hta", tooltip="Left click = Do hunt trick\nRight click = Cancel hunt trick" },
---[[ 8 ]]	["hsREF"] = { L=277, text="ref", tdx=6, tdy=3, exec1="xgui ref", exec2="xgui rel", tooltip="Left click = Refresh target list - cp (gq) check\nRight click = Reload target data - cp (gq) info" } }
+--[[ 7 ]]	["hsHT"]  = { L=250, text= "ht", tdx=9, tdy=3, exec1=      "ht", exec2=     "hta", tooltip="Left click = Do hunt trick\nRight click = Cancel hunt trick" },
+--[[ 8 ]]	["hsREF"] = { L=281, text="ref", tdx=6, tdy=3, exec1="xgui ref", exec2="xgui rel", tooltip="Left click = Refresh target list - cp (gq) check\nRight click = Reload target data - cp (gq) info" } }
 
 	function draw_b1_action_buttons(left, top)
 		local b1 = button_1_list

@@ -6829,7 +6829,7 @@ end
 
 	<trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,5}) has been cancelled due to lack of activity\.$"
 		script="gq_ended"
-		name="trg_gqmsg_extended_end" 		group="trg_gqmsg_2"
+		name="trg_gqmsg_extended_end2" 		group="trg_gqmsg_2"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
 	<trigger match="^You are no longer part of Global Quest # (?<gq_id>\d{1,5}) and will be unable to rejoin\.$"

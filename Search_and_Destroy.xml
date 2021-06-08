@@ -36,7 +36,7 @@
 <![CDATA[
 --Line 152
 	--[[ This script was originally improved upon by Starling, and as such, she deserves credit for the work put into the plugin. In order to ensure future compliance
-	     with Aardwolf and MUSHclient, maintenance will now be provided by Crowley and Naricain. If you have any questions, feel free to shoot us a message on Personal
+		 with Aardwolf and MUSHclient, maintenance will now be provided by Crowley and Naricain. If you have any questions, feel free to shoot us a message on Personal
 		 or through tells. We will make changes as we see fit to the code. // Crowley and Naricain
 
 
@@ -49,7 +49,7 @@
 	require "tprint"
 	require "wait"
 
-    json = require "json"
+	json = require "json"
 
 	async_ok, async = pcall (require, "async")
 
@@ -107,8 +107,8 @@
 	local xcp_index_attempt
 	local last_kill_index
 
-    local last_mob_damaged = nil
-    local last_mob_killed = nil
+	local last_mob_damaged = nil
+	local last_mob_killed = nil
 
 -- [[ campaign data (cpmd) ]]
 	local cp_info_level = tonumber(GetVariable("mcvar_cp_level_taken")) or 0
@@ -308,7 +308,7 @@
 -- [[ S&D dev stuff ]]
 	local debug_mode = GetVariable("debug_mode") or "off"
 
-    versionURL      = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/VERSION"
+	versionURL      = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/VERSION"
 	pluginURL       = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/%s/Search_and_Destroy.xml"
 	changelogURL    = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/v%s/changelog"
 	soundsURL       = "https://raw.githubusercontent.com/AardNaricain/Search-and-Destroy/download-sounds/%s"
@@ -354,13 +354,13 @@
 		xg_create_window()
 
 		migrate_database()
-        if not GetVariable("index_already_checked") then
-            area_index_process()
-            SetVariable("index_already_checked", "done")
-        end
+		if not GetVariable("index_already_checked") then
+			area_index_process()
+			SetVariable("index_already_checked", "done")
+		end
 		download_sounds(function() end)
 		--show_changelog(false)
-        get_changelog(false)
+		get_changelog(false)
 	end
 
 	function migrate_database()
@@ -469,7 +469,7 @@
 
 	--[[Deprecated show_changelog
 
-        function show_changelog(all_changes)
+		function show_changelog(all_changes)
 		local changes_to_show = {}
 
 		if all_changes then
@@ -499,49 +499,50 @@
 		SetVariable("last_installed_version", tostring(PLUGIN_VERSION))
 	end]]--
 
-    function get_changelog(all_changes)
-    	show_all_changes = all_changes or false
-    	DebugNote("Attempting to download changelog")
-    	download_file(string.format(changelogURL, PLUGIN_VERSION), show_changelog)
+	function get_changelog(all_changes)
+		show_all_changes = all_changes or false
+		DebugNote("Attempting to download changelog")
+		download_file(string.format(changelogURL, PLUGIN_VERSION), show_changelog)
 	end
 
 	function show_changelog(retval, page, status, headers, full_status, request_url)
 
-    	if status ~= 200 then
-        	DebugNote("show_changelog got status ", status)
-        	ErrorNote("Error while fetching changelog")
-	        return
-    	end
+		if status ~= 200 then
+			DebugNote("show_changelog got status ", status)
+			ErrorNote("Error while fetching changelog")
+			return
+		end
 
 		local CHANGELOG = json.decode(page)
 
-    	local changes_to_show = {}
+		local changes_to_show = {}
 
-	    if show_all_changes then
-	        changes_to_show = CHANGELOG
-    	elseif last_installed_version then
-        	last_installed_version = tonumber(last_installed_version)
-        	DebugNote("Last installed version ", last_installed_version)
+		if show_all_changes then
+			changes_to_show = CHANGELOG
+		elseif last_installed_version then
+			last_installed_version = tonumber(last_installed_version)
+			DebugNote("Last installed version ", last_installed_version)
 
-        	for version, notes in pairs(CHANGELOG) do
-        	    if tonumber(version) > tonumber(last_installed_version) then
-    	            changes_to_show[version] = notes
-	            end
-        	end
-    	else
-        	-- show only the latest changes
-        	local latest_change_num = -1
-        	for version, notes in pairs(CHANGELOG) do
-            	if tonumber(version) > latest_change_num then
-    	            latest_change_num = version
-	            end
-        	end
-	        changes_to_show[latest_change_num] = CHANGELOG[latest_change_num]
-    	end
-    	display_changes(changes_to_show)
+			for version, notes in pairs(CHANGELOG) do
+				if tonumber(version) > tonumber(last_installed_version) then
+					changes_to_show[version] = notes
+				end
+			end
+		else
+			-- show only the latest changes
+			local latest_change_num = -1
+			for version, notes in pairs(CHANGELOG) do
+				version = tonumber(version)
+				if version > latest_change_num then
+					latest_change_num = version
+				end
+			end
+			changes_to_show[latest_change_num] = CHANGELOG[latest_change_num]
+		end
+		display_changes(changes_to_show)
 
-    	last_installed_version = PLUGIN_VERSION
-    	SetVariable("last_installed_version", tostring(PLUGIN_VERSION))
+		last_installed_version = PLUGIN_VERSION
+		SetVariable("last_installed_version", tostring(PLUGIN_VERSION))
 	end
 
 	function display_changes(changes_to_show)
@@ -609,8 +610,8 @@
 			send_gmcp_packet("request char")
 			return
 		end
-      	SendNoEcho("tags scan on")
-      	SendNoEcho("tags roomchars on")
+		SendNoEcho("tags scan on")
+		SendNoEcho("tags roomchars on")
 
 		send_gmcp_packet("request room")
 		init_called = init_called + 1
@@ -1248,7 +1249,7 @@
 
 --	[[ Area index process ]]
 	function area_index_process()
-        DebugNote("Processing area index")
+		DebugNote("Processing area index")
 		Execute("xset suspend page size")
 		DoAfterSpecial(0.1, [[ SendNoEcho("areas 1 300 keyword") ]], sendto.script)
 	end
@@ -3476,7 +3477,8 @@ end
 			auto_hunt_abort()
 		else
 			ht_reset()
-			EnableTriggerGroup("AutoHunt", true)				auto_hunt_mob = s
+			EnableTriggerGroup("AutoHunt", true)
+			auto_hunt_mob = s
 			Send("hunt " .. s)
 		end
 	end
@@ -3703,7 +3705,9 @@ end
 		local ri = current_room
 		area_start_rooms[ri.arid] = {}
 		area_start_rooms[ri.arid].roomid = ri.rmid
-		tprint(area_start_rooms)
+		if debug_mode == "on" then
+			tprint(area_start_rooms)
+		end
 		local serial = serialize.save_simple(area_start_rooms)
 		SetVariable("mcvar_areaStartRooms", serial)
 		InfoNote("\nxset mark: Room ", ri.rmid, " set as start of area ", ri.arid, ".\n")
@@ -5825,21 +5829,23 @@ end
 			error("To start migration process, please locate the file 'WinkleGold_Database.db' and move it to the plugins folder. Then try again.")
 		else
 			InfoNote("Now rebuilding the database with data from Pwar's Search & Destroy.")
-
-			os.remove(snd_db_file)
-			migrate_database()
-
 			f:close()
 
 			local PwarDb = assert(sqlite3.open(GetInfo(60) .. "/WinkleGold_Database.db"))
 			local mapperDb = assert(sqlite3.open(GetInfo(66) .. "Aardwolf.db"))
-			local SnDdb = assert(sqlite3.open(GetInfo(66) .. "/SnDdb.db"))
+			local SnDdb = assert(sqlite3.open(snd_db_file))
 			local roomsById = {}
 			local roomsToLookup = {}
 			local migrateTable = {}
 			local insertStatements = {}
 			local batch_size = 10000
 			local err
+
+			InfoNote("Dropping existing data")
+			execute_in_transaction(SnDdb, {
+				"DELETE FROM mobs;",
+				"DELETE FROM mob_keyword_exceptions;",
+			})
 
 			local mobQuery = "SELECT roomid, mobname, sum(freq) as count FROM mobs GROUP BY roomid, mobname"
 
@@ -5858,7 +5864,7 @@ end
 			for i, mob in ipairs(migrateTable) do
 				room = roomsById[tostring(mob.roomid)]
 				if room then
-					table.insert(insertStatements, string.format("INSERT INTO mobs (mob,room,roomid,zone,count) VALUES (%s,%s,%s,%s,%i);", fixsql(mob.mob), fixsql(room.name), mob.roomid, fixsql(room.area), mob.count))
+					table.insert(insertStatements, string.format("INSERT OR IGNORE INTO mobs (mob,room,roomid,zone,count) VALUES (%s,%s,%s,%s,%i);", fixsql(mob.mob), fixsql(room.name), mob.roomid, fixsql(room.area), mob.count))
 
 					if #insertStatements > batch_size then
 						execute_in_transaction(SnDdb, insertStatements)
@@ -5888,6 +5894,18 @@ end
 
 					insertStatements = {}
 				end
+			end
+
+			local startRoomQuery = "SELECT areaname, roomid FROM startrooms"
+			local marks_updated = false
+			for row in PwarDb:nrows(startRoomQuery) do
+				marks_updated = true
+				area_start_rooms[row.areaname] = {roomid = row.roomid}
+			end
+
+			if marks_updated then
+				local serial = serialize.save_simple(area_start_rooms)
+				SetVariable("mcvar_areaStartRooms", serial)
 			end
 
 			PwarDb:close()

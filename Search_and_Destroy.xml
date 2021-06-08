@@ -6666,7 +6666,7 @@ end
 	<trigger match="^.+\w does UN\w+ things to +(?<mob_name>\S.*)[!\.] \[\d+\]$"
 		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
 
-	<trigger match="^.+\w damages +(?<mob_name>\S.*)[!\.] \[\d+\]$"
+	<trigger match="^.+\w damages? +(?<mob_name>\S.*)[!\.] \[\d+\]$"
 		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
 
 	<trigger match="^.+\w +shreds +(?<mob_name>\S.*)[!\.] \[\d+\]$"

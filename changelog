@@ -1,4 +1,11 @@
 {
+    "5.77": {
+        "fixes": [
+            "Fix smart scan not doing con in rooms with only noscan mobs.",
+            "Fixed certain kills not properly being identified depending on damage settings",
+            "Fixed trigger error message on plugin load"
+        ]
+    },
     "5.76": {
         "fixes": [
             "Fix xrt only running to exact area names."

@@ -6239,6 +6239,7 @@ end
 	function scan_start()
 		EnableTriggerGroup("scan", true)
 		doors_in_scanned_room = {}
+		scanned_mobs_here = {}
 		scan_full_display = { { doors = doors_in_scanned_room } }
 	end
 

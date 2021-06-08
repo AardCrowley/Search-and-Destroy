@@ -4811,7 +4811,7 @@ end
 				win_hide_settings_button = "off"
 				InfoNote("\nSettings button will be ", "shown")
 			end
-			SetVariable("mcvar_window_hide_settings_button", xcp_targets_quest_onoff)
+			SetVariable("mcvar_window_hide_settings_button", win_hide_settings_button)
 
 			clear_window_menu_hotspots()
 			xg_draw_window()

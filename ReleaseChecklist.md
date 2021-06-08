@@ -1,6 +1,6 @@
 Before pushing a release:
 * Update the version number at the top of Search_and_Destroy.xml
-* Update the version number in the VERSION filee
+* Update the version number in the VERSION file
 * Update the changelog file
 * Update README.MD if needed
 

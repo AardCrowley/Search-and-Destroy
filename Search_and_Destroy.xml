@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.75" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley and Naricain" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="5.76" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley and Naricain" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -3734,10 +3734,10 @@ end
 		end
 		for k,v in pairs (areaDefaultStartRooms) do
 			if k:lower() == arid then -- exact match
-				return v.roomid
+				return v.start
 			elseif string.match(string.lower(k), arid) then
 				possible_room_type = possible_room_type or "default"
-				possible_match = possible_match or v.roomid
+				possible_match = possible_match or v.start
 			end
 		end
 		if possible_match and not exact then

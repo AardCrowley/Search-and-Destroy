@@ -1,4 +1,9 @@
 {
+    "5.76": {
+        "fixes": [
+            "Fix xrt only running to exact area names."
+        ]
+    },
     "5.75": {
         "features": [
             "Replaced conscan mode with smartscan. Smartscan will do a scan when entering a room, filtering the results to only show cp/quest/gq targets. If there are more mobs in the room then found on scan, and you didn't find your current target, it will also perform a consider (assuming there's noscan mobs here), filtering the results for targets."

@@ -1,8 +1,11 @@
 {
     "5.78": {
         "changes": [
-            "Show a message where a con after smart scan finds nothing",
-            "Properly save the hide settings button setting"
+            "Show a message where a con after smart scan finds nothing"
+        ],
+        "fixes": [
+            "Properly save the hide settings button setting",
+            "`ms help` no longer tries to open help"
         ]
     },
     "5.77": {

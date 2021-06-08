@@ -6208,6 +6208,11 @@ end
 			end
 		end
 
+		local target_found = quest_target_found_here or activity_target_found_here or other_target_found_here
+		if con_after_scan and not target_found then
+			ColourNote(RGBColourToName(GetNormalColour(8)), "", "Consider found no targets in this room.\n")
+		end
+
 		activity_target_found_here = false
 		quest_target_found_here = false
 		other_target_found_here = false

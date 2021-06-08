@@ -1,4 +1,9 @@
 {
+    "5.78": {
+        "changes": [
+            "Show a message where a con after smart scan finds nothing"
+        ]
+    },
     "5.77": {
         "fixes": [
             "Fix smart scan not doing con in rooms with only noscan mobs.",

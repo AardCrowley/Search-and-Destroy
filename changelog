@@ -1,7 +1,8 @@
 {
     "5.78": {
         "changes": [
-            "Show a message where a con after smart scan finds nothing"
+            "Show a message where a con after smart scan finds nothing",
+            "Highlight mobs with matching names but unknown areas on con/scan"
         ],
         "fixes": [
             "Properly save the hide settings button setting",

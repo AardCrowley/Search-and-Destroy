@@ -6208,7 +6208,7 @@ end
 		end
 
 		-- Don't play sound when a quest target is here, assume soundpack will already play a sound
-		if con_after_scan and not quest_target_found_here then
+		if not con_after_scan and not quest_target_found_here then
 			if activity_target_found_here then
 				-- The current target is found in the room, play a sound
 				play_target_found_sound()
@@ -6415,7 +6415,7 @@ end
 		local result = {}
 
 		for i, target in ipairs(main_target_list) do
-			if current_room.arid == target.arid and target.mob:lower() == lower_mob_name then
+			if (current_room.arid == target.arid or target.unknown) and target.mob:lower() == lower_mob_name then
 				on_target_list = true
 				break
 			end

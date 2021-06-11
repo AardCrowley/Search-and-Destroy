@@ -76,8 +76,6 @@
 
 	notarg = (GetVariable("mcvar_quick_kill_notarg") == "true" or false)
 
-	gqCheckPass = false
-
 	local plugins_folder = GetPluginInfo(GetPluginID(), 20)
 	local db_file_1
 	local db_file_2
@@ -121,17 +119,20 @@
 	local player_on_cp = "no"
 
 -- [[ gquest data ]]
-	local gqid_declared = GetVariable("mcvar_gqid_declared") or "-1"
 	local gqid_joined = GetVariable("mcvar_gqid_joined") or "-1"
 	local gqid_started = GetVariable("mcvar_gqid_started") or "-1"
 	local gqid_extended = GetVariable("mcvar_gqid_extended") or "-1"
+	local potential_gq = {}
 	local player_on_gq = "no"
 	local gq_info_list = {}
 	local gq_check_list = {}
 	local last_gq_check = os.clock()
-	local gq_info_minlvl = tonumber(GetVariable("mcvar_gq_info_minlvl")) or 0
-	local gq_info_maxlvl = tonumber(GetVariable("mcvar_gq_info_maxlvl")) or 0
 	local gq_info_efflvl = tonumber(GetVariable("mcvar_gq_info_efflvl")) or 0
+
+-- [[ gquest test state ]]
+	local mock_gquests = {}
+	local mock_gqid_joined
+	local debug_gq_mode = false
 
 -- [[ current target data - cp, gq, quest ]]
 	local xcp_index = 0
@@ -1803,8 +1804,7 @@ end
 		local t = cp_info_list
 		local mob = wildcards.mob
 		local loc = wildcards.loc
-		local ord = #t+1
-		table.insert(t, { mob=mob, loc=loc, ord=ord } )
+		table.insert(t, { mob=mob, loc=loc } )
 	end
 
 	function cp_info_end()
@@ -1836,8 +1836,7 @@ end
 		local kw = ""
 		local loc = wildcards.loc
 		local is_dead = ((wildcards.isdead == "") and "no" or "yes")
-		local ord = #t + 1
-		table.insert(t, { mob=mob, qty=qty, loc=loc, is_dead=is_dead, ord=ord })
+		table.insert(t, { mob=mob, qty=qty, loc=loc, is_dead=is_dead })
 	end
 
 	function cp_check_end(name, line, wildcards)
@@ -1887,7 +1886,7 @@ end
 					return i
 				end
 			end
-			DebugNote("killed mob DEFAULTING to xcp mob")
+			DebugNote("killed mob DEFAULTING to xcp mob ", "#", "", xcp_index)
 			return xcp_index
 		end
 	end
@@ -1902,6 +1901,7 @@ end
 	end
 
 	function do_cp_complete(name, line, wildcards)
+		DebugNote("Campaign complete")
 		player_not_on_cp()
 	end
 
@@ -1941,31 +1941,27 @@ end
 	end
 
 --	[[ Gquest beginning event messages: declare, join, start ]]
-	function gqmsg_declared(name, line, wildcards)
-		gqid_declared = wildcards.gq_id
-			SetVariable("mcvar_gqid_declared", gqid_declared)
-		gqid_joined = "-1"
-			SetVariable("mcvar_gqid_joined", "-1")
-		gqid_started = "-1"
-			SetVariable("mcvar_gqid_started", "-1")
-		gqid_extended = "-1"
-			SetVariable("mcvar_gqid_extended", "-1")
-	end
-
 	function gqmsg_joined(name, line, wildcards)
 		gqid_joined = wildcards.gq_id
+
 		SetVariable("mcvar_gqid_joined", gqid_joined)
+		DebugNote("Joined gq ", gqid_joined, " gqid_started ", gqid_started)
 		if (gqid_joined == gqid_started) then
-			EnableTriggerGroup("trg_gqmsg_2", true)
+			EnableTriggerGroup("trg_gqmsg", true)
 			do_gq_info()
 		end
+	end
+
+	function gqmsg_info_num(name, line, wildcards)
+		gqid_joined = wildcards.gq_id
+		SetVariable("mcvar_gqid_joined", gqid_joined)
 	end
 
 	function gqmsg_started(name, line, wildcards)
 		gqid_started = wildcards.gq_id
 		SetVariable("mcvar_gqid_started", gqid_started)
 		if (gqid_started == gqid_joined) then
-			EnableTriggerGroup("trg_gqmsg_2", true)
+			EnableTriggerGroup("trg_gqmsg", true)
 			do_gq_info()
 		end
 	end
@@ -1977,64 +1973,71 @@ end
 			main_target_list = {}
 			room_targets_ignored = {}
 			gq_info_list = {}
-			EnableTrigger("trg_gq_info_quest_name", true)
-			SendNoEcho("gq info " .. gqid_joined)
-			--DoAfterSpecial(0.1, [[ Send("gq info .. ]] .. gqid_joined .. [[")]], sendto.script)
+			send_gq_info(gqid_joined)
 		else
-			print("\ndo_gq_info: You haven't joined a gquest.")
+			send_gq_info()
+		end
+	end
+
+	function send_gq_info(gqid)
+		if debug_gq_mode then
+			simulate_send_gq_info(gqid)
+		elseif gqid then
+			SendNoEcho("gq info " .. gqid)
+		else
+			SendNoEcho("gq info")
 		end
 	end
 
 	function gq_info_quest_name(name, line, wildcards)
 		local gqid = wildcards.gq_id
-		if (gqid == gqid_joined) then
-			EnableTrigger("trg_gq_info_quest_status", true)
-			player_is_on_gq()
-		elseif gqCheckPass then
-			gqid_joined = gqid
-			gqCheckPass = false
-			EnableTrigger("trg_gq_info_quest_status")
-			player_is_on_gq()
-		else
-			print("gq info name fail")
-		end
+		potential_gq = { id = gqid, targets = {} }
+		EnableTriggerGroup("trg_gq_info", true)
 	end
 
-	function gq_info_quest_status(name, line, wildcards)
-		local status = wildcards.status
-		if (status == "Active") or (status == "Extended") then
-			EnableTrigger("trg_gq_info_level_range", true)
-		end
+	function gq_info_extended()
+		potential_gq.extended = true
 	end
 
 	function gq_info_level_range(name, line, wildcards)
 		local min = tonumber(wildcards.minlvl)
 		local max = tonumber(wildcards.maxlvl)
 		local eff = math.floor((min + max) / 2)
-		gq_info_minlvl = min
-			SetVariable("mcvar_gq_info_minlvl", min)
-		gq_info_maxlvl = max
-			SetVariable("mcvar_gq_info_maxlvl", max)
-		gq_info_efflvl = eff
-			SetVariable("mcvar_gq_info_efflvl", eff)
+		potential_gq.efflvl = eff
 	end
 
 	function gq_info_line(name, line, wildcards)
-		local t = gq_info_list
 		local mob = wildcards.mob
 		local qty = wildcards.qty
 		local loc = wildcards.loc
-		local ord = #t+1
-		table.insert(t, { mob=mob, qty=qty, loc=loc, ord=ord } )
+		table.insert(potential_gq.targets, { mob=mob, qty=qty, loc=loc } )
 	end
 
 	function gq_info_end()
-		player_is_on_gq()	-- more redundancy.  gq's are a pain
-		area_room_type = area_room_type_check(gq_info_list)
-		cp_info_level = tonumber(gmcp("char.status.level"))	-- room target builder will crash without a sensible value here.  Just use current player level.
-		print("gq type detection: " .. area_room_type .. " (level " .. cp_info_level .. ")\n")
-		xg_draw_window()
-		DoAfterSpecial(0.1, "do_gq_check()", sendto.script)
+		EnableTriggerGroup("trg_gq_info", false)
+
+		if #potential_gq.targets > 0 then
+			player_is_on_gq()
+			gq_info_list = potential_gq.targets
+			gq_joined = potential_gq.id
+			gqid_started = potential_gq.id
+			gqid_extended = potential_gq.extended and potential_gq.id or "-1"
+			SetVariable("mcvar_gqid_joined", gqid_joined)
+			SetVariable("mcvar_gqid_started", gqid_started)
+			SetVariable("mcvar_gqid_extended", gqid_extended)
+
+			gq_info_efflvl = potential_gq.efflvl
+			SetVariable("mcvar_gq_info_efflvl", gq_info_efflvl)
+
+			area_room_type = area_room_type_check(gq_info_list)
+
+			-- cp_info_level = tonumber(gmcp("char.status.level"))	-- room target builder will crash without a sensible value here.  Just use current player level.
+			DebugNote("gq type detection: ", area_room_type, " (level ", gq_info_efflvl, ")")
+			xg_draw_window()
+			DoAfterSpecial(0.1, "do_gq_check()", sendto.script)
+		else
+			DebugNote("Gq info for pending gq or not your gq")
+		end
 	end
 
 --	[[ Gquest check functions ]]
@@ -2047,20 +2050,30 @@ end
 		last_gq_check = time_check
 		gq_check_list = {}
 		EnableTrigger("trg_gq_check_line", true)
-		DoAfterSpecial(0.1, 'SendNoEcho("gq ch")', sendto.script)
+		DoAfterSpecial(0.1, 'send_gq_check()', sendto.script)
+	end
+
+	function send_gq_check()
+		if debug_gq_mode then
+			DoAfterSpecial(2, "simulate_send_gq_check()", sendto.script)
+		else
+			SendNoEcho("gq ch")
+		end
 	end
 
 	function gq_check_line(name, line, wildcards)
+		EnableTrigger("trg_gq_check_end", true)
 		local t = gq_check_list
 		local mob = wildcards.mob
 		local qty = wildcards.qty
 		local loc = wildcards.loc
 		local is_dead = (wildcards.isdead == "" and "no" or "yes")
-		local ord = #t+1
-		table.insert(t, { mob=mob, qty=qty, loc=loc, is_dead=is_dead, ord=ord })
+		table.insert(t, { mob=mob, qty=qty, loc=loc, is_dead=is_dead })
 	end
 
 	function gq_check_end()
+		EnableTriggerGroup("trg_gq_check", false)
+
 		player_is_on_gq()
 		build_main_target_list("gq", area_room_type)
 		xcp_retry()
@@ -2103,6 +2116,7 @@ end
 					DoAfterSpecial(0.1, "do_gq_check()", 12)
 				end
 			elseif (#main_target_list == 1) then
+				DebugNote("last mob!")
 				if x and (x > 0) then
 					xg_draw_window()
 					print_target_links(main_target_list)
@@ -2152,10 +2166,11 @@ end
 		gqid_joined = wildcards[1]
 		player_is_on_gq()
 		gqid_started = "-1"
-			SetVariable("mcvar_gqid_started", "-1")
+		SetVariable("mcvar_gqid_started", "-1")
 	end
 
 	function player_is_on_gq()
+		EnableTriggerGroup("trg_gqmsg", true)
 		player_on_gq = "yes"
 		current_activity = "gq"
 	end
@@ -2167,8 +2182,7 @@ end
 	end
 
 	function player_not_on_gq()
-		EnableTriggerGroup("trg_gq", false)
-		EnableTriggerGroup("trg_gqmsg_2", false)
+		EnableTriggerGroup("trg_gqmsg", false)
 		EnableTrigger("trg_gqmsg_extended_time", false)
 		player_on_gq = "no"
 		area_room_type = "none"
@@ -2179,16 +2193,11 @@ end
 		room_targets_ignored = {}
 
 		gqid_joined = "-1"
-			SetVariable("mcvar_gqid_joined", gqid_joined)
-		gqid_started = "-1"
-			SetVariable("mcvar_gqid_started", gqid_started)
+		SetVariable("mcvar_gqid_joined", gqid_joined)
+		-- gqid_started = "-1"
+		-- SetVariable("mcvar_gqid_started", gqid_started)
 		gqid_extended = "-1"
-			SetVariable("mcvar_gqid_extended", gqid_extended)
-
-		gq_info_minlvl = "-1"
-			SetVariable("mcvar_gq_info_minlvl", gq_info_minlvl)
-		gq_info_maxlvl = "-1"
-			SetVariable("mcvar_gq_info_maxlvl", gq_info_maxlvl)
+		SetVariable("mcvar_gqid_extended", gqid_extended)
 
 		xcp_clear_target(true)
 
@@ -2213,6 +2222,7 @@ end
 			print("main_target_list build error - tried to run while on " .. cp_gq .. " but area/room type is 'none'.")
 		end
 		xg_draw_window()
+		DebugNote("Print target links after build main target list")
 		print_target_links(main_target_list)
 	end
 
@@ -2253,7 +2263,7 @@ end
 					is_dead = dead,
 					link_type = "area",
 					index = #t+1,
-					ord = v.ord } )
+				} )
 			end
 			if (results_found == false) then
 				table.insert(t,
@@ -2264,8 +2274,8 @@ end
 					is_dead = dead,
 					link_type = "unknown",
 					index = #t+1,
-					ord = v.ord,
-					unknown = true, } )
+					unknown = true,
+				} )
 			end
 		end
 		db:close_vm()
@@ -2332,7 +2342,7 @@ end
 								minlvl = area_min_lvl,
 								maxlvl = area_max_lvl,
 								link_type = lt,	--((v.is_dead == false) and "room" or "area"),	-- deals with dead mobs when area contains roomnames same as area name e.g. Aardington Estate
-								ord = v.ord } )
+							 } )
 						else
 							table.insert(ig, {	-- build table of search results for areas out of your level range.
 								mob = v.mob,	-- Usually invalid, but valid links can wind up here if area's level range is too broad, or wrong.
@@ -2344,7 +2354,7 @@ end
 								minlvl = area_min_lvl,
 								maxlvl = area_max_lvl,
 								link_type = "ignored",
-								ord = v.ord } )
+							} )
 						end
 					end
 				end
@@ -2418,13 +2428,13 @@ end
 					local select = string.format(sqla, fixsql(v.loc))	-- dead mobs only give area name (even in room cp's) so search area info only.
 					for dead_row in db:nrows(select) do	-- mob is dead, location is known
 						results_found = true
-						table.insert(high_chance, { mob=v.mob, arid=dead_row.arid, qty = v.qty, is_dead="yes", link_type="area", ord=v.ord } )
+						table.insert(high_chance, { mob=v.mob, arid=dead_row.arid, qty = v.qty, is_dead="yes", link_type="area" } )
 					end
 					if (results_found == false) then	-- mob is dead, location is unknown
-						table.insert(high_chance, { mob=v.mob, arid="-1", location=v.loc, qty = v.qty, is_dead="yes", link_type="unknown", ord=v.ord } )
+						table.insert(high_chance, { mob=v.mob, arid="-1", location=v.loc, qty = v.qty, is_dead="yes", link_type="unknown" } )
 					end
 				else	-- mob is alive, but location is unknown
-					table.insert(high_chance, { mob=v.mob, arid="-1", location=v.loc, qty = v.qty, is_dead="no", link_type="unknown", ord=v.ord } )
+					table.insert(high_chance, { mob=v.mob, arid="-1", location=v.loc, qty = v.qty, is_dead="no", link_type="unknown" } )
 				end
 			end
 		end
@@ -3848,7 +3858,357 @@ end
 		Simulate("\n")
 		Simulate("You have 6 days, 23 hours and 56 minutes left to finish this campaign.\n")
 		Simulate("\n")
+	end
 
+	function spoof_gq_level_range()
+		local level = tonumber(gmcp("char.status.level"))
+		local min = math.max(level - 10,  1)
+		local max = math.min(level + 10, 201)
+
+		return min, max
+	end
+
+	function simulate_declare_gq(name, line, wildcards)
+		local min, max = spoof_gq_level_range
+		local gq_num
+		if #wildcards.num then
+			gq_num = math.min(10000, tonumber(wildcards.num))
+		else
+			gq_num = math.random(1, 10000)
+		end
+
+		Simulate(string.format("Global Quest: Global quest #%i has been declared for levels %i to %i\n", gq_num, min, max))
+	end
+
+	function xtest_debug_gquest()
+		if debug_mode ~= "on" then
+			xtest_debug()
+		end
+
+		player_not_on_gq()
+
+		gqid_started = "-1"
+		-- gqid_joined = "-1"
+		-- gqid_extended = "-1"
+
+
+		debug_gq_mode = not debug_gq_mode
+
+
+		mock_gquests = {}
+		DebugNote("GQuest Debug mode ", debug_gq_mode and "enabled" or "disabled")
+	end
+
+	function assert_debug_gq_mode()
+		if not debug_gq_mode then
+			ErrorNote("Not in Gquest testing mode.")
+			return false
+		end
+
+		return true
+	end
+
+	function xtest_gq_waiting(name, line, wildcards)
+		if not assert_debug_gq_mode() then return end
+
+		local gqid = tonumber(wildcards.num) or 123
+		mock_gquests[gqid] = { state = "waiting", id = gqid }
+		Simulate(string.format("Global Quest: Global quest # %i has been declared for levels 1 to 201\n", gqid))
+		DebugNote("Added mock gquest ", gqid, " in waiting state.")
+	end
+
+	function xtest_gq_start(name, line, wildcards)
+		if not assert_debug_gq_mode() then return end
+		local targets
+		local gqid = tonumber(wildcards.num) or 123
+		local type = wildcards.type
+
+		if type == "" then
+			type = "area"
+		end
+
+		if type == "area" then
+			targets = gq_area_targets()
+		else
+			targets = gq_room_targets()
+		end
+
+		mock_gquests[gqid] = { state = "running", id = gqid, targets = targets }
+		Simulate(string.format("Global Quest: Global quest # %i for levels 1 to 201 has now started.\n", gqid))
+		DebugNote("Added mock gquest ", gqid, " (", type .. "-type", ") in running state state.")
+	end
+
+	function xtest_gq_join(name, line, wildcards)
+		if not assert_debug_gq_mode() then return end
+		local gqid = tonumber(wildcards.num)
+
+		if gqid == 0 then
+			mock_gqid_joined = 0
+			gqid_joined = "-1"
+			DebugNote("Removed from any gquests")
+		elseif wildcards.silent == "s" then
+			xtest_gq_joined_already(gqid)
+		else
+			xtest_gq_join_now(gqid)
+		end
+	end
+
+	function xtest_gq_joined_already(gqid)
+		if mock_gquests[gqid] then
+			mock_gqid_joined = gqid
+			DebugNote("Silently joining gq ", gqid)
+		else
+			DebugNote("No mock gq #", gqid, " is running")
+		end
+	end
+
+	function xtest_gq_join_now(gqid)
+		if mock_gquests[gqid] then
+			mock_gqid_joined = gqid
+			Simulate(string.format("You have now joined Global Quest # %i. See 'help gquest' for available commands.\n", gqid))
+		else
+			DebugNote("No mock gq #", gqid, " is running")
+		end
+	end
+
+	function xtest_gq_end(name, line, wildcards)
+		if not assert_debug_gq_mode() then return end
+		local gqid = tonumber(wildcards.num) or 123
+		if mock_gquests[gqid] then
+			simulate_gq_end(gqid)
+			mock_gquests[gqid] = nil
+		else
+			DebugNote("No mock gq #", gqid, " is running")
+		end
+	end
+
+	function xtest_gq_win(name, line, wildcards)
+		if not assert_debug_gq_mode() then return end
+		local gqid = tonumber(wildcards.num) or 123
+		if mock_gquests[gqid] then
+			simulate_gq_win(gqid)
+			mock_gquests[gqid] = nil
+		else
+			DebugNote("No mock gq #", gqid, " is running")
+		end
+	end
+
+	function xtest_gq_lose(name, line, wildcards)
+		if not assert_debug_gq_mode() then return end
+
+		local gqid = tonumber(wildcards.num) or 123
+		local noextended = #wildcards.noextended > 0
+		if mock_gquests[gqid] then
+			simulate_gq_lose(gqid, noextended)
+			if noextended then
+				mock_gquests[gqid] = nil
+			end
+		else
+			DebugNote("No mock gq #", gqid, " is running")
+		end
+	end
+
+	function xtest_gq_kill(name, line, wildcards)
+		if not assert_debug_gq_mode() then return end
+
+		local kill_num = tonumber(wildcards.num) or 1
+		if mock_gquests[mock_gqid_joined] then
+			simulate_gq_kill(kill_num)
+		elseif mock_gqid_joined then
+			DebugNote("No mock gq #", mock_gqid_joined, " is running")
+		else
+			DebugNote("You're not in a gquest")
+		end
+	end
+
+	function xtest_gq_quit(name, line, wildcards)
+		if not assert_debug_gq_mode() then return end
+
+		local gqid = tonumber(wildcards.num) or 123
+		Simulate(string.format("You are no longer part of Global Quest # %i and will be unable to rejoin.\n", gqid))
+	end
+
+	function xtest_xcp(name, line, wildcards)
+		xcp_index = tonumber(wildcards.num) or 1
+		if #main_target_list > 0 then
+			xcp_index = math.min(#main_target_list, xcp_index)
+			full_mob_name = main_target_list[xcp_index].mob
+			short_mob_name = main_target_list[xcp_index].kw
+			current_room.arid = main_target_list[xcp_index].arid
+			DebugNote("Targeting xcp ", xcp_index)
+
+			xg_draw_window()
+		else
+			DebugNote("Clearing xcp index")
+			xcp_clear_target(true)
+		end
+	end
+
+	function simulate_gq_info(number, targets)
+		Simulate("\n")
+		Simulate("---------------------[  CURRENT GLOBAL QUEST DETAILS ]---------------------\n")
+		Simulate(string.format("Quest Name.........: [ Global quest # %i ]\n", number))
+		Simulate("Quest Type ........: [ Main Group ]\n")
+		Simulate("Quest Status.......: [ Active ]\n")
+		Simulate("Level range........: [  186 ] - [  201 ]\n")
+		Simulate("Quest Duration.....: [   98 ]\n")
+		Simulate("Time Expired.......: [    0 ]\n")
+		Simulate("Time Remaining.....: [   98 ]\n")
+		Simulate("Inactivity Timer...: [ 00:00:11 ]\n")
+		Simulate("-----------------------------[ Quest Rewards ]-----------------------------\n")
+		Simulate("Quest points.......: [    13 ] ( +3 for each mob killed )\n")
+		Simulate("Gold Coins.........: [ 18600 ]\n")
+
+		if targets then
+			Simulate("-----------------------------[ Quest Targets ]-----------------------------\n")
+			Simulate("To complete this quest, you must:\n")
+
+			for i, mob in ipairs(targets) do
+				Simulate(string.format("Kill at least %i * %s (%s).\n", mob.count or 1, mob.name, mob.location))
+			end
+		end
+
+		Simulate("---------------------------------------------------------------------------\n\n")
+	end
+
+	function simulate_gq_check(targets)
+		for i, mob in ipairs(targets) do
+			Simulate(string.format("You still have to kill %i * %s (%s)\n", mob.count or 1, mob.name, mob.location))
+		end
+		Simulate("\n")
+	end
+
+	function gq_area_targets()
+		return {
+			{ count = 1, name = "a withered valkyrie", location = "Black Lagoon" },
+			{ count = 1, name = "Suljina the Nix", location = "Rebellion of the Nix" },
+			{ count = 1, name = "river rapids", location = "Tanra'vea" },
+			{ count = 1, name = "a blue light", location = "Tanra'vea" },
+			{ count = 2, name = "a feeding demon", location = "The Cataclysm" },
+			{ count = 1, name = "Drilla", location = "The Covenant of Mistridge" },
+			{ count = 1, name = "a Necrophim", location = "The Covenant of Mistridge" },
+			{ count = 2, name = "a lava leech", location = "The Deadlights" },
+			{ count = 1, name = "Destiny", location = "The Partroxis" },
+			{ count = 1, name = "Olivia", location = "The Partroxis" },
+			{ count = 1, name = "Daestitrus", location = "The Partroxis" },
+		}
+	end
+
+	function gq_room_targets()
+		return {
+			{ count = 1, name = "Earshda the receptionist", location = "The Reception Area" },
+			{ count = 1, name = "a chorus girl", location = "Upstage Centre" },
+			{ count = 1, name = "a caretaker", location = "Entering Room 5" },
+			{ count = 1, name = "a Nulan'Boar mother", location = "A small grassy paddock" },
+			{ count = 1, name = "an agathinon aasimon", location = "In a Great Field on Arcadia" },
+			{ count = 1, name = "Prince Beelzebub", location = "The Training Field" },
+			{ count = 1, name = "an ant", location = "The Land of Oz" },
+			{ count = 1, name = "a taller man", location = "Patient Room 5" },
+			{ count = 1, name = "a Mud Dweller", location = "Within The Secret Passage" },
+			{ count = 1, name = "Duke Malagard", location = "The Jewelled Palace" },
+			{ count = 1, name = "a rabid rabbit", location = "Path to the castle" },
+			{ count = 1, name = "a heavily built goblin guard", location = "Before the fortress" },
+			{ count = 1, name = "a cottonmouth", location = "Thick vegetation on the river bank" },
+			{ count = 1, name = "a light aasimon", location = "On the Belierin layer of the Elysium" },
+		}
+	end
+
+	function simulate_gq_end(gqid)
+		Simulate(string.format("Global Quest: Global quest # %i (extended) is now over.\n", gqid))
+	end
+
+	function simulate_gq_win(gqid)
+		simulate_gq_winner_message(gqid, gmcp("char.base.name"))
+	end
+
+	function simulate_gq_lose(gqid, extended)
+		simulate_gq_winner_message(gqid, "Someone Else")
+		if extended then
+			Simulate(string.format("Global Quest: Global Quest # %i will go into extended time for 5 more minutes.\n", gqid))
+		end
+	end
+
+	function simulate_gq_winner_message(gqid, name)
+		Simulate(string.format("Global Quest: Global Quest # %i has been won by %s - 53rd win.\n", gqid, name))
+	end
+
+	function simulate_send_gq_info(gqid)
+		DebugNote("Simulating ", string.format("gq info %s", tostring(gqid)))
+		local gq_info
+		if gqid then
+			gq_info = mock_gquests[tonumber(gqid)]
+		elseif mock_gqid_joined then
+			gq_info = mock_gquests[mock_gqid_joined]
+		end
+
+		if gq_info then
+			simulate_gq_info(gq_info.id, gq_info.targets)
+		else
+			local first_gq
+			local gq_count = 0
+
+			for k, v in pairs(mock_gquests) do
+				gq_count = gq_count + 1
+				first_gq = first_gq or v
+			end
+
+			if gq_count == 0 then
+				Simulate("There are no global quests running.\n")
+			elseif gq_count == 1 then
+				simulate_gq_info(first_gq.id)
+			else
+				Simulate("There is more than one global quest running.\n")
+			end
+
+		end
+	end
+
+	function simulate_send_gq_check()
+		DebugNote("Simulating ", "gq check")
+		if mock_gqid_joined then
+			local gq_info = mock_gquests[mock_gqid_joined]
+			if gq_info then
+				if gq_info.state == "running" then
+					simulate_gq_check(gq_info.targets)
+				else
+					Simulate(string.format("Global quest # %i has not yet started.", gq_info.id))
+				end
+				return
+			end
+		end
+		Simulate("You are not in a global quest.\n")
+	end
+
+	function simulate_gq_kill(kill_num)
+		mock_gq = mock_gquests[mock_gqid_joined]
+
+		if mock_gq.targets and #mock_gq.targets >= kill_num then
+			last_mob_killed = mock_gq.targets[kill_num].name
+
+			if mock_gq.targets[kill_num].count > 1 then
+				mock_gq.targets[kill_num].count = mock_gq.targets[kill_num].count - 1
+			else
+				table.remove(mock_gq.targets, kill_num)
+			end
+
+			-- local old_arid = current_room.arid
+			-- current_room.arid = mock_gq.targets[kill_num]
+			Simulate("Congratulations, that was one of the GLOBAL QUEST mobs!\n")
+
+			if #mock_gq.targets == 0 then
+				simulate_gq_win(mock_gq.id)
+			end
+		else
+			DebugNote("Target ", "#", "", kill_num, " is not on this gquest.")
+		end
+	end
+
+	function echo_gqid_joined()
+		if gqid_joined ~= "-1" then
+			DebugNote("You are on gq # ", gqid_joined)
+		else
+			DebugNote("You are not on a gquest")
+		end
 	end
 
 	function spoof_level(name, line, wildcards)
@@ -6766,76 +7126,57 @@ end
 	<!-- group: trg_gq -->
 	<trigger match="^Quest Name\.\.\.\.\.\.\.\.\.: \[ Global quest # (?<gq_id>\d{1,5}) \]$"
 		script="gq_info_quest_name"
-		name="trg_gq_info_quest_name" 		group="trg_gq"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
-			<send>	EnableTrigger("trg_gq_info_quest_name", false) </send> </trigger>
+		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
-	<trigger match="^Quest Status\.\.\.\.\.\.\.: \[ (?<status>\w+) \]$"
-		script="gq_info_quest_status"
-		name="trg_gq_info_quest_status" 	group="trg_gq"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
-			<send>	EnableTrigger("trg_gq_info_quest_status", false) </send> </trigger>
+	<trigger match="^---------------------------------------------------------------------------$"
+		script="gq_info_end"
+		group="trg_gq_info"
+		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+
+	<trigger match="^Quest Status\.\.\.\.\.\.\.: \[ Extended \]$"
+		script="gq_info_extended"
+		group="trg_gq_info"
+		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
 	<trigger match="^Level range\.\.\.\.\.\.\.\.: \[\s+(?<minlvl>\d{1,3}) \] - \[\s+(?<maxlvl>\d{1,3}) \]$"
 		script="gq_info_level_range"
-		name="trg_gq_info_level_range" 		group="trg_gq"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
-			<send>	EnableTrigger("trg_gq_info_level_range", false)
-					EnableTrigger("trg_gq_info_target_header", true) </send> </trigger>
-
-	<trigger match="^To complete this quest, you must:$"
-		name="trg_gq_info_target_header" 	group="trg_gq"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
-			<send>	EnableTrigger("trg_gq_info_target_header", false)
-					EnableTrigger("trg_gq_info_line", true)
-					EnableTrigger("trg_gq_info_end", true)
-					EnableTriggerGroup("trg_gqmsg_2", true) </send> </trigger>
-
-	<trigger match="^Kill at least (?<qty>[1-3]) \* (?<mob>\w[^(]+) \((?<loc>\S.+)\)\.$"
-		script="gq_info_line"
-		name="trg_gq_info_line" 			group="trg_gq"
+		group="trg_gq_info"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
-	<trigger match="^(?!Kill at least [1-3] \* \w[^(]+ \(\S.+\)\.)$"
-		script="gq_info_end"
-		name="trg_gq_info_end" 				group="trg_gq"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
-			<send>	EnableTrigger("trg_gq_info_line", false)
-					EnableTrigger("trg_gq_info_end", false) </send> </trigger>
+	<trigger match="^Kill at least (?<qty>\d) \* (?<mob>\w[^(]+) \((?<loc>\S.+)\)\.$"
+		script="gq_info_line"
+		group="trg_gq_info"
+		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
 	<trigger match="^You still have to kill (?<qty>[1-3]) \* (?<mob>\w[^(]+) \((?<loc>\S.+?)(?<isdead> - Dead)?\)$"
 		script="gq_check_line"
-		name="trg_gq_check_line" 			group="trg_gq"
+		name="trg_gq_check_line" group="trg_gq_check"
 		enabled="n"	regexp="y" sequence="500" keep_evaluating="y" omit_from_output="y" send_to="12" >
 			<send>	EnableTrigger("trg_gq_check_end", true) </send> </trigger>
 
 	<trigger match="^(?!You still have to kill [1-3] \* \w[^(]+ \(\S.+?(?: - Dead)?\))$"
 		script="gq_check_end"
-		name="trg_gq_check_end" 			group="trg_gq"
-		enabled="n"	regexp="y" sequence="500" keep_evaluating="y" omit_from_output="n" send_to="12" >
-			<send>	EnableTrigger("trg_gq_check_line", false)
-					EnableTrigger("trg_gq_check_end", false) </send> </trigger>
+		name="trg_gq_check_end" group="trg_gq_check"
+		enabled="n"	regexp="y" sequence="500" keep_evaluating="y" omit_from_output="n" send_to="12" > </trigger>
 
-	<!-- group: trg_gqmsg_1 -->
+	<!-- gq messages to always listen for -->
 	<trigger match="^You have now joined Global Quest # (?<gq_id>\d{1,5})\. See 'help gquest' for available commands\.$"
 		script="gqmsg_joined"
-		name="trg_gqmsg_joined" 			group="trg_gqmsg_1"
 		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
 	<trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,5}) for levels (?<min_lvl>\d{1,3}) to (?<max_lvl>\d{1,3})(?: - (?:200|10) or fewer wins only)? has now started\.$"
 		script="gqmsg_started"
-		name="trg_gqmsg_started" 			group="trg_gqmsg_1"
 		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
-	<!-- group: trg_gqmsg_2 -->
+	<!-- gq messages to only listen for when in a gquest -->
 	<trigger match="^You have finished this global quest\.$"
 		script="player_not_on_gq"
-		name="trg_gq_finished_extended" 	group="trg_gqmsg_2"
+		name="trg_gq_finished_extended" 	group="trg_gqmsg"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
 	<trigger match="^Global Quest: Global Quest # (?<gq_id>\d{1,5}) has been won by (?<winner>[A-Z][A-Za-z]+) - \d*(?:1st|2nd|3rd|\dth) win\.$"
 		script="gqmsg_winner"
-		name="trg_gqmsg_winner" 			group="trg_gqmsg_2"
+		name="trg_gqmsg_winner" 			group="trg_gqmsg"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
 	<trigger match="^Global Quest: Global Quest # (?<gq_id>\d{1,5}) will go into extended time for 5 more minutes\.$"
@@ -6845,37 +7186,33 @@ end
 
 	<trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,5})(?: \(extended\))? is now over\.$"
 		script="gq_ended"
-		name="trg_gqmsg_extended_end" 		group="trg_gqmsg_2"
+		name="trg_gqmsg_extended_end" 		group="trg_gqmsg"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
 	<trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,5}) has been cancelled due to lack of activity\.$"
 		script="gq_ended"
-		name="trg_gqmsg_extended_end2" 		group="trg_gqmsg_2"
+		name="trg_gqmsg_extended_end2" 		group="trg_gqmsg"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
 	<trigger match="^You are no longer part of Global Quest # (?<gq_id>\d{1,5}) and will be unable to rejoin\.$"
 		script="player_not_on_gq"
-		name="trg_gqmsg_quit" 				group="trg_gqmsg_2"
+		name="trg_gqmsg_quit" 				group="trg_gqmsg"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
 	<trigger match="^Congratulations, that was one of the GLOBAL QUEST mobs\!$"
 		script="gq_mob_killed"
-		name="trg_gq_mob_killed" 			group="trg_gq_status"
 		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
 	<trigger match="^You are not in a global quest\.$"
 		script="player_not_on_gq"
-		name="trg_player_not_on_gq" 		group="trg_gq_status"
 		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
 	<trigger match="^There are no global quests running\.$"
 		script="player_not_on_gq"
-		name="trg_no_gqs_running" 			group="trg_gq_status"
 		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
 	<trigger match="^Global Quest # (?<gq_id>\d{1,5}) has not yet started\.$"
 		script="gq_check_not_yet_started"
-		name="trg_gq_check_not_yet_started" group="trg_gq_status"
 		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
 <!-- CAMPAIGN OPERATIONS -->
@@ -7249,13 +7586,13 @@ end
 
 	<trigger match="{roomchars}"
 		script="roomchars_start"
-		enabled="y" regexp="n" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+		enabled="y" regexp="n" sequence="50" omit_from_output="y" send_to="12" > </trigger>
 
 	<trigger match="{/roomchars}"
 		script="roomchars_end"
-		enabled="y" regexp="n" sequence="100" omit_from_output="y" send_to="12" > </trigger>
+		enabled="y" regexp="n" sequence="50" omit_from_output="y" send_to="12" > </trigger>
 
-	<trigger match="^[^{].+$"
+	<trigger match="^.+$"
 		script="roomchars" name="roomchars"
 		enabled="n" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
 
@@ -7320,10 +7657,9 @@ end
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 <!-- gquest data input: gq info, check -->
-	<alias	match="^gq (?:i|info)$"
+	<alias	match="^gq i(?:n(?:fo?)?)?$"
 			script="do_gq_info"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" >
-				<send>	EnableTriggerGroup("trg_gq", false) </send>	</alias>
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 	<alias	match="^(?:gq (?:c|ch|check)|gg|qq)$"
 			script="do_gq_check"
@@ -7568,6 +7904,50 @@ end
 	<alias	match="^xtest simulate q(?:uest)?(?: (?<status>start|status|killed|comp|fail|reset|ready|timeout|statkilled|wait|ready))?$"
 			script="simulate_quest"
 			enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xtest debug gq(uest)?$"
+			script="xtest_debug_gquest"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xtest simulate gq wait(?: (?<num>\d{1,5}))?$"
+			script="xtest_gq_waiting"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xtest simulate gq start(?: (?<type>area|room))?(?: (?<num>\d{1,5}))?$"
+			script="xtest_gq_start"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xtest simulate gq join (?<num>\d{1,5})(?: (?<silent>s))?$"
+			script="xtest_gq_join"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xtest simulate gq end(?: (?<num>\d{1,5}))?$"
+			script="xtest_gq_end"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xtest simulate gq win(?: (?<num>\d{1,5}))?$"
+			script="xtest_gq_win"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xtest simulate gq lose(?: (?<num>\d{1,5}))?(?<noextend> noextended)$"
+			script="xtest_gq_lose"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xtest simulate gq kill(?: (?<num>\d+))?$"
+			script="xtest_gq_kill"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xtest simulate gq quit(?: (?<num>\d{1,5}))?$"
+			script="xtest_gq_quit"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xtest simulate xcp(?: (?<num>\d+))?$"
+			script="xtest_xcp"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias  match="^xtest gqid$"
+			script="echo_gqid_joined"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 	<alias	match="^xtest loadroom(?: (?<roomid>\d+))?$"
 			script="xtest_loadroom"

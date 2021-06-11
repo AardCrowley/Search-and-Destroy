@@ -2,7 +2,8 @@
     "5.78": {
         "changes": [
             "Show a message where a con after smart scan finds nothing",
-            "Highlight mobs with matching names but unknown areas on con/scan"
+            "Highlight mobs with matching names but unknown areas on con/scan",
+            "When set to do an automatic hunt trick after xcp, instead do quick where while on gquests since hunt trick only works during campaigns"
         ],
         "fixes": [
             "Properly save the hide settings button setting",

@@ -2586,11 +2586,11 @@ end
 				full_mob_name = t.mob
 				short_mob_name = t.kw
 				if (t.link_type == "area") then	-- Area cp links - "xcp" goes to target area, then runs Hunt Trick to get target room.
-					if (action == "qw") then
-						local func = function() qw_exact(t.kw) end
-						execute_in_area(t.arid, func)
-					elseif (action == "ht") then		-- do hunt trick or quick where after arriving in area.
+					if (action == "ht" and current_activity == "cp") then		-- do hunt trick or quick where after arriving in area.
 						local func = function() do_hunt_trick(1, t.kw) end
+						execute_in_area(t.arid, func)
+					elseif (action == "qw" or (action == "ht" and current_activity ~= "cp")) then
+						local func = function() qw_exact(t.kw) end
 						execute_in_area(t.arid, func)
 					elseif (action == "off") then	-- do nothing
 						InfoNote("Xcp action is off - no additional action\n")
@@ -2633,7 +2633,7 @@ end
 			if (opt == "ht") or (opt == "qw") or (opt == "off") then
 				xcp_action_mode = opt
 				SetVariable("mcvar_xcp_action_mode", opt)
-				InfoNote("", "Set 'xcp' mode to: ", options[opt], ".")
+				InfoNote("Set 'xcp' mode to: ", options[opt], ".")
 			elseif (opt == "") then
 				InfoNote("Current 'xcp' mode: " .. options[xcp_action_mode] .. ".")
 				InfoNote("Syntax: 'xcp mode [ht|qw|off]'")

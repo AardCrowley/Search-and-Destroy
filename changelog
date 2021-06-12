@@ -1,4 +1,9 @@
 {
+    "5.8": {
+        "fixes": [
+            "In rare situations the wrong sounds would play based on the targets found, or not play at all. This should be working better now."
+        ]
+    },
     "5.79": {
         "changes": [
             "Highlight mobs with matching names but unknown areas on con/scan",

@@ -6568,11 +6568,11 @@ end
 		end
 
 		-- Don't play sound when a quest target is here, assume soundpack will already play a sound
-		if not con_after_scan and not quest_target_found_here then
+		if not quest_target_found_here then
 			if activity_target_found_here then
 				-- The current target is found in the room, play a sound
 				play_target_found_sound()
-			else
+			elseif not con_after_scan then
 				-- A non-active target on the campaign/gquest list is found in the current room, play a sound
 				if other_target_found_here then
 					play_other_target_here_sound()
@@ -6659,22 +6659,24 @@ end
 
 		write_mob_list_to_db(scanned_mobs_here)
 
-		if activity_target_found_here then
-			play_target_found_sound()
-		else
-			if running_smart_scan and #scanned_mobs_here < mob_count_here then
-				DebugNote("Saw ", mob_count_here, " mobs in the room but only ", #scanned_mobs_here, " on scan")
-				InfoNote("Target not found on smart scan but potential noscan mobs found in this room. Running consider.")
-				con_after_scan = true
-				SendNoEcho("con")
-			end
+		if not quest_target_found_here then
+			if activity_target_found_here then
+				play_target_found_sound()
+			else
+				if running_smart_scan and #scanned_mobs_here < mob_count_here then
+					DebugNote("Saw ", mob_count_here, " mobs in the room but only ", #scanned_mobs_here, " on scan")
+					InfoNote("Target not found on smart scan but potential noscan mobs found in this room. Running consider.")
+					con_after_scan = true
+					SendNoEcho("con")
+				end
 
-			if target_found_nearby then
-				play_target_nearby_sound()
-			end
+				if target_found_nearby then
+					play_target_nearby_sound()
+				end
 
-			if other_target_found_here then
-				play_other_target_here_sound()
+				if other_target_found_here then
+					play_other_target_here_sound()
+				end
 			end
 		end
 		scanning_current_room = false

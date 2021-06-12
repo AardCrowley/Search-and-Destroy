@@ -1,14 +1,20 @@
 {
-    "5.78": {
+    "5.79": {
         "changes": [
-            "Show a message where a con after smart scan finds nothing",
             "Highlight mobs with matching names but unknown areas on con/scan",
             "When set to do an automatic hunt trick after xcp, instead do quick where while on gquests since hunt trick only works during campaigns"
         ],
         "fixes": [
-            "Properly save the hide settings button setting",
-            "`ms help` no longer tries to open help",
             "You should no longer be able to get into a state where you're in a gquest but SnD doesn't think you are and won't show your targets"
+        ]
+    },
+    "5.78": {
+        "changes": [
+            "Show a message where a con after smart scan finds nothing"
+        ],
+        "fixes": [
+            "Properly save the hide settings button setting",
+            "`ms help` no longer tries to open help"
         ]
     },
     "5.77": {

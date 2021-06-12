@@ -2324,13 +2324,13 @@ end
 			local last_mob_sig = ""
 			for row in db:nrows(select) do			-- if not row then / print("error - room db search returned no rows") / elseif not row.areaName then / print("area name missing from row") / end
 				if (area_range_index[row.areaName]) then	-- don't include areas that never contain quest mobs
-					results_found = true
 					local mob_sig = row.arid .. "|" .. v.mob
 					if (mob_sig ~= last_mob_sig) then
 						last_mob_sig = mob_sig
 						local area_min_lvl = (area_range_index[row.areaName].min) or 1
 						local area_max_lvl = (area_range_index[row.areaName].max) or 300
 						if (level_taken >= area_min_lvl) and (level_taken <= (area_max_lvl+25)) then	-- limit results to sensible level range.
+							results_found = true
 							table.insert(areas_sql, fixsql(row.arid))
 							table.insert(possibilities, {
 								mob = v.mob,

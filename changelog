@@ -1,4 +1,12 @@
 {
+    "5.8": {
+        "changes": [
+            "Don't omit rooms from target list of room-based cps/gqs just because you found an identically-named room in an area out of the range of your activity"
+        ],
+        "fixes": [
+            "In rare situations the wrong sounds would play based on the targets found, or not play at all. This should be working better now."
+        ]
+    },
     "5.79": {
         "changes": [
             "Highlight mobs with matching names but unknown areas on con/scan",

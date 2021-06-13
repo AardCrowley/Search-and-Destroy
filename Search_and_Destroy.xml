@@ -2254,18 +2254,26 @@ end
 			local dead = v.is_dead
 			local results_found = false
 			local select = string.format(sqla, fixsql(v.loc))
+			local possibilities = {}
 			for row in db:nrows(select) do
 				results_found = true
-				table.insert(t,
+				table.insert(possibilities,
 				{	mob = v.mob,
 					arid = row.arid,
 					qty = v.qty,
 					is_dead = dead,
 					link_type = "area",
-					index = #t+1,
 				} )
 			end
-			if (results_found == false) then
+			if #possibilities > 1 then
+				for i, mob in ipairs(possibilities) do
+					mob.index = i
+					mob.duplicates = #possibilities
+					table.insert(t, mob)
+				end
+			elseif #possibilities == 1 then
+				table.insert(t, possibilities[1])
+			else
 				table.insert(t,
 				{	mob = v.mob,
 					location = v.loc,
@@ -2273,7 +2281,6 @@ end
 					qty = v.qty,
 					is_dead = dead,
 					link_type = "unknown",
-					index = #t+1,
 					unknown = true,
 				} )
 			end
@@ -2395,7 +2402,7 @@ end
 						local temp_high = {}
 						local temp_low = {}
 						for i, possibility in ipairs(possibilities) do
-							possibility.count_for_room = #possibilities
+							possibility.duplicates = #possibilities
 							if possibility.found then
 								table.insert(temp_high, possibility)
 							else
@@ -2404,18 +2411,18 @@ end
 							end
 						end
 						for i, possibility in ipairs(temp_high) do
-							possibility.room_index = i
+							possibility.index = i
 							table.insert(high_chance, possibility)
 						end
 
 						for i, possibility in ipairs(temp_low) do
-							possibility.room_index = i + #temp_high
+							possibility.index = i + #temp_high
 							table.insert(low_chance, possibility)
 						end
 					else
 						for i, possibility in ipairs(possibilities) do
-							possibility.count_for_room = #possibilities
-							possibility.room_index = i
+							possibility.duplicates = #possibilities
+							possibility.index = i
 							table.insert(high_chance, possibility)
 						end
 					end
@@ -2497,7 +2504,6 @@ end
 						link_text = string.format("%2d  %-32s - unknown: '%s'%s", i, mob_text, location, string.rep(" ", 30 - #location))
 						tooltip = "Location not found in mapper database"
 						Hyperlink(" ", link_text, tooltip, color, background, 0, 1)
-
 					end
 					print("")
 				end
@@ -3822,6 +3828,7 @@ end
 		EnableTrigger("trg_cp_check_line", true)
 		Simulate("\n")
 		if (area_room_type == "area") then
+			Simulate("You still have to kill * Evil Vladia (The School of Horror)\n")
 			Simulate("You still have to kill * the head necromancer's assistant (Necromancers' Guild)\n")
 			Simulate("You still have to kill * Isscheburqua (Insanitaria)\n")
 			Simulate("You still have to kill * a rook citizen (Avian Kingdom - Dead)\n") -- dead
@@ -4814,8 +4821,8 @@ end
 			end
 			local qty = ((player_on_gq == "yes") and v.qty .. "* " or "")
 			local counts = ""
-			if v.count_for_room and v.count_for_room > 1 then
-				counts = string.format("(%i/%i) ", v.room_index, v.count_for_room)
+			if v.duplicates and v.duplicates > 1 then
+				counts = string.format("(%i/%i) ", v.index, v.duplicates)
 			end
 			local link = string.format("%2s) %s%s%s - %s", index, counts, qty, mob, location)
 			local color = ColourNameToRGB(color_for_target(v, index == xcp_index))

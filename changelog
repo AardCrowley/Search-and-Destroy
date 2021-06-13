@@ -1,5 +1,8 @@
 {
     "5.8": {
+        "features": [
+            "Show next quest time in title bar of the targets window"
+        ],
         "changes": [
             "Don't omit rooms from target list of room-based cps/gqs just because you found an identically-named room in an area out of the range of your activity",
             "Show (1/2) and (2/2), and mark unlikely if you have the mob data, when there are multiple possible areas a target could be in, like in school of horror"

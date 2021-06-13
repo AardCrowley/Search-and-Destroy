@@ -30,6 +30,11 @@
 		script="check_for_updates"
 		second="10"
 		enabled="y" send_to="12"> </timer>
+
+	<timer name="quest_timer"
+		script="quest_timer_tick"
+		second="1"
+		enabled="y" send_to="12"> </timer>
 </timers>
 
 <script>
@@ -139,6 +144,10 @@
 	local quest_target = {}	-- {qmob = "", area = "", room = "", keyword="", status="0"}
 	local short_mob_name = -1
 	local full_mob_name = -1
+
+-- [[ time of next quest or when the current one expires ]]
+	local next_quest_time
+	local next_quest_text
 
 -- [[ xcp action mode ]]
 	local xcp_action_mode = GetVariable("mcvar_xcp_action_mode") or "qw"
@@ -263,6 +272,8 @@
 			desc = "the text informing you that you have a quest available" },
 		{ key = "quest_complete",	default = "#7CFC00", menu_name = "Quest complete",
 			desc = "the text informing you that you have a quest to turn in"},
+		{ key = "quest_waiting",	default = "#FF7A7A", menu_name = "Next quest time",
+			desc = "the next quest timer when you are waiting for your next quest"},
 		{ key = "alternating_row",	default = "#000040", menu_name = "Alternating Row Backgrounds",
 			desc = "the background color on alternating rows of the targets list in the mud window. Set it to black to disable"},
 	}
@@ -1741,6 +1752,11 @@ end
 	end
 
 	function quest_status_gmcp(q)	-- sets quest status when you take a new quest, kill qmob, complete quest, etc.
+		local quest_time = q.wait or q.timer
+		if quest_time then
+			next_quest_time = os.time() + quest_time * 60
+			DebugNote("Quest time: ", quest_time)
+		end
 		if (q.action == "start") then									-- you've just taken a new quest
 			quest_target = { qstat = "2", mob = q.targ,	areaName = q.area, arid = areaNameXref[q.area], room = (string.gsub(q.room, "@[bcgmrwyBCDGMRWY]", "")) }
 			target_quest_mob(true)
@@ -1771,6 +1787,7 @@ end
 				quest_target = { qstat="1"}
 				InfoNote("\nSearch and Destroy: Not on quest - must wait before requesting new.\n")
 			elseif (q.action == "status" and q.status == "ready") then		-- off quest, can request new quest immediately
+				next_quest_time = os.time()
 				quest_target = { qstat="0"}
 				InfoNote("\nSearch and Destroy: Not on quest - can request new quest immediately. \n")
 			end
@@ -1779,6 +1796,7 @@ end
 			SetVariable("mcvar_qt_areaName", "")
 			SetVariable("mcvar_qt_room", "")
 		end
+		quest_timer_tick()
 		xg_draw_window()
 	end
 
@@ -4517,7 +4535,6 @@ end
 	local window_fonts = {
 		["title"]	= { f="Consolas",				 s=10, 				b=false, 	i=false, 	u=false },
 		["bt1"]	 	= { f="Segoe",					 s=10, 				b=true, 	i=false, 	u=false },
-		["bt2"] 	= { f="Segoe",					 s=10, 				b=true, 	i=false, 	u=false },
 		["circ1"] 	= { f="Consolas",				 s=11, 				b=false, 	i=false, 	u=false },
 		["circ2"]	= { f="Consolas",				 s= 9, 				b=false, 	i=false, 	u=false },
 		["cplevel"] = { f="Consolas",				 s=11, 				b=false, 	i=false, 	u=false },
@@ -4573,6 +4590,7 @@ end
 		draw_b1_action_buttons(47 + x_offset, 20)	-- draw xcp, go, etc. buttons
 		draw_circle_readout(5 + x_offset, 20)		-- add circle text/level readout
 		draw_noexp_readout(206 + x_offset, 22)	-- add noexp on/off and TNL indicator
+		draw_next_quest_time()
 		draw_resize_tag()
 		xg_show_target_links()
 		Redraw()
@@ -4816,6 +4834,57 @@ end
 					"", "", "", "", "mouseup_noexp",				-- Mouse actions
 					"" .. ("Noexp is manually off, type 'noexp' again to turn on"), miniwin.cursor_arrow, 0)
 			--end
+		end
+	end
+
+	function quest_time_color()
+		local color
+		if quest_target.qstat == "2" then
+			color = text_colors.targeted
+		elseif quest_target.qstat == "0" then
+			color = text_colors.quest_available
+		elseif quest_target.qstat == "3" then
+			color = text_colors.quest_complete
+		else
+			color = text_colors.quest_waiting
+		end
+
+		return ColourNameToRGB(color)
+	end
+
+	function draw_next_quest_time()
+		if not next_quest_text then
+			return
+		end
+
+		WindowRectOp(win, 2, win_width - 120, 1, win_width-1, 16, 0)
+
+		local width = WindowTextWidth(win, 'title', next_quest_text)
+		WindowText(win, "title", next_quest_text, win_width - width - 5, 1, win_width - 5, 16, quest_time_color(), false)
+	end
+
+	function quest_timer_text()
+		if not next_quest_time then
+			return
+		end
+
+		local quest_time = math.max(0, math.ceil((next_quest_time - os.time())/60))
+		if quest_target.qstat == "2" or quest_target.qstat == "3" then
+			return string.format("Quest time: %im", quest_time)
+		else
+			return string.format("Next quest: %im", quest_time)
+		end
+	end
+
+	function quest_timer_tick()
+		if not next_quest_time then
+			return
+		end
+
+		local new_value = quest_timer_text()
+		if new_value ~= next_quest_text then
+			next_quest_text = new_value
+			draw_next_quest_time()
 		end
 	end
 
@@ -5602,6 +5671,11 @@ end
 
 	function xtest_popmsg(name, line, wildcards)
 
+	end
+
+	function xtest_set_qt(name, line, wildcards)
+		local qt = tonumber(wildcards.qt)
+		next_quest_time = os.time() + qt * 60
 	end
 
 	function xtest_debug(name, line, wildcards)
@@ -8019,6 +8093,10 @@ end
 
 	<alias	match="^xtest debug$"
 			script="xtest_debug"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xtest qt (?<qt>\d{1,2})$"
+			script="xtest_set_qt"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 	<alias  match="^snd reload$"

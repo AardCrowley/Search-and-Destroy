@@ -7008,7 +7008,7 @@ end
 			DebugNote("I suspect you just killed ", last_mob_damaged, " in room ", current_room.rmid, " (", current_room.arid, ")")
 			last_mob_killed = last_mob_damaged
 		else
-			ErrorNote("****** ", "I don't know which mob you just killed", " ******")
+			DebugNote("****** ", "I don't know which mob you just killed", " ******")
 		end
 		last_mob_damaged = nil
 	end

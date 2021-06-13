@@ -1775,6 +1775,7 @@ end
 				qw_reset(false)
 			elseif (q.action == "ready") or (q.action == "timeout") then -- can take new quest immediately
 				quest_target = { qstat="0"}
+				next_quest_time = os.time()
 
 			-- in all of these, the action is "status"
 			elseif (q.action == "status" and q.target == "killed") then		-- on quest, qmob has been killed (do not confuse q.target with q.targ above!)

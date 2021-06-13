@@ -1,7 +1,8 @@
 {
     "5.8": {
         "changes": [
-            "Don't omit rooms from target list of room-based cps/gqs just because you found an identically-named room in an area out of the range of your activity"
+            "Don't omit rooms from target list of room-based cps/gqs just because you found an identically-named room in an area out of the range of your activity",
+            "Show (1/2) and (2/2) when there are multiple possible areas a target could be in, like in school of horror"
         ],
         "fixes": [
             "In rare situations the wrong sounds would play based on the targets found, or not play at all. This should be working better now."

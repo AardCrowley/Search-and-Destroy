@@ -2244,17 +2244,20 @@ end
 
 	function build_area_targets(cp_gq, sqla)
 		local t, list = {}, {}
+		local unlikely_mobs = {}
 		if (cp_gq == "cp") then
 			list = cp_check_list
 		elseif (cp_gq == "gq") then
 			list = gq_check_list
 		end
 		local db = assert(sqlite3.open(mapper_db_file))
+		local SnDdb = assert(sqlite3.open(snd_db_file))
 		for i,v in ipairs (list) do
 			local dead = v.is_dead
 			local results_found = false
 			local select = string.format(sqla, fixsql(v.loc))
 			local possibilities = {}
+			local areas_sql = {}
 			for row in db:nrows(select) do
 				results_found = true
 				table.insert(possibilities,
@@ -2264,12 +2267,55 @@ end
 					is_dead = dead,
 					link_type = "area",
 				} )
+				table.insert(areas_sql, fixsql(row.arid))
 			end
 			if #possibilities > 1 then
-				for i, mob in ipairs(possibilities) do
-					mob.index = i
-					mob.duplicates = #possibilities
-					table.insert(t, mob)
+				local mobs_by_area_query = string.format([[
+					SELECT DISTINCT(zone)
+					FROM mobs
+					WHERE mob = %s AND zone IN (%s);
+				]], fixsql(v.mob), table.concat(areas_sql, ','))
+				local mob_found = false
+
+				for row in SnDdb:nrows(mobs_by_area_query) do
+					for i, mob in ipairs(possibilities) do
+						if mob.arid == row.zone then
+							mob_found = true
+							mob.found = true
+							break
+						end
+					end
+				end
+
+				if mob_found then
+					local found = {}
+					local not_found = {}
+
+					for i, mob in ipairs(possibilities) do
+						mob.duplicates = #possibilities
+						if mob.found then
+							table.insert(found, mob)
+						else
+							mob.unlikely = true
+							table.insert(not_found, mob)
+						end
+					end
+
+					for i, mob in ipairs(found) do
+						mob.index = i
+						table.insert(t, mob)
+					end
+
+					for i, mob in ipairs(not_found) do
+						mob.index = i + #found
+						table.insert(unlikely_mobs, mob)
+					end
+				else
+					for i, mob in ipairs(possibilities) do
+						mob.index = i
+						mob.duplicates = #possibilities
+						table.insert(t, mob)
+					end
 				end
 			elseif #possibilities == 1 then
 				table.insert(t, possibilities[1])
@@ -2286,6 +2332,11 @@ end
 			end
 		end
 		db:close_vm()
+
+		for i, mob in ipairs(unlikely_mobs) do
+			table.insert(t, mob)
+		end
+
 		for i,v in ipairs (t) do
 			v.kw = gmkw(v.mob, v.arid)
 		end
@@ -2370,7 +2421,7 @@ end
 				-- When more than one possible area is found, check if you've seen the mob in that room in any of the areas
 				-- if never seen in any of the rooms, check if you've seen them anywhere in the areas
 				if #possibilities > 1 then
-					local mobs_by_room_query = string.format("SELECT sum(count) as count, zone FROM mobs WHERE mob = %s AND room = %s AND zone IN (%s);",
+					local mobs_by_room_query = string.format("SELECT DISTINCT(zone) FROM mobs WHERE mob = %s AND room = %s AND zone IN (%s);",
 						fixsql(v.mob), fixsql(v.loc), table.concat(areas_sql, ","))
 					local mob_found = false
 					for row in SnDdb:nrows(mobs_by_room_query) do
@@ -2384,7 +2435,7 @@ end
 					end
 
 					if not mob_found then
-						local mobs_by_area_query = string.format("SELECT sum(count) as count, zone FROM mobs WHERE mob = %s AND zone IN (%s);",
+						local mobs_by_area_query = string.format("SELECT DISTINCT(zone) FROM mobs WHERE mob = %s AND zone IN (%s);",
 							fixsql(v.mob), table.concat(areas_sql, ","))
 						for row in SnDdb:nrows(mobs_by_room_query) do
 							for i, possibility in ipairs(possibilities) do

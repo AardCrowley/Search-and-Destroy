@@ -4885,6 +4885,7 @@ end
 		if new_value ~= next_quest_text then
 			next_quest_text = new_value
 			draw_next_quest_time()
+			Redraw()
 		end
 	end
 
@@ -5676,6 +5677,7 @@ end
 	function xtest_set_qt(name, line, wildcards)
 		local qt = tonumber(wildcards.qt)
 		next_quest_time = os.time() + qt * 60
+		quest_timer_tick()
 	end
 
 	function xtest_debug(name, line, wildcards)

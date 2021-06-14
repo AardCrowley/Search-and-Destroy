@@ -1519,6 +1519,8 @@ end
 			area_list[row.uid] = row.uid
 		end
 
+		db:close_vm()
+
 		area = utils.choose("Area", "Please choose the mob's area.", area_list, current_area)
 		if not area then return end
 
@@ -3123,6 +3125,7 @@ end
 				end
 			end
 		end
+		db:close_vm()
 
 		for i, room in ipairs(possible_rooms) do
 			if total_count > 0 then

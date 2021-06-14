@@ -35,6 +35,11 @@
 		script="quest_timer_tick"
 		second="1"
 		enabled="y" send_to="12"> </timer>
+
+	<timer name="state_change_timer"
+		script="check_state_changed"
+		second="1"
+		enabled="y" send_to="12"> </timer>
 </timers>
 
 <script>
@@ -86,6 +91,8 @@
 	local db_file_2
 	local mapper_db_file = GetInfo(66)..WorldName()..".db"	-- typically aardwolf.db, normally found in main Mushclient folder
 	local snd_db_file = GetInfo(66) .. "/SnDdb.db"
+
+	local state_changed = false
 
 -- [[ Current, previous room data GMCP_room_info ]]
 	local current_room  = { rmid = "-1", arid = "-1", maze = "no", exits = {} }
@@ -368,7 +375,7 @@
 		migrate_database()
 		if not GetVariable("index_already_checked") then
 			area_index_process()
-			SetVariable("index_already_checked", "done")
+			set_variable("index_already_checked", "done")
 		end
 		download_sounds(function() end)
 		--show_changelog(false)
@@ -479,38 +486,6 @@
 		]])
 	end
 
-	--[[Deprecated show_changelog
-
-		function show_changelog(all_changes)
-		local changes_to_show = {}
-
-		if all_changes then
-			changes_to_show = CHANGELOG
-		elseif last_installed_version then
-			last_installed_version = tonumber(last_installed_version)
-			DebugNote("Last installed version ", last_installed_version)
-
-			for version, notes in pairs(CHANGELOG) do
-				if version > last_installed_version then
-					changes_to_show[version] = notes
-				end
-			end
-		else
-			-- show only the latest change
-			local latest_change_num = -1
-			for version, notes in pairs(CHANGELOG) do
-				if version > latest_change_num then
-					latest_change_num = version
-				end
-			end
-			changes_to_show[latest_change_num] = CHANGELOG[latest_change_num]
-		end
-		display_changes(changes_to_show)
-
-		last_installed_version = PLUGIN_VERSION
-		SetVariable("last_installed_version", tostring(PLUGIN_VERSION))
-	end]]--
-
 	function get_changelog(all_changes)
 		show_all_changes = all_changes or false
 		DebugNote("Attempting to download changelog")
@@ -554,7 +529,7 @@
 		display_changes(changes_to_show)
 
 		last_installed_version = PLUGIN_VERSION
-		SetVariable("last_installed_version", tostring(PLUGIN_VERSION))
+		set_variable("last_installed_version", tostring(PLUGIN_VERSION))
 	end
 
 	function display_changes(changes_to_show)
@@ -1322,7 +1297,7 @@ function area_index_line(name, line, wildcards) -- 1055
 end
 
 	function area_index_end(name, line, wildcards)
-		SetVariable("mcvar_area_range", serialize.save_simple(area_range_index))
+		set_variable("mcvar_area_range", serialize.save_simple(area_range_index))
 		InfoNote("\n*** Area levels indexed!")
 		Execute("xset resume page size")
 		DoAfterSpecial(0.1, "cp info", sendto.execute)
@@ -1737,10 +1712,10 @@ end
 		else
 			full_mob_name = qt.mob
 			short_mob_name = gmkw(qt.mob, qt.arid)
-			SetVariable("mcvar_qt_mob", qt.mob)
-			SetVariable("mcvar_qt_arid", qt.arid)
-			SetVariable("mcvar_qt_areaName", qt.areaName)
-			SetVariable("mcvar_qt_room", qt.room)
+			set_variable("mcvar_qt_mob", qt.mob)
+			set_variable("mcvar_qt_arid", qt.arid)
+			set_variable("mcvar_qt_areaName", qt.areaName)
+			set_variable("mcvar_qt_room", qt.room)
 			if (bool == true) then
 				InfoNote("\nYour quest mob is: \n")
 				InfoNote("mob : ", qt.mob.." ")
@@ -1792,10 +1767,10 @@ end
 				quest_target = { qstat="0"}
 				InfoNote("\nSearch and Destroy: Not on quest - can request new quest immediately. \n")
 			end
-			SetVariable("mcvar_qt_mob", "")
-			SetVariable("mcvar_qt_arid", "")
-			SetVariable("mcvar_qt_areaName", "")
-			SetVariable("mcvar_qt_room", "")
+			set_variable("mcvar_qt_mob", "")
+			set_variable("mcvar_qt_arid", "")
+			set_variable("mcvar_qt_areaName", "")
+			set_variable("mcvar_qt_room", "")
 		end
 		quest_timer_tick()
 		xg_draw_window()
@@ -1816,7 +1791,7 @@ end
 	function cp_info_level_taken(name, line, wildcards)
 		local x = tonumber(wildcards.level)
 		cp_info_level = x
-		SetVariable("mcvar_cp_level_taken", x)
+		set_variable("mcvar_cp_level_taken", x)
 	end
 
 	function cp_info_line(name, line, wildcards)
@@ -1928,7 +1903,7 @@ end
 		player_on_cp = "no"
 		EnableTriggerGroup ("trg_campaign", false)
 		cp_info_level = "0"
-			SetVariable("mcvar_cp_level_taken", "0")
+		set_variable("mcvar_cp_level_taken", "0")
 		cp_info_list = {}
 		cp_check_list = {}
 		if (player_on_gq == "yes") then
@@ -1963,7 +1938,7 @@ end
 	function gqmsg_joined(name, line, wildcards)
 		gqid_joined = wildcards.gq_id
 
-		SetVariable("mcvar_gqid_joined", gqid_joined)
+		set_variable("mcvar_gqid_joined", gqid_joined)
 		DebugNote("Joined gq ", gqid_joined, " gqid_started ", gqid_started)
 		if (gqid_joined == gqid_started) then
 			EnableTriggerGroup("trg_gqmsg", true)
@@ -1973,12 +1948,12 @@ end
 
 	function gqmsg_info_num(name, line, wildcards)
 		gqid_joined = wildcards.gq_id
-		SetVariable("mcvar_gqid_joined", gqid_joined)
+		set_variable("mcvar_gqid_joined", gqid_joined)
 	end
 
 	function gqmsg_started(name, line, wildcards)
 		gqid_started = wildcards.gq_id
-		SetVariable("mcvar_gqid_started", gqid_started)
+		set_variable("mcvar_gqid_started", gqid_started)
 		if (gqid_started == gqid_joined) then
 			EnableTriggerGroup("trg_gqmsg", true)
 			do_gq_info()
@@ -2041,12 +2016,12 @@ end
 			gq_joined = potential_gq.id
 			gqid_started = potential_gq.id
 			gqid_extended = potential_gq.extended and potential_gq.id or "-1"
-			SetVariable("mcvar_gqid_joined", gqid_joined)
-			SetVariable("mcvar_gqid_started", gqid_started)
-			SetVariable("mcvar_gqid_extended", gqid_extended)
+			set_variable("mcvar_gqid_joined", gqid_joined)
+			set_variable("mcvar_gqid_started", gqid_started)
+			set_variable("mcvar_gqid_extended", gqid_extended)
 
 			gq_info_efflvl = potential_gq.efflvl
-			SetVariable("mcvar_gq_info_efflvl", gq_info_efflvl)
+			set_variable("mcvar_gq_info_efflvl", gq_info_efflvl)
 
 			area_room_type = area_room_type_check(gq_info_list)
 
@@ -2185,7 +2160,7 @@ end
 		gqid_joined = wildcards[1]
 		player_is_on_gq()
 		gqid_started = "-1"
-		SetVariable("mcvar_gqid_started", "-1")
+		set_variable("mcvar_gqid_started", "-1")
 	end
 
 	function player_is_on_gq()
@@ -2212,11 +2187,11 @@ end
 		room_targets_ignored = {}
 
 		gqid_joined = "-1"
-		SetVariable("mcvar_gqid_joined", gqid_joined)
+		set_variable("mcvar_gqid_joined", gqid_joined)
 		-- gqid_started = "-1"
-		-- SetVariable("mcvar_gqid_started", gqid_started)
+		-- set_variable("mcvar_gqid_started", gqid_started)
 		gqid_extended = "-1"
-		SetVariable("mcvar_gqid_extended", gqid_extended)
+		set_variable("mcvar_gqid_extended", gqid_extended)
 
 		xcp_clear_target(true)
 
@@ -2718,7 +2693,7 @@ end
 				}
 			if (opt == "ht") or (opt == "qw") or (opt == "off") then
 				xcp_action_mode = opt
-				SetVariable("mcvar_xcp_action_mode", opt)
+				set_variable("mcvar_xcp_action_mode", opt)
 				InfoNote("Set 'xcp' mode to: ", options[opt], ".")
 			elseif (opt == "") then
 				InfoNote("Current 'xcp' mode: " .. options[xcp_action_mode] .. ".")
@@ -2735,7 +2710,7 @@ end
 		else
 			xcp_targets_quest_onoff = "on"
 		end
-		SetVariable("mcvar_xcp_targets_quest_onoff", xcp_targets_quest_onoff)
+		set_variable("mcvar_xcp_targets_quest_onoff", xcp_targets_quest_onoff)
 
 		InfoNote("\nxcp quest targeting is now ", string.upper(xcp_targets_quest_onoff))
 	end
@@ -3282,7 +3257,7 @@ end
 			notarg = false
 		end
 
-		SetVariable("mcvar_quick_kill_notarg", tostring(notarg))
+		set_variable("mcvar_quick_kill_notarg", tostring(notarg))
 		DebugNote("Quick kill notarg variable set to ", GetVariable("mcvar_quick_kill_notarg"))
 
 		if (wildcards.arg == "") then
@@ -3290,7 +3265,7 @@ end
 		else
 			quick_kill_command = wildcards.arg:gsub(" notarg", "")
 			--quick_kill_command = wildcards.arg
-			SetVariable("mcvar_quick_kill_command", quick_kill_command)
+			set_variable("mcvar_quick_kill_command", quick_kill_command)
 			InfoNote("Search and Destroy: Quick-kill command is now set to: '", quick_kill_command, "'")
 		end
 	end
@@ -3300,7 +3275,7 @@ end
 			InfoNote("Search and Destroy: Silent mode currently set to: '", silentMode, "'")
 		else
 			silentMode = wildcards[1]:lower()
-			SetVariable("mcvar_silentMode_command", silentMode)
+			set_variable("mcvar_silentMode_command", silentMode)
 			InfoNote("Search and Destroy: Silent mode is now set to: '", silentMode, "'")
 		end
 	end
@@ -3641,12 +3616,12 @@ end
 			elseif (wildcards.arg == "off") or (wildcards.arg == "0") then	-- "xset noexp off" and "xset noexp 0" turn auto-noexp off.
 				EnableTrigger("trg_anex_mobdeath_xp1", false)
 				anex_tnl_cutoff = 0
-				SetVariable("mcvar_anex_tnl_cutoff", anex_tnl_cutoff)
+				set_variable("mcvar_anex_tnl_cutoff", anex_tnl_cutoff)
 				InfoNote("\nSearch and Destroy: Auto 'noexp' is now OFF.\n")
 			else											-- xset with any other (positive) number turns auto-noexp on.
 				EnableTrigger("trg_anex_mobdeath_xp1", true)
 				anex_tnl_cutoff = tonumber(set_tnl)
-				SetVariable("mcvar_anex_tnl_cutoff", anex_tnl_cutoff)
+				set_variable("mcvar_anex_tnl_cutoff", anex_tnl_cutoff)
 				InfoNote("\nSearch and Destroy: Auto 'noexp' now set to ", anex_tnl_cutoff, " TNL.\n")
 			end
 		else
@@ -3778,14 +3753,14 @@ end
 	function anex_automatic_on()	-- Noexp will toggle automatically according to the TNL setting.
 		anex_automatic_onoff = "on"
 		noexp_onoff = "off"
-		SetVariable("mcvar_anex_automatic_onoff", "on")
+		set_variable("mcvar_anex_automatic_onoff", "on")
 		xg_draw_window()
 	end
 
 	function anex_automatic_off()	-- Manually turns off experience and disables automatic toggling.  Typing noexp again turns the automatics back on.
 		anex_automatic_onoff = "off"
 		noexp_onoff = "on"
-		SetVariable("mcvar_anex_automatic_onoff", "off")
+		set_variable("mcvar_anex_automatic_onoff", "off")
 		xg_draw_window()
 	end
 
@@ -3797,7 +3772,7 @@ end
 			tprint(area_start_rooms)
 		end
 		local serial = serialize.save_simple(area_start_rooms)
-		SetVariable("mcvar_areaStartRooms", serial)
+		set_variable("mcvar_areaStartRooms", serial)
 		InfoNote("\nxset mark: Room ", ri.rmid, " set as start of area ", ri.arid, ".\n")
 	end
 
@@ -3843,7 +3818,7 @@ end
 		local x = xset_vidblain_onoff
 		x = (x == "on") and "off" or "on"
 		xset_vidblain_onoff = x
-		SetVariable("mcvar_xset_vidblain_onoff", x)
+		set_variable("mcvar_xset_vidblain_onoff", x)
 		InfoNote("\nVidblain navigation is now ", string.upper(x), "\n")
 	end
 
@@ -3853,7 +3828,7 @@ end
 			InfoNote("\n'xset vidblain' portal level is ", xset_vidblain_level, "\n")
 		else
 			xset_vidblain_level = x
-			SetVariable("mcvar_xset_vidblain_level", x)
+			set_variable("mcvar_xset_vidblain_level", x)
 			InfoNote("\n'xset vidblain' portal level set to ", x, "\n")
 		end
 	end
@@ -4555,7 +4530,7 @@ end
 				WindowFont(win, k, v.f, v.s, v.b, v.i, v.u, false)
 			end
 			WindowFont(win, "cplist", win_font, win_font_size, win_font_bold, win_font_italic, win_font_underline, false)
-			if not GetVariable("mcvar_xgui_window_onoff") then SetVariable("mcvar_xgui_window_onoff", "on") end
+			if not GetVariable("mcvar_xgui_window_onoff") then set_variable("mcvar_xgui_window_onoff", "on") end
 			WindowShow(win, true and GetVariable("mcvar_xgui_window_onoff") == "on" or false)  -- show it
 			if (win_state == "min") then
 				mouseup_drag(0, "hsMinimize")
@@ -5101,7 +5076,7 @@ end
 			else
 				-- do nothing
 			end
-			SetVariable("mcvar_anex_tnl_cutoff", anex_tnl_cutoff)
+			set_variable("mcvar_anex_tnl_cutoff", anex_tnl_cutoff)
 			anex_check_tnl_silent()
 			xg_draw_window()
 		end
@@ -5263,11 +5238,11 @@ end
 
 			WindowFont(win, "cplist", win_font, win_font_size, win_font_bold, win_font_italic, win_font_underline, false)
 
-			SetVariable("mcvar_window_font", win_font)
-			SetVariable("mcvar_window_font_size", win_font_size)
-			SetVariable("mcvar_window_font_bold", win_font_bold)
-			SetVariable("mcvar_window_font_italic", win_font_italic)
-			SetVariable("mcvar_window_font_underline", win_font_underline)
+			set_variable("mcvar_window_font", win_font)
+			set_variable("mcvar_window_font_size", win_font_size)
+			set_variable("mcvar_window_font_bold", win_font_bold)
+			set_variable("mcvar_window_font_italic", win_font_italic)
+			set_variable("mcvar_window_font_underline", win_font_underline)
 
 			xg_draw_window()
 			InfoNote("Window font changed to ", string.format("%s Size %i (%s)", win_font, win_font_size, new_font.style))
@@ -5292,7 +5267,7 @@ end
 		elseif result == "Reset to Defaults" then
 			for i, details in ipairs(TEXT_COLOR_DETAILS) do
 				text_colors[details.key] = details.default
-				SetVariable("color_" .. details.key, details.default)
+				set_variable("color_" .. details.key, details.default)
 			end
 			Note("All colors reset to default values.")
 			xg_draw_window()
@@ -5304,7 +5279,7 @@ end
 				win_hide_settings_button = "off"
 				InfoNote("\nSettings button will be ", "shown")
 			end
-			SetVariable("mcvar_window_hide_settings_button", win_hide_settings_button)
+			set_variable("mcvar_window_hide_settings_button", win_hide_settings_button)
 
 			clear_window_menu_hotspots()
 			xg_draw_window()
@@ -5334,7 +5309,7 @@ end
 
 			new_color = RGBColourToName(new_color)
 			text_colors[color_details.key] = new_color
-			SetVariable("color_" .. color_details.key, new_color)
+			set_variable("color_" .. color_details.key, new_color)
 			if color_details.key == "alternating_row" then
 				ColourNote("white", new_color, string.format("This is now color for %s.", color_details.desc))
 			else
@@ -5366,10 +5341,10 @@ end
 		local arg = wildcards.onoff
 		if (arg == "on") or (arg == "show") or (arg == "1") then
 			WindowShow(win, true)
-			SetVariable("mcvar_xgui_window_onoff", "on")
+			set_variable("mcvar_xgui_window_onoff", "on")
 		elseif (arg == "off") or (arg == "hide") or (arg == "0") then
 			WindowShow(win, false)
-			SetVariable("mcvar_xgui_window_onoff", "off")
+			set_variable("mcvar_xgui_window_onoff", "off")
 		else
 			if (arg == "max") or (arg == "maximize") or (arg == "expand") then
 				win_state = "max"
@@ -5399,6 +5374,10 @@ end
 			win_width = WindowInfo(win, 3)
 			win_height = WindowInfo(win, 4)
 		end
+
+		-- Since these are inside of OnPluginSaveState we need to use
+		-- SetVariable instead of set_variable or we'll be in an endless
+		-- loop of saving the plugin state
 		SetVariable("mcvar_window_pos_x", win_pos_x)
 		SetVariable("mcvar_window_pos_y", win_pos_y)
 		SetVariable("mcvar_window_state", win_state)
@@ -5691,7 +5670,7 @@ end
 			InfoNote("Debug mode ", "enabled\n")
 			debug_mode = "on"
 		end
-		SetVariable("debug_mode", debug_mode)
+		set_variable("debug_mode", debug_mode)
 	end
 
 	function InfoNote(...)
@@ -5726,11 +5705,13 @@ end
 
 -- [[ New code ]]
 	function update_plugin()
+		SaveState() -- save plugin state before switching so we don't lose anything
 		DebugNote("Checking version to see if it should update itself")
 		download_version_file(do_update, true)
 	end
 
 	function force_update_plugin(name, line, wildcards)
+		SaveState() -- save plugin state before switching so we don't lose anything
 		local branch = "master"
 
 		if wildcards.branch ~= "" then
@@ -5843,7 +5824,7 @@ end
 			force_update_check()
 			EnableTimer("update_check_tick", true)
 		end
-		SetVariable("mcvar_automatic_update_checks", automatic_update_checks)
+		set_variable("mcvar_automatic_update_checks", automatic_update_checks)
 
 
 		InfoNote("\nSearch&Destroy automatic update checking is now ", string.upper(automatic_update_checks))
@@ -6402,7 +6383,7 @@ end
 
 			if marks_updated then
 				local serial = serialize.save_simple(area_start_rooms)
-				SetVariable("mcvar_areaStartRooms", serial)
+				set_variable("mcvar_areaStartRooms", serial)
 			end
 
 			PwarDb:close()
@@ -6589,7 +6570,7 @@ end
 
 	function xset_nx(name, line, wildcards)
 		xset_nx_action = wildcards.action
-		SetVariable("mcvar_xset_nx_action", xset_nx_action)
+		set_variable("mcvar_xset_nx_action", xset_nx_action)
 		print_xset_nx_desc()
 	end
 
@@ -6616,7 +6597,7 @@ end
 			xset_overwrite_con = "on"
 		end
 		toggle_con_overwrite_triggers()
-		SetVariable("mcvar_xset_overwrite_con", xset_overwrite_con)
+		set_variable("mcvar_xset_overwrite_con", xset_overwrite_con)
 
 		InfoNote("\nConsider overwriting is now ", string.upper(xset_overwrite_con))
 	end
@@ -6982,7 +6963,7 @@ end
 
 	function update_sounds_onoff_value(new_val)
 		xset_sound_onoff = new_val
-		SetVariable("mcvar_xset_sound_onoff", xset_sound_onoff)
+		set_variable("mcvar_xset_sound_onoff", xset_sound_onoff)
 
 		InfoNote("\nSearch&Destroy Sounds are now ", string.upper(xset_sound_onoff))
 	end
@@ -7019,6 +7000,21 @@ end
 	function trigger_damage_done(name, line, wildcards)
 		last_mob_damaged = Trim(wildcards.mob_name)
 	end
+
+	function set_variable(key, value)
+		SetVariable(key, value)
+		state_changed = true
+		DebugNote("Changing ", key, " to ", value)
+	end
+
+	function check_state_changed()
+		if state_changed then
+			state_changed = false
+			SaveState()
+			DebugNote("State changed. Saving plugin state file.")
+		end
+	end
+
 ]]>
 </script>
 <triggers>

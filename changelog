@@ -1,4 +1,13 @@
 {
+    "5.81": {
+        "changes": [
+            "Be better about automatically saving plugin state so settings shouldn't be lost, for example, when updating snd",
+            "Stop showing 'I don't know which mob you just killed' error message"
+        ],
+        "fixes": [
+            "Fixed a runtime error that happened when first logging in"
+        ]
+    },
     "5.8": {
         "features": [
             "Show next quest time in title bar of the targets window"

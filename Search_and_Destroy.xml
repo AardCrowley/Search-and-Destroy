@@ -5705,13 +5705,11 @@ end
 
 -- [[ New code ]]
 	function update_plugin()
-		SaveState() -- save plugin state before switching so we don't lose anything
 		DebugNote("Checking version to see if it should update itself")
 		download_version_file(do_update, true)
 	end
 
 	function force_update_plugin(name, line, wildcards)
-		SaveState() -- save plugin state before switching so we don't lose anything
 		local branch = "master"
 
 		if wildcards.branch ~= "" then

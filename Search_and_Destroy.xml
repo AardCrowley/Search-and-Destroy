@@ -3672,7 +3672,9 @@ end
 		if (anex_automatic_onoff == "on") then
 			if (anex_tnl_cutoff > 0) then	-- if anex_tnl_cutoff > 0 then auto-noexp is on.
 				local level = tonumber(gmcp("char.status.level"))
-				if (level < 200) then
+				if not level then
+					return
+				elseif (level < 200) then
 					local tnl = tonumber(gmcp("char.status.tnl"))
 					if (tnl < anex_tnl_cutoff) and (noexp_onoff == "off") then		-- tnl less than set point and noexp is off --> turn that shit on
 						anex_set_noexp("on")

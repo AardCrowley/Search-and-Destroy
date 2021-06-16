@@ -2802,6 +2802,7 @@ end
 				if (tonumber(next_room) == tonumber(gmcp("room.info.num"))) and (gotoIndex < #gotoList) then
 					gotoIndex = gotoIndex + 1
 				end
+				gotoIndex = math.max(1, gotoIndex)
 				if gotoList[gotoIndex] then
 					InfoNote("Next room (nx) - ", gotoIndex, " of ", #gotoList)
 					next_room = gotoList[gotoIndex]

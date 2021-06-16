@@ -6,7 +6,8 @@
             "`snd help` can be used in addition to `xhelp` to find help files."
         ],
         "fixes": [
-            "Fixed a runtime error that happened when first logging in"
+            "Fixed a runtime error that happened when first logging in",
+            "Using nx after `go 0` will go to the first room assuming there is one"
         ]
     },
     "5.8": {

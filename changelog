@@ -1,5 +1,8 @@
 {
     "5.81": {
+        "features": [
+            "Started broadcasting events when the target is changed so that other plugins can tie in to this, for example a plugin that locates lplanes/uplanes targets when selected."
+        ],
         "changes": [
             "Be better about automatically saving plugin state so settings shouldn't be lost, for example, when updating snd",
             "Stop showing 'I don't know which mob you just killed' error message",

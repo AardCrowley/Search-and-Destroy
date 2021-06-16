@@ -147,10 +147,22 @@
 	local debug_gq_mode = false
 
 -- [[ current target data - cp, gq, quest ]]
-	local xcp_index = 0
 	local quest_target = {}	-- {qmob = "", area = "", room = "", keyword="", status="0"}
-	local short_mob_name = -1
-	local full_mob_name = -1
+
+-- [[ current target data]]
+	-- If there is no current target then it is nil.
+	-- If there is a current target then we'll have a table with some of these
+	-- filled in, depending on where the target is derived from
+	-- current_target = {
+	-- 		keyword = "sinister vandal",
+	-- 		name = "a sinister vandal",  -- nil for ad-hoc targets
+	-- 		room_name = "In The Courtyard", -- Only in room-based cp/gq or quests
+	-- 		area = "diatz",
+	-- 		index = 4, -- nil if not a cp/gq target (like when you do "qw <name>", or for quest targets)
+	-- 		activity = "cp", -- cp, gq, quest, or nil
+	-- }
+	local current_target = nil
+
 
 -- [[ time of next quest or when the current one expires ]]
 	local next_quest_time
@@ -1537,8 +1549,8 @@ end
 		keyword = Trim(keyword)
 
 		if save_mob_keyword_keyword(area, mob_name, keyword) then
-			if full_mob_name == mob_name then
-				short_mob_name = keyword
+			if has_activity_target() and current_target.name == mob_name then
+				update_target_keyword(keyword)
 			end
 			update_main_target_list_keyword(area, mob_name, keyword)
 		end
@@ -1548,21 +1560,15 @@ end
 		local keyword = Trim(wildcards.keyword)
 		local area
 
-		if has_target() then
-			if is_quest_mob_targeted() then
-				area = quest_target.arid
-			elseif main_target_list[xcp_index] then
-				area = main_target_list[xcp_index].arid
-			end
-
-			if not area then
+		if has_activity_target() then
+			if not current_target.area then
 				InfoNote("\nSearch and Destroy: Target's area could not be identified. Try visiting its area and trying again.")
 				return
 			end
 
-			if save_mob_keyword_keyword(area, full_mob_name, keyword) then
-				short_mob_name = keyword
-				update_main_target_list_keyword(area, full_mob_name, keyword)
+			if save_mob_keyword_keyword(current_target.area, current_target.name, keyword) then
+				update_target_keyword(keyword)
+				update_main_target_list_keyword(current_target.area, current_target.name, keyword)
 			end
 		else
 			InfoNote("\nSearch and Destroy: 'kw' has no target.  Use 'xcp' to select a target, or use 'xset kw' with no arguments.")
@@ -1659,6 +1665,99 @@ end
 		return guess
 	end
 
+	function set_target_from_main_target_list(index)
+		local target = main_target_list[index]
+		local activity = current_activity
+		if activity == "none" then
+			activity = nil
+		end
+
+		change_target({
+			name = target.mob,
+			keyword = target.kw,
+			room_name = target.roomName,
+			index = index,
+			area = target.arid,
+			activity = current_activity,
+		})
+	end
+
+	function set_target_from_quest(quest_target)
+		change_target({
+			name = quest_target.mob,
+			keyword = gmkw(quest_target.mob, quest_target.arid),
+			room_name = quest_target.room,
+			area = quest_target.arid,
+			activity = "quest",
+		})
+	end
+
+	function set_adhoc_target(keyword)
+		change_target({
+			keyword = keyword,
+			area = current_room.arid,
+		})
+	end
+
+	function clear_target()
+		change_target(nil)
+	end
+
+	-- Function that should be called whenever the target changes. This will
+	-- broadcast to other plugins that the target has changed.
+	function change_target(new_target)
+		if are_targets_identical(current_target, new_target) then
+			DebugNote("Attempted to change target to the same target")
+			return
+		end
+
+		current_target = new_target
+		if new_target then
+			DebugNote("Emitting target changed event. Target is now ", target_as_json())
+			BroadcastPlugin(1, "target_changed")
+		else
+			DebugNote("Emitting target cleared event. Target is now ", target_as_json())
+			BroadcastPlugin(2, "target_cleared")
+		end
+	end
+
+	function update_target_keyword(new_keyword)
+		if not current_target then
+			return
+		end
+
+		current_target.keyword = new_keyword
+		DebugNote("Emitting keyword changed event. Target is now ", target_as_json())
+		BroadcastPlugin(3, "keyword_changed")
+	end
+
+	-- function intended to be called from other plugins to get the current target
+	function target_as_json()
+		return json.encode(current_target)
+	end
+
+	function are_targets_identical(old_target, new_target)
+		if old_target == new_target then
+			return true
+		elseif not old_target or not new_target then
+			return false
+		end
+
+		for k, v in pairs(old_target) do
+			if v ~= new_target[k] then
+				return false
+			end
+		end
+
+		for k, v in pairs(new_target) do
+			if v ~= old_target[k] then
+				return false
+			end
+		end
+
+		return true
+	end
+
 --	[[ Detect campaign (or gquest) type - area or room ]]
 	function area_room_type_check(list)
 		local areaCount = 0
@@ -1712,8 +1811,7 @@ end
 				InfoNote("room: ", qt.room)
 			end
 		else
-			full_mob_name = qt.mob
-			short_mob_name = gmkw(qt.mob, qt.arid)
+			set_target_from_quest(qt)
 			set_variable("mcvar_qt_mob", qt.mob)
 			set_variable("mcvar_qt_arid", qt.arid)
 			set_variable("mcvar_qt_areaName", qt.areaName)
@@ -1773,6 +1871,9 @@ end
 			set_variable("mcvar_qt_arid", "")
 			set_variable("mcvar_qt_areaName", "")
 			set_variable("mcvar_qt_room", "")
+			if is_quest_mob_targeted() then
+				clear_target()
+			end
 		end
 		quest_timer_tick()
 		xg_draw_window()
@@ -1783,7 +1884,6 @@ end
 		cp_info_list = {}
 		main_target_list = {}
 		room_targets_ignored = {}
-		xcp_index = 0
 		EnableTrigger("trg_cp_info_level_taken", true)
 		EnableTrigger("trg_cp_info_targets", true)
 		SendNoEcho("cp info")
@@ -1862,7 +1962,7 @@ end
 			xcp_retry_stat = 1
 			qw_reset(false)
 			last_kill_index = get_last_kill_index()
-			if main_target_list[last_kill_index] then
+			if last_kill_index and main_target_list[last_kill_index] then
 				main_target_list[last_kill_index].is_dead = "yes"
 			end
 			xcp_clear_target(true)
@@ -1871,20 +1971,15 @@ end
 	end
 
 	function get_last_kill_index()
-		if xcp_index > 0 and last_mob_killed == main_target_list[xcp_index].mob then
-			DebugNote("killed mob is xcp index mob")
-			return xcp_index
-		else
-			for i, target in ipairs(main_target_list) do
-				DebugNote("comparing ", last_mob_killed, " (", current_room.arid, ") to ", target.mob, " (",  target.arid, ")")
-				if current_room.arid == target.arid and last_mob_killed == target.mob then
-					DebugNote("killed mob is number ", i)
-					return i
-				end
+		for i, target in ipairs(main_target_list) do
+			DebugNote("comparing ", last_mob_killed, " (", current_room.arid, ") to ", target.mob, " (",  target.arid, ")")
+			if current_room.arid == target.arid and last_mob_killed == target.mob then
+				DebugNote("killed mob is number ", i)
+				return i
 			end
-			DebugNote("killed mob DEFAULTING to xcp mob ", "#", "", xcp_index)
-			return xcp_index
 		end
+		DebugNote("Couldn't find last mob kill on target list")
+		return nil
 	end
 
 	function player_level_up()
@@ -1915,7 +2010,9 @@ end
 			room_targets_ignored = {}
 			area_room_type = "none"
 			current_activity = "none"
-			xcp_index = 0
+			if is_cp_or_gq_mob_targeted() then
+				clear_target()
+			end
 			xg_draw_window()
 		end
 	end
@@ -2084,8 +2181,8 @@ end
 		-- do 'xcp' again (with or without arg), which works normally now that
 		-- table data is available.
 		if (xcp_retry_stat == 2) then
-			xcp_index = xcp_index_attempt
-			if last_kill_index < xcp_index_attempt then
+			local xcp_index = xcp_index_attempt
+			if last_kill_index and last_kill_index < xcp_index_attempt then
 				xcp_index = math.max(1, xcp_index_attempt - 1)
 			end
 			xcp_retry_stat = 0
@@ -2097,7 +2194,7 @@ end
 --	[[ Gquest general status functions ]]
 	function gq_mob_killed()
 		last_kill_index = get_last_kill_index()
-		if main_target_list[last_kill_index] then
+		if last_kill_index and main_target_list[last_kill_index] then
 			local x = tonumber(main_target_list[last_kill_index].qty) - 1
 			main_target_list[last_kill_index].qty = x
 			if (#main_target_list > 1) then
@@ -2589,21 +2686,21 @@ end
 			xg_draw_window()
 		elseif (area_room_type == "none") then	-- abort if not on cp
 			InfoNote("\nSearch and Destroy: 'xcp' aborted - you're not on a cp.\n")
-		elseif (#t == 0) then	-- abort if on a cp, but target list is empty
+		elseif (#main_target_list == 0) then	-- abort if on a cp, but target list is empty
 			InfoNote("\nSearch and Destroy: 'xcp' aborted - cp is active but target list is empty.\n")
 		else
-			for i,v in ipairs (t) do	-- loop through list and try to find something to kill.
-				if (v.is_dead == "no") and (v.link_type == "area" or v.link_type == "room") then	-- if mob is alive and location known, go to it.
-					xcp_index = i
-					xg_draw_window()
+			local target_found = false
+			for i, mob in ipairs (main_target_list) do	-- loop through list and try to find something to kill.
+				if (mob.is_dead == "no") and (mob.link_type == "area" or mob.link_type == "room") then	-- if mob is alive and location known, go to it.
+					DebugNote("Switching to target ", i)
 					xcp_goto_target(i)
+					xg_draw_window()
+					target_found = true
 					break
-				else
-					local index = i + 1
-					if (index > #t) then 	-- if we reach this step, all mobs are dead and/or unknown.
-						InfoNote("\nSearch and Destroy: 'xcp' aborted - lack of targets (dead, or location unknown)")
-					end
 				end
+			end
+			if not target_found then
+				InfoNote("\nSearch and Destroy: 'xcp' aborted - lack of targets (dead, or location unknown)")
 			end
 		end
 	end
@@ -2625,9 +2722,8 @@ end
 		else	-- everything is in order, so go to mob.
 			local ch_state = current_character_state
 			if (ch_state == "3") then
-				xcp_index = index
-				xg_draw_window()
 				xcp_goto_target(index)
+				xg_draw_window()
 			elseif (ch_state == "8") then
 				InfoNote("\nNot while you're fighting!")
 			elseif (ch_state == "12") then
@@ -2637,8 +2733,8 @@ end
 	end
 
 	function xcp_goto_target(index)
+		local t = main_target_list[index]
 		if (xcp_retry_stat == 0) then
-			local t = main_target_list[index]
 			local ri = current_room
 			local action = xcp_action_mode
 			gotoArea = -1
@@ -2646,14 +2742,13 @@ end
 			next_room = -1
 			gotoList = {}
 			if (t ~= nil) and (ri.rmid ~= nil) then
-				full_mob_name = t.mob
-				short_mob_name = t.kw
+				set_target_from_main_target_list(index)
 				if (t.link_type == "area") then	-- Area cp links - "xcp" goes to target area, then runs Hunt Trick to get target room.
 					if (action == "ht" and current_activity == "cp") then		-- do hunt trick or quick where after arriving in area.
 						local func = function() do_hunt_trick(1, t.kw) end
 						execute_in_area(t.arid, func)
 					elseif (action == "qw" or (action == "ht" and current_activity ~= "cp")) then
-						local func = function() qw_exact(t.kw) end
+						local func = function() qw_exact() end
 						execute_in_area(t.arid, func)
 					elseif (action == "off") then	-- do nothing
 						InfoNote("Xcp action is off - no additional action\n")
@@ -2669,19 +2764,18 @@ end
 				InfoNote("No item exists, or data is busy")
 			end
 		else
+			set_target_from_main_target_list(index)
 			xcp_index_attempt = index
 			xcp_retry_stat = 2
 		end
 	end
 
-	function xcp_clear_target(bool)
-		short_mob_name = -1
-		full_mob_name = -1
-		xcp_index = 0
+	function xcp_clear_target(redraw_miniwin)
+		clear_target()
 		gotoArea = -1
 		gotoIndex = 0
 		gotoList = {}
-		if (bool == true) then
+		if redraw_miniwin then
 			xg_draw_window()
 		end
 	end
@@ -2959,16 +3053,15 @@ end
 
 	function qw_noarg()
 		local ix = qw.index or 1
-		local s = short_mob_name or -1
-		if (s == -1) then
-			InfoNote("\nSearch and Destroy: 'Quick-where' has no target.")
-			InfoNote("Use 'xcp', 'qw <mob>, or 'ht <mob>' to get target info.\n")
-		else
+		if has_activity_target() then
 			if (qw.exact == true) then
 				qw_exact()
 			else
-				do_quick_where(ix, s)
+				do_quick_where(ix, current_target.keyword)
 			end
+		else
+			InfoNote("\nSearch and Destroy: 'Quick-where' has no target.")
+			InfoNote("Use 'xcp', 'qw <mob>, or 'ht <mob>' to get target info.\n")
 		end
 	end
 
@@ -2976,15 +3069,12 @@ end
 		local mob = wildcards.mob
 		local index = tonumber(wildcards.index) or 1
 
-		xcp_index = 0
-		full_mob_name = -1
-		xg_draw_window()
-
 		qw_arg(index, mob)
+		xg_draw_window()
 	end
 
 	function qw_arg(index, mob)
-		short_mob_name = mob
+		set_adhoc_target(mob)
 		qw.index = index
 		qw.exact = false
 
@@ -2992,14 +3082,9 @@ end
 	end
 
 	function qw_exact()  -- called from code, e.g. xcp function
-		local t = main_target_list[xcp_index]
-		if (t) then
-			local f = t.mob
-			local s = t.kw
-			full_mob_name = f
-			short_mob_name = s
+		if has_activity_target() then
 			local ix = qw.index or 1
-			local p1 = split(f, "[^ ]+")
+			local p1 = split(current_target.name, "[^ ]+")
 			local p2
 				for i,v in ipairs (p1) do
 					if gmkw_omit[v] then
@@ -3010,7 +3095,7 @@ end
 				end
 			qw.exact = true
 			qw.match = p2
-			do_quick_where(ix, s)
+			do_quick_where(ix, current_target.keyword)
 		else
 			print("\nqw exact: You have no 'xcp' target.")
 		end
@@ -3033,11 +3118,11 @@ end
 		local found = false
 		qw.index = qw.index or 1
 		if (qw.exact == true) then	-- tells this function to look for an exact match for the current xcp target mob name.
-			if mob == Trim(string.sub(full_mob_name, 1, 30)):lower() then
+			if mob == Trim(string.sub(current_target.name, 1, 30)):lower() then
 				found = true
 			end
 		else
-			parts = split(string.lower(short_mob_name), "[^ ]+")
+			parts = split(string.lower(current_target.keyword), "[^ ]+")
 			for i=1, #parts do
 				if (string.find(mob, parts[i], 1, true) ~= nil) then
 					found = true
@@ -3048,7 +3133,7 @@ end
 		if (found == false) then	-- not our line, keep looking
 			qw.index = qw.index + 1
 			if (qw.index < 101) then
-				SendNoEcho(string.format("where %s.%s", qw.index, short_mob_name))
+				SendNoEcho(string.format("where %s.%s", qw.index, current_target.keyword))
 				return
 			else
 				print("qw: too many fails")
@@ -3058,15 +3143,12 @@ end
 		end
 		qw_reset(qw.exact)
 		-- change target
-		xcp_index = 0
-		full_mob_name = -1
 		if quest_target.mob and current_room.arid == quest_target.arid and quest_target.mob:lower():sub(1, 30) == Trim(mob):lower() then
-			full_mob_name = quest_target.mob
+			set_target_from_quest(quest_target)
 		else
 			for i, target in ipairs(main_target_list) do
 				if current_room.arid == target.arid and mob == target.mob:lower():sub(1, 30) then
-					full_mob_name = target.mob
-					xcp_index = i
+					set_target_from_main_target_list(i)
 					break
 				end
 			end
@@ -3080,14 +3162,13 @@ end
 
 	function qw_no_match()	-- responds to "There is no <mob name> around here."
 		qw_reset(qw.exact)
-		if type(full_mob_name) == 'string' then
+		if has_activity_target() then
 			lookup_not_found_mob()
 		end
 	end
 
 	function lookup_not_found_mob()
-		local full_name = full_mob_name:lower()
-		local search_name = short_mob_name -- needed?
+		local full_name = current_target.name:lower()
 		local arid = current_room.arid
 		local found = false
 		local query = string.format("SELECT room, roomid, count FROM mobs WHERE zone = %s AND mob = %s;",
@@ -3142,7 +3223,7 @@ end
 		InfoNote("  * It might be dead")
 		InfoNote("  * You might be using the wrong keyword (use `xset kw` to update if needed)")
 		InfoNote("  * It might be flagged nowhere")
-		InfoNote("You have previously seen ", full_mob_name, " in:")
+		InfoNote("You have previously seen ", current_target.name, " in:")
 		search_rooms_results(possible_rooms)
 	end
 
@@ -3153,24 +3234,21 @@ end
 	end
 
 	function ht_noarg()
-		local s = short_mob_name or -1
 		local ix = ht.index or 1
-		if (s == -1) then
+
+		if has_target() then
+			do_hunt_trick(ix, current_target.keyword)
+		else
 			InfoNote("\nSearch and Destroy: 'Hunt trick' has no target.")
-			InfoNote("Use 'xcp', ht <mob>', or 'qw <mob>' to pick a target.\n")
-			return
+			InfoNote("Use 'xcp', 'ht <mob>', or 'qw <mob>' to pick a target.\n")
 		end
-		do_hunt_trick(ix, s)
 	end
 
 	function ht_arg(name, line, wildcards)
-		local s = wildcards.mob
 		local ix = tonumber(wildcards.index) or 1
-		short_mob_name = s
-		xcp_index = 0
-		full_mob_name = -1
+		set_adhoc_target(wildcards.mob)
 		xg_draw_window()
-		do_hunt_trick(ix, s)
+		do_hunt_trick(ix, current_target.keyword)
 	end
 
 	function do_hunt_trick(ix, s)
@@ -3185,17 +3263,15 @@ end
 	end
 
 	function ht_continue()
-		local s = short_mob_name
 		local ix = (ht.index + 1) or 1
 		ht.first_target = false
-		do_hunt_trick(ix, s)
+		do_hunt_trick(ix, current_target.keyword)
 	end
 
 	function ht_complete(name, line, wildcards)
 		EnableTriggerGroup("AutoHunt", false)
-		local s = short_mob_name
 		local ix = ht.index or 1
-		qw_arg(ix, s)
+		qw_arg(ix, current_target.keyword)
 		ht_reset()
 	end
 
@@ -3204,8 +3280,7 @@ end
 		EnableTriggerGroup("HuntTrick", false)
 		ht_reset()
 
-
-		if first_target and type(full_mob_name) == 'string' then
+		if first_target and has_activity_target() then
 			InfoNote("Search and Destroy:  Hunt trick failed. Attempting quick where.")
 			qw_exact()
 		else
@@ -3221,15 +3296,15 @@ end
 
 -- [[ quick scan, quick kill ("kk") ]]
 	function quick_scan()
-		if (short_mob_name == nil) or (short_mob_name == "") then
-			Send("scan")
+		if has_target() then
+			Send(string.format("scan %s", current_target.keyword))
 		else
-			Send(string.format("scan %s", short_mob_name))
+			Send("scan")
 		end
 	end
 
 	function smart_scan()
-		if has_activity() then
+		if has_activity_target() then
 			running_smart_scan = true
 			DebugNote("Performing smart scan.")
 			SendNoEcho("scan")
@@ -3240,17 +3315,15 @@ end
 
 	function quick_kill(name, line, wildcards)
 		local targName = ""
-		if (short_mob_name == nil) or (short_mob_name == "") or (short_mob_name == "-1") or (short_mob_name == -1) then
-			InfoNote("\nSearch and Destroy: 'Quick-kill' has no target.  Use 'ht', 'qw', or 'xcp' to select a target.\n")
-		else
+		if has_target() then
 			for command in quick_kill_command:gmatch("[%a%s%p%d]+[^;]?") do
 				if not notarg then
-					targName = " '" .. short_mob_name .. "'"
+					targName = " '" .. current_target.keyword .. "'"
 				end
 				Execute(command .. targName)
-				--Execute(command .. " '" .. short_mob_name .. "'")
 			end
-			--Execute(quick_kill_command .. " '" .. short_mob_name .. "'")
+		else
+			InfoNote("\nSearch and Destroy: 'Quick-kill' has no target.  Use 'ht', 'qw', or 'xcp' to select a target.\n")
 		end
 	end
 
@@ -4087,13 +4160,12 @@ end
 	end
 
 	function xtest_xcp(name, line, wildcards)
-		xcp_index = tonumber(wildcards.num) or 1
-		if #main_target_list > 0 then
-			xcp_index = math.min(#main_target_list, xcp_index)
-			full_mob_name = main_target_list[xcp_index].mob
-			short_mob_name = main_target_list[xcp_index].kw
-			current_room.arid = main_target_list[xcp_index].arid
-			DebugNote("Targeting xcp ", xcp_index)
+		local index = tonumber(wildcards.num) or 1
+		if index > 0 and #main_target_list > 0 then
+			index = math.min(#main_target_list, index)
+
+			set_target_from_main_target_list(index)
+			DebugNote("Targeting xcp ", index)
 
 			xg_draw_window()
 		else
@@ -4928,7 +5000,7 @@ end
 				counts = string.format("(%i/%i) ", v.index, v.duplicates)
 			end
 			local link = string.format("%2s) %s%s%s - %s", index, counts, qty, mob, location)
-			local color = ColourNameToRGB(color_for_target(v, index == xcp_index))
+			local color = ColourNameToRGB(color_for_target(v, is_cp_or_gq_mob_targeted() and current_target.index == index))
 			local hs_left = 6
 			local hs_top = (targ_list_top + ((index-1) * font_height))
 			local hs_right = math.min(hs_left + WindowTextWidth(win, font, link), win_width - 5)
@@ -4953,26 +5025,23 @@ end
 		end
 	end
 
+	function has_target()
+		return not not current_target
+	end
+
 	function is_cp_or_gq_mob_targeted()
-		return xcp_index > 0 and main_target_list[xcp_index]
+		return has_target() and (current_target.activity == "cp" or current_target.activity == "gq")
 	end
 
 	function is_quest_mob_targeted()
-		if not has_active_quest() then
-			return false
-		elseif xcp_index > 0 then
-			return false
-		else
-			return full_mob_name == quest_target.mob
-		end
+		return has_target() and current_target.activity == "quest"
 	end
 
-	function has_target()
-		return is_quest_mob_targeted() or is_cp_or_gq_mob_targeted()
-	end
-
-	function has_activity()
-		return has_active_quest() or has_active_cp_or_gq()
+	-- Return true if you have a target, and that target is from a cp/gq/quest
+	-- Otherwise false (no target or target is not from a cp/gq/quest, like
+	-- when you do `qw <mob name>`)
+	function has_activity_target()
+		return is_cp_or_gq_mob_targeted() or is_quest_mob_targeted()
 	end
 
 	function has_active_quest()
@@ -6905,7 +6974,7 @@ end
 
 		if on_target_list then
 			if checking_current_room then
-				if type(full_mob_name) == 'string' and full_mob_name:lower() == lower_mob_name then
+				if has_activity_target() and current_target.name:lower() == lower_mob_name then
 					activity_target_found_here = true
 				else
 					other_target_found_here = true

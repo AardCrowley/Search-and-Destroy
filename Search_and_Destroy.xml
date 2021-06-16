@@ -5919,7 +5919,7 @@ end
 	end
 
 	function onHelp(name, line, wildcards)
-		local str = wildcards[1]
+		local str = wildcards.search
 		local helpFiles = {
 			"win",
 			"speed",
@@ -7762,7 +7762,7 @@ end
 <!-- Plugin Update automatic -->
 	<alias enabled="y" match="snd update" script="update_plugin" sequence="100">
 	</alias>
-	<alias enabled="y" match="^xhelp(?:\s(.*))?$" regexp="y" script="onHelp" sequence="100">
+	<alias enabled="y" match="^(?:xhelp|snd help)(?:\s(?<search>.*))?$" regexp="y" script="onHelp" sequence="100">
 	</alias>
 
 	<alias enabled="y" match="^snd force update(?: (?<branch>\S+))?$" script="force_update_plugin" regexp="y" sequence="100">

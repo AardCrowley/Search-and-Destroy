@@ -2,7 +2,8 @@
     "5.81": {
         "changes": [
             "Be better about automatically saving plugin state so settings shouldn't be lost, for example, when updating snd",
-            "Stop showing 'I don't know which mob you just killed' error message"
+            "Stop showing 'I don't know which mob you just killed' error message",
+            "`snd help` can be used in addition to `xhelp` to find help files."
         ],
         "fixes": [
             "Fixed a runtime error that happened when first logging in"

@@ -72,7 +72,7 @@
 
 	PLUGIN_VERSION  = GetPluginInfo(GetPluginID(), 19)
 	PLUGIN_NAME 	= GetPluginInfo(GetPluginID(), 1)
-	SCHEMA_VERSION  = 2
+	SCHEMA_VERSION  = 3
 
 	UPDATE_CHECK_INTERVAL = 60 * 60 -- Check once per hour
 	local last_update_check = -1
@@ -404,7 +404,7 @@
 
 		if current_version >= SCHEMA_VERSION then return end
 
-		Note("Migrating datase")
+		InfoNote("Migrating datase")
 
 		-- Inidividual migrations go here
 		if current_version == 0 then
@@ -417,6 +417,11 @@
 			strip_mobs_table(db)
 		end
 
+		if current_version < 3 then
+			add_kills_column(db)
+		end
+
+		InfoNote("Migration complete!")
 		db:execute(string.format("PRAGMA user_version = %i;", SCHEMA_VERSION))
 
 		db:close_vm()
@@ -432,7 +437,7 @@
 		end
 
 		if not db_tables['mobs'] then
-			Note("Creating table 'mobs'")
+			DebugNote("Creating table 'mobs'")
 			table.insert(create_tables, [[
 				CREATE TABLE mobs (
 					mob 		TEXT NOT NULL,
@@ -445,7 +450,7 @@
 		end
 
 		if not db_tables['area'] then
-			Note("Creating table 'area'")
+			DebugNote("Creating table 'area'")
 			table.insert(create_tables, [[
 				CREATE TABLE 	area (
 					name		TEXT NOT NULL,
@@ -466,7 +471,7 @@
 	end
 
 	function create_mob_keywords_table(db)
-		Note("Creating mob aliases database table")
+		DebugNote("Creating mob aliases database table")
 		db:execute([[
 			CREATE TABLE IF NOT EXISTS mob_keyword_exceptions (
 				area_name	TEXT NOT NULL,
@@ -479,7 +484,7 @@
 	end
 
 	function strip_mobs_table(db)
-		Note("Updating mobs table")
+		DebugNote("Updating mobs table")
 		db:execute([[
 			BEGIN TRANSACTION;
 			ALTER TABLE mobs RENAME TO old_mobs;
@@ -490,7 +495,30 @@
 				zone 		TEXT NOT NULL,
 				count 		INTEGER NOT NULL DEFAULT 0,
 				UNIQUE(mob, roomid));
-			INSERT INTO mobs SELECT mob COLLATE NOCASE, room COLLATE NOCASE, roomid, zone, SUM(count) as count FROM old_mobs GROUP BY mob COLLATE NOCASE, roomid;
+			INSERT INTO mobs
+				SELECT mob COLLATE NOCASE, room COLLATE NOCASE, roomid, zone, SUM(count) as count
+				FROM old_mobs GROUP BY mob COLLATE NOCASE, roomid;
+			DROP TABLE old_mobs;
+			COMMIT;
+		]])
+	end
+
+	function add_kills_column(db)
+		DebugNote("Adding kills to mobs table")
+		db:execute([[
+			BEGIN TRANSACTION;
+			ALTER TABLE mobs RENAME TO old_mobs;
+			CREATE TABLE mobs (
+				mob 		TEXT NOT NULL COLLATE NOCASE,
+				room 		TEXT NOT NULL COLLATE NOCASE,
+				roomid 		INTEGER NOT NULL,
+				zone 		TEXT NOT NULL,
+				seen_count 	INTEGER NOT NULL DEFAULT 0,
+				kill_count 	INTEGER NOT NULL DEFAULT 0,
+				UNIQUE(mob, roomid));
+			INSERT INTO mobs
+				SELECT mob, room, roomid, zone, count as seen_count, 0 as kill_count
+				FROM old_mobs;
 			DROP TABLE old_mobs;
 			COMMIT;
 		]])
@@ -3219,7 +3247,7 @@ end
 		local full_name = current_target.name:lower()
 		local arid = current_room.arid
 		local found = false
-		local query = string.format("SELECT room, roomid, count FROM mobs WHERE zone = %s AND mob = %s;",
+		local query = string.format("SELECT room, roomid, seen_count FROM mobs WHERE zone = %s AND mob = %s;",
 			fixsql(arid), fixsql(full_name))
 
 		local db = assert(sqlite3.open(snd_db_file))
@@ -3233,9 +3261,9 @@ end
 				rmid = row.roomid,
 				name = row.room,
 				arid = arid,
-				count = row.count,
+				seen_count = row.seen_count,
 			})
-			total_count = total_count + row.count
+			total_count = total_count + row.seen_count
 			table.insert(roomids, row.roomid)
 		end
 		db:close_vm()
@@ -3259,13 +3287,13 @@ end
 
 		for i, room in ipairs(possible_rooms) do
 			if total_count > 0 then
-				room.percentage = (room.count / total_count)
+				room.percentage = (room.seen_count / total_count)
 			else
 				room.percentage = 0
 			end
 		end
 
-		table.sort(possible_rooms, sort_rooms_by_count)
+		table.sort(possible_rooms, sort_rooms_by_seen_count)
 
 		InfoNote("\nMob not found. There are multiple possible reasons for this:")
 		InfoNote("  * It might be dead")
@@ -3495,34 +3523,34 @@ end
 				local count_by_room = {}
 				local sum = 0
 
-				select = string.format("SELECT roomid, count FROM mobs WHERE zone = %s AND mob = %s AND roomid in (%s);", fixsql(arid), fixsql(fullMobName), table.concat(roomid_list, ","))
+				select = string.format("SELECT roomid, seen_count FROM mobs WHERE zone = %s AND mob = %s AND roomid in (%s);", fixsql(arid), fixsql(fullMobName), table.concat(roomid_list, ","))
 
 				for row in SnDdb:nrows(select) do
-					count_by_room[row.roomid] = row.count
-					sum = sum + row.count
+					count_by_room[row.roomid] = row.seen_count
+					sum = sum + row.seen_count
 				end
 				SnDdb:close_vm()
 
 				for i, result in ipairs(results) do
-					result.count = count_by_room[result.rmid] or 0
+					result.seen_count = count_by_room[result.rmid] or 0
 					if sum > 0 then
-						result.percentage = (result.count / sum)
+						result.percentage = (result.seen_count / sum)
 					else
 						result.percentage = 0
 					end
 				end
 
-				table.sort(results, sort_rooms_by_count)
+				table.sort(results, sort_rooms_by_seen_count)
 			end
 
 			search_rooms_results(results)
 		end
 	end
 
-	function sort_rooms_by_count(a, b)
-		if a.count > b.count then
+	function sort_rooms_by_seen_count(a, b)
+		if a.seen_count > b.seen_count then
 			return true
-		elseif	a.count < b.count then
+		elseif	a.seen_count < b.seen_count then
 			return false
 		else
 			return a.rmid < b.rmid
@@ -6476,7 +6504,7 @@ end
 			for i, mob in ipairs(migrateTable) do
 				room = roomsById[tostring(mob.roomid)]
 				if room then
-					table.insert(insertStatements, string.format("INSERT OR IGNORE INTO mobs (mob,room,roomid,zone,count) VALUES (%s,%s,%s,%s,%i);", fixsql(mob.mob), fixsql(room.name), mob.roomid, fixsql(room.area), mob.count))
+					table.insert(insertStatements, string.format("INSERT OR IGNORE INTO mobs (mob,room,roomid,zone,seen_count) VALUES (%s,%s,%s,%s,%i);", fixsql(mob.mob), fixsql(room.name), mob.roomid, fixsql(room.area), mob.count))
 
 					if #insertStatements > batch_size then
 						execute_in_transaction(SnDdb, insertStatements)
@@ -6574,7 +6602,7 @@ end
 			searchQuery = searchQuery .. lvlQuery:format(level, level)
 		end
 
-		searchQuery = searchQuery .. " and area.noquest LIKE 'false' and mobs.zone = area.key ORDER BY mobs.zone, mobs.Count DESC"
+		searchQuery = searchQuery .. " and area.noquest LIKE 'false' and mobs.zone = area.key ORDER BY mobs.zone, mobs.seen_count DESC"
 
 		SnDdb:close()
 
@@ -7078,7 +7106,7 @@ end
 			table.insert(sql_mobs, fixsql(mob))
 			table.insert(writes, string.format("INSERT OR IGNORE INTO mobs (mob,room,roomid,zone) VALUES (%s,%s,%i,%s);",
 				fixsql(mob), fixsql(rname), tonumber(current_room.rmid), fixsql(zname)))
-			table.insert(writes, string.format("UPDATE mobs SET Count = Count + 1 WHERE mob = %s AND roomid = %i;", fixsql(mob), tonumber(current_room.rmid)))
+			table.insert(writes, string.format("UPDATE mobs SET seen_count = seen_count + 1 WHERE mob = %s AND roomid = %i;", fixsql(mob), tonumber(current_room.rmid)))
 		end
 
 		local db = assert(sqlite3.open(snd_db_file))

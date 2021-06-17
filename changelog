@@ -1,4 +1,9 @@
 {
+    "5.83": {
+        "fixes": [
+            "Fixed an issue where ht followed by qw was not correctly matching mobs that had a name that didn't match its keywords (looking at you, school of horror)"
+        ]
+    },
     "5.82": {
         "fixes": [
             "xset kk correctly targets with multiple commands separated by semicolons, and takes notarg argument into account for each command individually"

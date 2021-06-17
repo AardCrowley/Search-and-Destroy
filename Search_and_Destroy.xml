@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.81" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley and Naricain" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="5.82" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley and Naricain" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -83,8 +83,6 @@
 	local plugin_id_gmcp_mapper		= "b6eae87ccedd84f510b74714"
 	local plugin_id_z_order 		= "462b665ecb569efbf261422f"
 	local plugin_id_soundpack 		= "23832d1089f727f5f34abad8"
-
-	notarg = (GetVariable("mcvar_quick_kill_notarg") == "true" or false)
 
 	local plugins_folder = GetPluginInfo(GetPluginID(), 20)
 	local db_file_1
@@ -3314,13 +3312,17 @@ end
 	end
 
 	function quick_kill(name, line, wildcards)
-		local targName = ""
 		if has_target() then
-			for command in quick_kill_command:gmatch("[%a%s%p%d]+[^;]?") do
-				if not notarg then
-					targName = " '" .. current_target.keyword .. "'"
+			local targName = " '" .. current_target.keyword .. "'"
+			for command in quick_kill_command:gmatch("[^;]+") do
+				command = Trim(command)
+
+				if string.match(command, "%s+notarg$") then
+					command = command:gsub("%s+notarg$", "")
+					Execute(command)
+				else
+					Execute(command .. targName)
 				end
-				Execute(command .. targName)
 			end
 		else
 			InfoNote("\nSearch and Destroy: 'Quick-kill' has no target.  Use 'ht', 'qw', or 'xcp' to select a target.\n")
@@ -3328,19 +3330,10 @@ end
 	end
 
 	function xset_quick_kill_command(name, line, wildcards)		-- user-defined attack to use with qk/kk
-		if (wildcards.notarg ~= "") then
-			notarg = true
-		else
-			notarg = false
-		end
-
-		set_variable("mcvar_quick_kill_notarg", tostring(notarg))
-		DebugNote("Quick kill notarg variable set to ", GetVariable("mcvar_quick_kill_notarg"))
-
 		if (wildcards.arg == "") then
 			InfoNote("Search and Destroy: Quick-kill command currently set to: '", quick_kill_command, "'")
 		else
-			quick_kill_command = wildcards.arg:gsub(" notarg", "")
+			quick_kill_command = wildcards.arg
 			--quick_kill_command = wildcards.arg
 			set_variable("mcvar_quick_kill_command", quick_kill_command)
 			InfoNote("Search and Destroy: Quick-kill command is now set to: '", quick_kill_command, "'")
@@ -3952,6 +3945,8 @@ end
 		EnableTrigger("trg_cp_check_line", true)
 		Simulate("\n")
 		if (area_room_type == "area") then
+			Simulate("You still have to kill * an ultroloth (The Lower Planes)\n")
+			Simulate("You still have to kill * a hound archon (The Upper Planes)\n")
 			Simulate("You still have to kill * Evil Vladia (The School of Horror)\n")
 			Simulate("You still have to kill * the head necromancer's assistant (Necromancers' Guild)\n")
 			Simulate("You still have to kill * Isscheburqua (Insanitaria)\n")
@@ -5582,10 +5577,6 @@ end
 		return result
 	end
 
-	function trim(s)
-		return s:match'^()%s*$' and '' or s:match'^%s*(.*%S)'
-	end
-
 	function tier_level()
 		local l = tonumber(gmcp("char.status.level"))
 		local t = tonumber(gmcp("char.base.tier"))
@@ -6134,6 +6125,10 @@ end
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <xset> <ak|kk|qk> <commands>")
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("With the 'xset' argument, sets the interchangable command of 'ak', 'kk', and 'qk' to the command supplied. Without the 'xset' argument, executes the 'quick kill' command. If you wish to stack multiple commands, you must separate each command with a double semicolon (or a single semicolon if you start the line with a semicolon). For example, 'xset kick;;bash;;slap' (or ';xset kick;bash;slap')  will kick the target, then bash the target, then slap the target.")}))
+			Note()
+			ColourNote("antiquewhite", "", unpack({helpWrap("Any of the commands can be given a 'notarg' argument and they will be executed without supplying the target name. For example:")}))
+			ColourNote("limegreen", "", "  xset kk backstab;;spiral notarg")
+			ColourNote("antiquewhite", "", unpack({helpWrap("If your target is a guard then this will do 'backstab guard;spiral'.")}))
 
 		elseif str == "qs" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": qs")
@@ -7929,7 +7924,7 @@ end
 			script="quick_kill"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
-	<alias	match="^xset (?:kk|ak|qk|qkill)( (?<arg>.+?)(?<notarg> notarg)?)?$"
+	<alias	match="^xset (?:kk|ak|qk|qkill)(?: (?<arg>.+))$"
 			script="xset_quick_kill_command"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 

@@ -1,4 +1,9 @@
 {
+    "5.82": {
+        "fixes": [
+            "xset kk correctly targets with multiple commands separated by semicolons, and takes notarg argument into account for each command individually"
+        ]
+    },
     "5.81": {
         "features": [
             "Started broadcasting events when the target is changed so that other plugins can tie in to this, for example a plugin that locates lplanes/uplanes targets when selected."

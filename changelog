@@ -4,7 +4,8 @@
             "Fixed an issue where SnD mistakenly thought you were in a gq if you were looking at the history of a finished gq",
             "Fixed an issue where ht followed by qw was not correctly matching mobs that had a name that didn't match its keywords (looking at you, school of horror)",
             "Gquests are cleared properly when they end",
-            "Current target is kept when you kill a different target on your list"
+            "Current target is kept when you kill a different target on your list",
+            "Mobs with weird names like '(Helper) Fenix' should show up in the targets list and on con/scan properly"
         ]
     },
     "5.82": {

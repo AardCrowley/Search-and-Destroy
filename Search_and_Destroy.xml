@@ -2267,7 +2267,7 @@ end
 	end
 
 	function gq_ended(name, line, wildcards)
-		if gq_id_joined == wildcards.gq_id then
+		if gqid_joined == wildcards.gq_id then
 			player_not_on_gq()
 		end
 	end

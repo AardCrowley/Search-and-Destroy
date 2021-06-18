@@ -176,6 +176,8 @@
 	local gotoList = {}
 	local next_room = -1
 
+	local going_to_room
+
 -- [[ auto-hunt ]]
 	local auto_hunt_dir = ""
 	local auto_hunt_mob = ""
@@ -355,6 +357,11 @@
 				if (current_room.rmid == previous_room.rmid) then
 					-- do nothing
 				else
+					if going_to_room == current_room.rmid then
+						action_on_destination_arrived()
+						going_to_room = nil
+					end
+
 					if (#room_history == 300) then
 						room_history[300] = nil
 					end
@@ -2925,6 +2932,7 @@ end
 	end
 
 	function action_on_destination_arrived()
+		DebugNote("Executing action on destination arrived: ", tostring(xset_nx_action))
 		if xset_nx_action == "smartscan" then
 			smart_scan()
 		elseif xset_nx_action == "con" then
@@ -2939,18 +2947,28 @@ end
 		end
 	end
 
+	function set_going_to_room(room_id)
+		going_to_room = tostring(room_id)
+		DebugNote("setting going to room to ", going_to_room)
+		if current_room.rmid == going_to_room then
+			DebugNote("You're already at the destination room. Do action now")
+			action_on_destination_arrived()
+			going_to_room = nil
+		end
+	end
+
 	function goto_number(name, line, wildcards)
 		local ch_state = current_character_state
 		if (ch_state == "3") then
 			gotoIndex = tonumber(wildcards.index) or 1
 			if gotoList[gotoIndex] then
 				if (tonumber(gotoList[gotoIndex]) == nil) then
+					set_going_to_room(get_start_room(gotoList[gotoIndex], true))
 					xrun_to(gotoList[gotoIndex], true)
-					action_on_destination_arrived()
 				else
 					next_room = gotoList[gotoIndex]
-					goto_room_id(gotoList[gotoIndex])
-					action_on_destination_arrived()
+					set_going_to_room(next_room)
+					goto_room_id(next_room)
 				end
 			else
 				InfoNote("Goto room result (go) aborted - No destination yet.")
@@ -2977,8 +2995,8 @@ end
 				if gotoList[gotoIndex] then
 					InfoNote("Next room (nx) - ", gotoIndex, " of ", #gotoList)
 					next_room = gotoList[gotoIndex]
+					set_going_to_room(next_room)
 					do_mapper_goto(next_room)
-					action_on_destination_arrived()
 				else
 					InfoNote("Goto next (nx) aborted - No more rooms.")
 				end

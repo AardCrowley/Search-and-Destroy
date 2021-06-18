@@ -2090,6 +2090,10 @@ end
 		potential_gq.extended = true
 	end
 
+	function gq_info_finished()
+		potential_gq.finished = true
+	end
+
 	function gq_info_level_range(name, line, wildcards)
 		local min = tonumber(wildcards.minlvl)
 		local max = tonumber(wildcards.maxlvl)
@@ -2107,7 +2111,10 @@ end
 	function gq_info_end()
 		EnableTriggerGroup("trg_gq_info", false)
 
-		if #potential_gq.targets > 0 then
+		if potential_gq.finished then
+			DebugNote("Looking at the info of a finished gq. No action needed")
+			return
+		elseif #potential_gq.targets > 0 then
 			player_is_on_gq()
 			gq_info_list = potential_gq.targets
 			gq_joined = potential_gq.id
@@ -7341,6 +7348,11 @@ end
 
 	<trigger match="^Quest Status\.\.\.\.\.\.\.: \[ Extended \]$"
 		script="gq_info_extended"
+		group="trg_gq_info"
+		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+
+	<trigger match="^Quest Status\.\.\.\.\.\.\.: \[ Finished \]$"
+		script="gq_info_finished"
 		group="trg_gq_info"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 

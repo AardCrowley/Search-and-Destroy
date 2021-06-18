@@ -3269,7 +3269,12 @@ end
 	function ht_complete(name, line, wildcards)
 		EnableTriggerGroup("AutoHunt", false)
 		local ix = ht.index or 1
-		qw_arg(ix, current_target.keyword)
+		if has_activity_target() then
+			qw.index = ix
+			qw_exact()
+		else
+			qw_arg(ix, current_target.keyword)
+		end
 		ht_reset()
 	end
 

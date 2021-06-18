@@ -6814,7 +6814,7 @@ end
 
 		local details = con_details[name]
 		local on_target_list = false
-		local mob_name = wildcards.mob_name
+		local mob_name = Trim(wildcards.mob_name)
 		local lower_mob_name = mob_name:lower()
 		local tags = mob_activity_tags(mob_name, true)
 		local mob_scanned = false
@@ -7260,7 +7260,7 @@ end
 		AddTriggerEx("", match, "", flags, -1, 0, "", "scan_mob", sendto.script, 100)
 
 		for i, str in ipairs(CONSIDER_OUTCOMES) do
-			match = "^" .. flags_string .. " " .. str
+			match = "^" .. flags_string .. " ?" .. str
 			name = string.format("con_%i", i)
 			AddTriggerEx(name, match, "", flags, -1, 0, "", "consider_trigger", sendto.script, 100)
 			SetTriggerOption(name, "group", "consider")

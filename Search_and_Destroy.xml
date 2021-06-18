@@ -641,6 +641,7 @@
 		send_gmcp_packet("request room")
 		init_called = init_called + 1
 		if (init_called == 2) then
+			setup_scan_con_triggers()
 			EnableTimer("tim_init_plugin", false)
 			load_saved_table_data()
 			send_gmcp_packet("config noexp")
@@ -4028,10 +4029,9 @@ end
 		EnableTrigger("trg_cp_check_line", true)
 		Simulate("\n")
 		if (area_room_type == "area") then
-			Simulate("You still have to kill * a spirit naga (The Labyrinth)\n")
 			Simulate("You still have to kill * the Deep Dragon (The Gauntlet)\n")
 			Simulate("You still have to kill * an ultroloth (The Lower Planes)\n")
-			Simulate("You still have to kill * Evil Vladia (The School of Horror)\n")
+			Simulate("You still have to kill * (Helper) Fenix (The School of Horror)\n")
 			Simulate("You still have to kill * the head necromancer's assistant (Necromancers' Guild)\n")
 			Simulate("You still have to kill * Isscheburqua (Insanitaria)\n")
 			Simulate("You still have to kill * a rook citizen (Avian Kingdom - Dead)\n") -- dead
@@ -4041,7 +4041,6 @@ end
 			Simulate("You still have to kill * a wealth redistribution specialist (Empyrean, Streets of Downfall)\n") -- long unnknown
 			Simulate("You still have to kill * a wealth redistribution specialist (Empyrean, Streets of Downfall and Upfall and Other Things)\n") -- really long unnknown
 			Simulate("You still have to kill * Laurence, archangel of the sword and shield and other implements of war (The Flying Citadel)\n") -- long known
-			Simulate("You still have to kill * the spirit of Bakarne (The Empire of Aiighialla)\n")
 			Simulate("You still have to kill * a sinister vandal (The Three Pillars of Diatz)\n") -- noscan
 			Simulate("You still have to kill * a hideously hairy spider (The Temple of Shouggoth)\n") -- nowhere
 			Simulate("You still have to kill * Don Crumble (Zangar's Demonic Grotto)\n") -- nohunt
@@ -6780,19 +6779,19 @@ end
 
 	function consider_trigger(name, line, wildcards, style)
 		local con_details = {
-			a = { level_range="-20 and below", 		colour="cornflowerblue", },
-			b = { level_range="-10 to -19", 		colour="deepskyblue", },
-			c = { level_range="-5 to -9", 			colour="turquoise", },
-			d = { level_range="-2 to -4", 			colour="mediumspringgreen", },
-			e = { level_range="-1 to +1", 			colour="lime", },
-			f = { level_range="+2 to +4", 			colour="lawngreen", },
-			g = { level_range="+5 to +9", 			colour="limegreen", },
-			h = { level_range="+10 to +15", 		colour="greenyellow", },
-			i = { level_range="+16 to +20", 		colour="#EFF22D", },
-			j = { level_range="+21 to +30", 		colour="gold", },
-			k = { level_range="+31 to +40", 		colour="darkorange", },
-			l = { level_range="+41 to +50", 		colour="orangered", },
-			m = { level_range="+51 and above", 		colour="red", },
+			["con_1"]	= { level_range="-20 and below", 	colour="cornflowerblue", },
+			["con_2"]	= { level_range="-10 to -19", 		colour="deepskyblue", },
+			["con_3"]	= { level_range="-5 to -9", 		colour="turquoise", },
+			["con_4"]	= { level_range="-2 to -4", 		colour="mediumspringgreen", },
+			["con_5"]	= { level_range="-1 to +1", 		colour="lime", },
+			["con_6"]	= { level_range="+2 to +4", 		colour="lawngreen", },
+			["con_7"]	= { level_range="+5 to +9", 		colour="limegreen", },
+			["con_8"]	= { level_range="+10 to +15", 		colour="greenyellow", },
+			["con_9"]	= { level_range="+16 to +20", 		colour="#EFF22D", },
+			["con_10"]	= { level_range="+21 to +30", 		colour="gold", },
+			["con_11"]	= { level_range="+31 to +40", 		colour="darkorange", },
+			["con_12"]	= { level_range="+41 to +50", 		colour="orangered", },
+			["con_13"]	= { level_range="+51 and above", 	colour="red", },
 		}
 
 		local details = con_details[name]
@@ -7002,7 +7001,7 @@ end
 
 	function scan_mob(name, line, wildcards, style)
 		local tags = {}
-		if not string.find(wildcards.flags, "(Player)") then
+		if not string.match(wildcards.flags, "(Player)") and not string.find(wildcards.flags, "(P)") then
 			local mob_name = wildcards.mob_name
 			tags = mob_activity_tags(mob_name, scanning_current_room)
 
@@ -7174,6 +7173,79 @@ end
 			state_changed = false
 			SaveState()
 			DebugNote("State changed. Saving plugin state file.")
+		end
+	end
+
+	local SCAN_FLAGS = {
+		-- Player flags
+		"P",
+		"Player",
+		"OPK",
+		"Linkdead",
+		"WANTED",
+		"HARDCORE",
+		"OPK",
+		"Linkdead",
+		"Raider",
+		"Traitor",
+		-- Mob flags
+		"Animated",
+		"A",
+		"Angry",
+		"Charmed",
+		"C",
+		"Diseased",
+		"D",
+		"Golden Aura",
+		"G",
+		"Hidden",
+		"H",
+		"Invis",
+		"I",
+		"Marked",
+		"X",
+		"Red Aura",
+		"R",
+		"Stealth",
+		"S",
+		"Translucent",
+		"T",
+		"Undead",
+		"U",
+		"White Aura",
+		"W",
+	}
+
+	local CONSIDER_OUTCOMES = {
+		"You would stomp (?<mob_name>.+?) into the ground\\.$",
+		"(?<mob_name>.+?) would be easy, but is it even worth the work out\\?$",
+		"No Problem! (?<mob_name>.+?) is weak compared to you\\.$",
+		"(?<mob_name>.+?) looks a little worried about the idea\\.$",
+		"(?<mob_name>.+?) should be a fair fight!$",
+		"(?<mob_name>.+?) snickers nervously\\.$",
+		"(?<mob_name>.+?) chuckles at the thought of you fighting \\S+\\.$",
+		"Best run away from (?<mob_name>.+?) while you can!$",
+		"Challenging (?<mob_name>.+?) would be either very brave or very stupid\\.$",
+		"(?<mob_name>.+?) would crush you like a bug!$",
+		"(?<mob_name>.+?) would dance on your grave!$",
+		"(?<mob_name>.+?) says 'BEGONE FROM MY SIGHT unworthy\\!'$",
+		"You would be completely annihilated by (?<mob_name>.+?)!$",
+	}
+
+	function setup_scan_con_triggers()
+		local flags_string = "(?<flags>(?: ?\\[AFK\\]| ?\\((?:" .. table.concat(SCAN_FLAGS, "|") .. ")\\))*)?"
+		local match = "^ {5}-" .. flags_string .. " (?<mob_name>.+)$"
+		local name
+
+		local flags = trigger_flag.Enabled + trigger_flag.OmitFromOutput + trigger_flag.IgnoreCase + trigger_flag.RegularExpression
+
+		AddTriggerEx("", match, "", flags, -1, 0, "", "scan_mob", sendto.script, 100)
+
+		for i, str in ipairs(CONSIDER_OUTCOMES) do
+			match = "^" .. flags_string .. " " .. str
+			name = string.format("con_%i", i)
+			AddTriggerEx(name, match, "", flags, -1, 0, "", "consider_trigger", sendto.script, 100)
+			SetTriggerOption(name, "group", "consider")
 		end
 	end
 
@@ -7445,18 +7517,18 @@ end
 		group="trg_gq_info"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
-	<trigger match="^Kill at least (?<qty>\d) \* (?<mob>\w[^(]+) \((?<loc>\S.+)\)\.$"
+	<trigger match="^Kill at least (?<qty>\d) \* (?<mob>.+) \((?<loc>[^(]+)\)\.$"
 		script="gq_info_line"
 		group="trg_gq_info"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
-	<trigger match="^You still have to kill (?<qty>[1-3]) \* (?<mob>\w[^(]+) \((?<loc>\S.+?)(?<isdead> - Dead)?\)$"
+	<trigger match="^You still have to kill (?<qty>[1-3]) \* (?<mob>.+) \((?<loc>[^(]+?)(?<isdead> - Dead)?\)$"
 		script="gq_check_line"
 		name="trg_gq_check_line" group="trg_gq_check"
 		enabled="n"	regexp="y" sequence="500" keep_evaluating="y" omit_from_output="y" send_to="12" >
 			<send>	EnableTrigger("trg_gq_check_end", true) </send> </trigger>
 
-	<trigger match="^(?!You still have to kill [1-3] \* \w[^(]+ \(\S.+?(?: - Dead)?\))$"
+	<trigger match="^(?!You still have to kill [1-3] \* .+ \(\S[^(]+?(?: - Dead)?\))$"
 		script="gq_check_end"
 		name="trg_gq_check_end" group="trg_gq_check"
 		enabled="n"	regexp="y" sequence="500" keep_evaluating="y" omit_from_output="n" send_to="12" > </trigger>
@@ -7532,26 +7604,26 @@ end
 					EnableTrigger("trg_cp_info_line", true)
 					EnableTrigger("trg_cp_info_end", true) </send> </trigger>
 
-	<trigger match="^Find and kill 1 \* (?<mob>\w[^(]+) \((?<loc>\S.+)\)$"
+	<trigger match="^Find and kill 1 \* (?<mob>.+) \((?<loc>[^(]+)\)$"
 		script="cp_info_line"
 		name="trg_cp_info_line" group="trg_campaign"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
-	<trigger match="^(?!Find and kill 1 \* \w[^(]+ \(\S.+\))$"
+	<trigger match="^(?!Find and kill 1 \* .+ \([^(]+\))$"
 		script="cp_info_end"
 		name="trg_cp_info_end" group="trg_campaign"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
 			<send>	EnableTrigger("trg_cp_info_line", false)
 					EnableTrigger("trg_cp_info_end", false) </send> </trigger>
 
-	<trigger match="^You still have to kill \* (?<mob>\w[^(]+) \((?<loc>\S.+?)(?<isdead> - Dead)?\)$"
+	<trigger match="^You still have to kill \* (?<mob>.+) \((?<loc>[^(]+?)(?<isdead> - Dead)?\)$"
 		script="cp_check_line"
 		name="trg_cp_check_line" group="trg_campaign"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12" >
 			<send>	EnableTrigger("trg_cp_check_end", true)</send> </trigger>
 
 
-	<trigger match="^(?!You still have to kill \* \w[^(]+ \(\S.+?(?: - Dead)?\))$"
+	<trigger match="^(?!You still have to kill \* .+ \([^(]+?(?: - Dead)?\))$"
 		script="cp_check_end"
 		name="trg_cp_check_end" group="trg_campaign"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12" >
@@ -7606,7 +7678,7 @@ end
 		enabled="y" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="n" send_to="12" > </trigger>
 
 <!-- QUICK WHERE -->
-	<trigger match="^(?<mobname>\w.{29}) (?<roomname>[^ (0-9].*)$"
+	<trigger match="^(?<mobname>.{30}) (?<roomname>[^ (0-9].*)$"
 		script="qw_match"
 		name="trg_quick_where_match" group="QuickWhere"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
@@ -7763,70 +7835,6 @@ end
 					EnableTrigger("trg_area_index_end", false) </send> </trigger>
 
 <!-- Consider -->
-	<trigger match="^(?<flags>\(.*\) )?You would stomp (?<mob_name>.+?) into the ground\.$"
-		script="consider_trigger" group="consider"
-		name="a"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) would be easy, but is it even worth the work out\?$"
-		script="consider_trigger" group="consider"
-		name="b"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^(?<flags>\(.*\) )?No Problem! (?<mob_name>.+?) is weak compared to you\.$"
-		script="consider_trigger" group="consider"
-		name="c"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) looks a little worried about the idea\.$"
-		script="consider_trigger" group="consider"
-		name="d"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) should be a fair fight!$"
-		script="consider_trigger" group="consider"
-		name="e"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) snickers nervously\.$"
-		script="consider_trigger" group="consider"
-		name="f"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) chuckles at the thought of you fighting \S+\.$"
-		script="consider_trigger" group="consider"
-		name="g"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^(?<flags>\(.*\) )?Best run away from (?<mob_name>.+?) while you can!$"
-		script="consider_trigger" group="consider"
-		name="h"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^(?<flags>\(.*\) )?Challenging (?<mob_name>.+?) would be either very brave or very stupid\.$"
-		script="consider_trigger" group="consider"
-		name="i"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) would crush you like a bug!$"
-		script="consider_trigger" group="consider"
-		name="j"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) would dance on your grave!$"
-		script="consider_trigger" group="consider"
-		name="k"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^(?<flags>\(.*\) )?(?<mob_name>.+?) says 'BEGONE FROM MY SIGHT unworthy\!'$"
-		script="consider_trigger" group="consider"
-		name="l"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^(?<flags>\(.*\) )?You would be completely annihilated by (?<mob_name>.+?)!$"
-		script="consider_trigger" group="consider"
-		name="m"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 
 	<trigger match="^(.+ has divine protection\.|If you killed .+, who would serve .+ customers\?)$"
 		script="consider_unkillable" name="consider_unkillable" group="consider"
@@ -7868,11 +7876,6 @@ end
 
 	<trigger match="^You see .+\.$"
 		script="scan_door_nearby"
-		group="scan"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^ {5}-(?<flags> [\[\(].+[\]\)])? (?<mob_name>.+)$"
-		script="scan_mob"
 		group="scan"
 		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
 

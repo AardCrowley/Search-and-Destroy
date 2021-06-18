@@ -1663,6 +1663,24 @@ end
 		return guess
 	end
 
+	function target_matches_current_target(target)
+		if not current_target then
+			return false
+		elseif target.mob ~= current_target.name then
+			return false
+		elseif target.kw ~= current_target.keyword then
+			return false
+		elseif target.roomName ~= current_target.room_name then
+			return false
+		elseif target.arid ~= current_target.area then
+			return false
+		elseif current_activity ~= current_target.activity then
+			return false
+		else
+			return true
+		end
+	end
+
 	function set_target_from_main_target_list(index)
 		local target = main_target_list[index]
 		local activity = current_activity
@@ -1963,7 +1981,13 @@ end
 			if last_kill_index and main_target_list[last_kill_index] then
 				main_target_list[last_kill_index].is_dead = "yes"
 			end
-			xcp_clear_target(true)
+			if is_cp_mob_targeted() then
+				if current_target.index == last_kill_index then
+					xcp_clear_target(false)
+				end
+			end
+			xg_draw_window()
+
 			DoAfterSpecial(0.1, "do_cp_check()", 12)
 		end
 	end
@@ -2185,7 +2209,20 @@ end
 		-- two things: 1) tells 'xcp' to silently abort, 2) tells gq_check_end to
 		-- do 'xcp' again (with or without arg), which works normally now that
 		-- table data is available.
-		if (xcp_retry_stat == 2) then
+		DebugNote("xcp retry with state ", xcp_retry_stat)
+		if xcp_retry_stat == 1 and is_cp_or_gq_mob_targeted() and last_kill_index then
+			-- If the killed mob was different from your current mob, you might
+			-- need to adjust the targeted mob's index so that it is the correct
+			-- one on the new list
+			DebugNote("Killed mob was ", tostring(last_kill_index), " and current target inndex is ", current_target.index)
+			for i, target in ipairs(main_target_list) do
+				if target_matches_current_target(target) then
+					set_target_from_main_target_list(i)
+					break
+				end
+			end
+			xg_draw_window()
+		elseif xcp_retry_stat == 2 then
 			local xcp_index = xcp_index_attempt
 			if last_kill_index and last_kill_index < xcp_index_attempt then
 				xcp_index = math.max(1, xcp_index_attempt - 1)
@@ -2208,9 +2245,15 @@ end
 					print_target_links(main_target_list)
 				else
 					qw_reset(false)
+					DebugNote("Setting xcp_retry_stat to ", 1)
 					xcp_retry_stat = 1
 					main_target_list[last_kill_index].is_dead = "yes"
-					xcp_clear_target(true)
+					if is_gq_mob_targeted() then
+						if current_target.index == last_kill_index then
+							xcp_clear_target(false)
+						end
+					end
+					xg_draw_window()
 					DoAfterSpecial(0.1, "do_gq_check()", 12)
 				end
 			elseif (#main_target_list == 1) then
@@ -3957,8 +4000,9 @@ end
 		EnableTrigger("trg_cp_check_line", true)
 		Simulate("\n")
 		if (area_room_type == "area") then
+			Simulate("You still have to kill * a spirit naga (The Labyrinth)\n")
+			Simulate("You still have to kill * the Deep Dragon (The Gauntlet)\n")
 			Simulate("You still have to kill * an ultroloth (The Lower Planes)\n")
-			Simulate("You still have to kill * a hound archon (The Upper Planes)\n")
 			Simulate("You still have to kill * Evil Vladia (The School of Horror)\n")
 			Simulate("You still have to kill * the head necromancer's assistant (Necromancers' Guild)\n")
 			Simulate("You still have to kill * Isscheburqua (Insanitaria)\n")
@@ -5037,7 +5081,15 @@ end
 	end
 
 	function is_cp_or_gq_mob_targeted()
-		return has_target() and (current_target.activity == "cp" or current_target.activity == "gq")
+		return is_cp_mob_targeted() or is_gq_mob_targeted()
+	end
+
+	function is_cp_mob_targeted()
+		return has_target() and current_target.activity == "cp"
+	end
+
+	function is_gq_mob_targeted()
+		return has_target() and current_target.activity == "gq"
 	end
 
 	function is_quest_mob_targeted()
@@ -5736,6 +5788,10 @@ end
 		local qt = tonumber(wildcards.qt)
 		next_quest_time = os.time() + qt * 60
 		quest_timer_tick()
+	end
+
+	function xtest_print_target()
+		DebugNote("Target is: ", target_as_json())
 	end
 
 	function xtest_debug(name, line, wildcards)
@@ -7619,7 +7675,6 @@ end
 		script="auto_hunt_door_open"
 		enabled="n" regexp="y" sequence="100" > </trigger>
 
-	auto_hunt_door_open
 <!-- AUTO SET NOEXP -->
 	<trigger match="^You will no longer receive experience\. Happy questing\!$"
 		script="anex_automatic_off"
@@ -8181,6 +8236,10 @@ end
 
 	<alias	match="^xtest qt (?<qt>\d{1,2})$"
 			script="xtest_set_qt"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xtest target$"
+			script="xtest_print_target"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 	<alias  match="^snd reload$"

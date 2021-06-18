@@ -5,7 +5,8 @@
             "Fixed an issue where ht followed by qw was not correctly matching mobs that had a name that didn't match its keywords (looking at you, school of horror)",
             "Gquests are cleared properly when they end",
             "Current target is kept when you kill a different target on your list",
-            "Mobs with weird names like '(Helper) Fenix' should show up in the targets list and on con/scan properly"
+            "Mobs with weird names like '(Helper) Fenix' should show up in the targets list and on con/scan properly",
+            "Delays in cexits should now be taken into account when doing your nx action."
         ]
     },
     "5.82": {

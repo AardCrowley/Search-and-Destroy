@@ -2508,6 +2508,7 @@ end
 				} )
 			end
 		end
+		SnDdb:close_vm()
 		db:close_vm()
 
 		for i, mob in ipairs(unlikely_mobs) do
@@ -4047,7 +4048,7 @@ end
 		EnableTrigger("trg_cp_check_line", true)
 		Simulate("\n")
 		if (area_room_type == "area") then
-			Simulate("You still have to kill * the Deep Dragon (The Gauntlet)\n")
+			Simulate("You still have to kill * the crypt thing (The Gauntlet)\n")
 			Simulate("You still have to kill * an ultroloth (The Lower Planes)\n")
 			Simulate("You still have to kill * (Helper) Fenix (The School of Horror)\n")
 			Simulate("You still have to kill * the head necromancer's assistant (Necromancers' Guild)\n")

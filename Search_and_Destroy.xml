@@ -2250,12 +2250,17 @@ end
 			-- If the killed mob was different from your current mob, you might
 			-- need to adjust the targeted mob's index so that it is the correct
 			-- one on the new list
-			DebugNote("Killed mob was ", tostring(last_kill_index), " and current target inndex is ", current_target.index)
+			DebugNote("Killed mob was ", tostring(last_kill_index), " and current target index is ", current_target.index)
+			local target_found = false
 			for i, target in ipairs(main_target_list) do
 				if target_matches_current_target(target) then
+					target_found = true
 					set_target_from_main_target_list(i)
 					break
 				end
+			end
+			if not target_found then
+				clear_target()
 			end
 			xg_draw_window()
 		elseif xcp_retry_stat == 2 then
@@ -2806,22 +2811,40 @@ end
 			InfoNote("\nSearch and Destroy: 'xcp' aborted - no mapper data for target (#" .. index .. ").\n")
 		else	-- everything is in order, so go to mob.
 			local ch_state = current_character_state
-			if (ch_state == "3") then
-				xcp_goto_target(index)
-				xg_draw_window()
-			elseif (ch_state == "8") then
-				InfoNote("\nNot while you're fighting!")
-			elseif (ch_state == "12") then
-				InfoNote("\nYou are already running!")
-			elseif (ch_state == "9") then
-				InfoNote("\nNot while you're asleep!")
-			elseif (ch_state == "11") then
-				InfoNote("\nNot while you're resting!")
-			else
-				InfoNote("\nYou can't do that right now")
-			end
+			xcp_goto_target(index)
+			xg_draw_window()
 		end
 	end
+
+	function is_character_ready()
+		return current_character_state == "3"
+	end
+
+	local CHARACTERS_STATES = {
+		"logging in",
+		"logging in",	-- MOTD sequence
+		"ready",
+		"AFK",
+		"writing a note",
+		"building",
+		"reading a page",
+		"fighting",
+		"sleeping",
+		"in an unknown state",
+		"resting",
+		"running",
+	}
+
+	function character_state_string()
+		local str
+		if current_character_state then
+			local ch_state = tonumber(current_character_state)
+			str = CHARACTERS_STATES[ch_state]
+		end
+
+		return str or "in an unknown state"
+	end
+
 
 	function xcp_goto_target(index)
 		DebugNote("xcp goto target index ", index)
@@ -2835,22 +2858,27 @@ end
 			gotoList = {}
 			if (t ~= nil) and (ri.rmid ~= nil) then
 				set_target_from_main_target_list(index)
-				if (t.link_type == "area") then	-- Area cp links - "xcp" goes to target area, then runs Hunt Trick to get target room.
-					if (action == "ht" and current_activity == "cp") then		-- do hunt trick or quick where after arriving in area.
-						local func = function() do_hunt_trick(1, t.kw) end
-						execute_in_area(t.arid, func)
-					elseif (action == "qw" or (action == "ht" and current_activity ~= "cp")) then
-						local func = function() qw_exact() end
-						execute_in_area(t.arid, func)
-					elseif (action == "off") then	-- do nothing
-						InfoNote("Xcp action is off - no additional action\n")
+				if is_character_ready() then
+					DebugNote("Character ready")
+					if (t.link_type == "area") then	-- Area cp links - "xcp" goes to target area, then runs Hunt Trick to get target room.
+						if (action == "ht" and current_activity == "cp") then		-- do hunt trick or quick where after arriving in area.
+							local func = function() do_hunt_trick(1, t.kw) end
+							execute_in_area(t.arid, func)
+						elseif (action == "qw" or (action == "ht" and current_activity ~= "cp")) then
+							local func = function() qw_exact() end
+							execute_in_area(t.arid, func)
+						elseif (action == "off") then	-- do nothing
+							InfoNote("Xcp action is off - no additional action\n")
+						end
+						if (ri.arid ~= t.arid) then	-- if you're not in target area, xrunto target area.
+							--Execute("xrt " .. t.arid)
+							xrun_to(t.arid, true)
+						end
+					else	-- Room cp:  get target room from mapper, but don't move yet.  "go" takes you to room.
+						search_rooms(t.roomName .. "|" .. t.arid, "area", t.mob)
 					end
-					if (ri.arid ~= t.arid) then	-- if you're not in target area, xrunto target area.
-						--Execute("xrt " .. t.arid)
-						xrun_to(t.arid, true)
-					end
-				else	-- Room cp:  get target room from mapper, but don't move yet.  "go" takes you to room.
-					search_rooms(t.roomName .. "|" .. t.arid, "area", t.mob)
+				else
+					InfoNote(string.format("\nYou can't run there while you're %s!\n", character_state_string()))
 				end
 			else
 				InfoNote("No item exists, or data is busy")
@@ -2966,8 +2994,7 @@ end
 	end
 
 	function goto_number(name, line, wildcards)
-		local ch_state = current_character_state
-		if (ch_state == "3") then
+		if is_character_ready() then
 			gotoIndex = tonumber(wildcards.index) or 1
 			if gotoList[gotoIndex] then
 				if (tonumber(gotoList[gotoIndex]) == nil) then
@@ -2981,18 +3008,13 @@ end
 			else
 				InfoNote("Goto room result (go) aborted - No destination yet.")
 			end
-		elseif (ch_state == "8") then
-			InfoNote("\nNot while you're fighting!")
-		elseif (ch_state == "12") then
-			InfoNote("\nYou are already running!")
 		else
-			InfoNote("\nGoto room result (go):  Can't do that now - you must be standing and ready.")
+			InfoNote("\nYou can't use ", "go", string.format(" while you're %s!", character_state_string()))
 		end
 	end
 
 	function goto_next(name, line, wildcards)
-		local ch_state = current_character_state
-		if (ch_state == "3") then
+		if is_character_ready() then
 			if (next_room == nil) or (next_room == "") or (not tonumber(next_room)) then
 				InfoNote("Goto next (nx) aborted - No data yet.")
 			else
@@ -3009,18 +3031,14 @@ end
 					InfoNote("Goto next (nx) aborted - No more rooms.")
 				end
 			end
-		elseif (ch_state == "8") then
-			InfoNote("\nNot while you're fighting!")
-		elseif (ch_state == "12") then
-			InfoNote("\nYou are already running!")
 		else
-			InfoNote("\nGoto next room (nx):  Can't do that now - you must be standing and ready.")
+			InfoNote("\nYou can't use ", "nx", string.format(" while you're %s!", character_state_string()))
 		end
 	end
 
 	function goto_previous(name, line, wildcards)
 		local ch_state = current_character_state
-		if (ch_state == "3") then
+		if is_character_ready() then
 			if (next_room == nil) or (next_room == "") or (not tonumber(next_room)) then
 				InfoNote("Goto previous (nx-) aborted - No data yet.")
 			else
@@ -3036,12 +3054,8 @@ end
 					InfoNote("Goto previous (nx-) aborted - No more rooms.")
 				end
 			end
-		elseif (ch_state == "8") then
-			InfoNote("\nNot while you're fighting!")
-		elseif (ch_state == "12") then
-			InfoNote("\nYou are already running!")
 		else
-			InfoNote("\nGoto previous room (nx-):  Can't do that now - you must be standing and ready.")
+			InfoNote("\nYou can't use ", "nx-", string.format(" while you're %s!", character_state_string()))
 		end
 	end
 
@@ -4318,17 +4332,20 @@ end
 
 	function gq_area_targets()
 		return {
-			{ count = 1, name = "a withered valkyrie", location = "Black Lagoon" },
-			{ count = 1, name = "Suljina the Nix", location = "Rebellion of the Nix" },
-			{ count = 1, name = "river rapids", location = "Tanra'vea" },
-			{ count = 1, name = "a blue light", location = "Tanra'vea" },
-			{ count = 2, name = "a feeding demon", location = "The Cataclysm" },
-			{ count = 1, name = "Drilla", location = "The Covenant of Mistridge" },
-			{ count = 1, name = "a Necrophim", location = "The Covenant of Mistridge" },
-			{ count = 2, name = "a lava leech", location = "The Deadlights" },
-			{ count = 1, name = "Destiny", location = "The Partroxis" },
-			{ count = 1, name = "Olivia", location = "The Partroxis" },
-			{ count = 1, name = "Daestitrus", location = "The Partroxis" },
+			{ count = 1, name = "a horse", location =  "Kul Tiras" },
+			{ count = 1, name = "a treble clef", location =  "Art of Melody" },
+			{ count = 1, name = "a spider", location =  "Gallows Hill" },
+			{ count = 2, name = "800 baby spiders", location =  "Gallows Hill" },
+			{ count = 1, name = "a Boy", location =  "Gallows Hill" },
+			{ count = 1, name = "some wicked ale", location =  "Gallows Hill" },
+			{ count = 3, name = "a grub", location =  "Kimr's Farm" },
+			{ count = 1, name = "a bobwhite quail", location =  "The Forest of Li'Dnesh" },
+			{ count = 1, name = "a small dark viper", location =  "The Forest of Li'Dnesh" },
+			{ count = 1, name = "a hook-tailed dragonfly", location =  "The Forest of Li'Dnesh" },
+			{ count = 2, name = "a golden honeybee", location =  "The Forest of Li'Dnesh" },
+			{ count = 1, name = "a tiny red imp", location =  "The Grand City of Aylor" },
+			{ count = 1, name = "a little girl", location =  "The Land of the Beer Goblins" },
+			{ count = 1, name = "a true believer", location =  "The Path of the Believer" },
 		}
 	end
 
@@ -4423,6 +4440,9 @@ end
 		if mock_gq.targets and #mock_gq.targets >= kill_num then
 			last_mob_killed = mock_gq.targets[kill_num].name
 
+			local curr_arid = current_room.arid
+			current_room.arid = areaNameXref[mock_gq.targets[kill_num].location] or curr_arid
+
 			if mock_gq.targets[kill_num].count > 1 then
 				mock_gq.targets[kill_num].count = mock_gq.targets[kill_num].count - 1
 			else
@@ -4436,6 +4456,7 @@ end
 			if #mock_gq.targets == 0 then
 				simulate_gq_win(mock_gq.id)
 			end
+			current_room.arid = curr_arid
 		else
 			DebugNote("Target ", "#", "", kill_num, " is not on this gquest.")
 		end
@@ -6801,7 +6822,6 @@ end
 		local enabled = is_con_overwritten()
 		for i, name in ipairs(GetTriggerList()) do
 			if GetTriggerInfo(name, 26) == "consider" then
-				DebugNote("Setting omit_from_output to ", tostring(enabled), " for trigger ", name)
 				SetTriggerOption(name, "omit_from_output", enabled)
 			end
 		end

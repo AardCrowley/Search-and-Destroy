@@ -2813,11 +2813,18 @@ end
 				InfoNote("\nNot while you're fighting!")
 			elseif (ch_state == "12") then
 				InfoNote("\nYou are already running!")
+			elseif (ch_state == "9") then
+				InfoNote("\nNot while you're asleep!")
+			elseif (ch_state == "11") then
+				InfoNote("\nNot while you're resting!")
+			else
+				InfoNote("\nYou can't do that right now")
 			end
 		end
 	end
 
 	function xcp_goto_target(index)
+		DebugNote("xcp goto target index ", index)
 		local t = main_target_list[index]
 		if (xcp_retry_stat == 0) then
 			local ri = current_room

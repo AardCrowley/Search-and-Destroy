@@ -1,4 +1,9 @@
 {
+    "5.84": {
+        "changes": [
+            "Show more feedback when you try to use xcp but you're not in a state where you can run (sitting, sleeping, writing a note, etc)"
+        ]
+    },
     "5.83": {
         "fixes": [
             "Fixed an issue where SnD mistakenly thought you were in a gq if you were looking at the history of a finished gq",

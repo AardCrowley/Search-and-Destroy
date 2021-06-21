@@ -3368,7 +3368,11 @@ end
 	function ht_continue()
 		local ix = (ht.index + 1) or 1
 		ht.first_target = false
-		do_hunt_trick(ix, current_target.keyword)
+		if has_target() then
+			do_hunt_trick(ix, current_target.keyword)
+		else
+			DebugNote("You no longer have a target. Stopping hunt trick.")
+		end
 	end
 
 	function ht_complete(name, line, wildcards)

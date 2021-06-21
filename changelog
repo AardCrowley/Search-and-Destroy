@@ -2,6 +2,9 @@
     "5.84": {
         "changes": [
             "Show more feedback when you try to use xcp but you're not in a state where you can run (sitting, sleeping, writing a note, etc)"
+        ],
+        "fixes": [
+            "Fixed a bug where hunt trick would blow if it was running after you killed your target"
         ]
     },
     "5.83": {

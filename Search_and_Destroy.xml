@@ -4016,7 +4016,7 @@ end
 	end
 
 --  [[ "xset gqalias" ]]
-    function xset_gqalias(name, line, wildcards)
+	function xset_gqalias(name, line, wildcards)
 		local x = xset_gq_check_extra_aliases
 		x = (x == "on") and "off" or "on"
 		xset_gq_check_extra_aliases = x
@@ -4026,11 +4026,11 @@ end
 	end
 	
 	function apply_xset_gqalias()
-	  if (xset_gq_check_extra_aliases == "on") then
-	    EnableAlias ("extra_gq_check_aliases", true)
-	  else
-	    EnableAlias("extra_gq_check_aliases", false)
-	  end
+		if (xset_gq_check_extra_aliases == "on") then
+			EnableAlias ("extra_gq_check_aliases", true)
+		else
+			EnableAlias("extra_gq_check_aliases", false)
+		end
 	end
 
 --	[[ "xset vidblain" ]]

@@ -1,4 +1,9 @@
 {
+    "5.85": {
+        "fixes": [
+            "Fixed xset kk not returning the current value when no argument is provided."
+        ]
+    },
     "5.84": {
         "changes": [
             "Show more feedback when you try to use xcp/nx/go but you're not in a state where you can run (sitting, sleeping, writing a note, etc)"

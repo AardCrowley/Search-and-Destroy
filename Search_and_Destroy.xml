@@ -200,6 +200,9 @@
 -- [[ Vidblain navigation ]]
 	local xset_vidblain_level = tonumber(GetVariable("mcvar_xset_vidblain_level")) or 300
 	local xset_vidblain_onoff = GetVariable("mcvar_xset_vidblain_onoff") or "off"
+	
+-- [[ Extra GQ aliases ]]
+	local xset_gq_check_extra_aliases = GetVariable("mcvar_xset_gq_check_extra_aliases") or "on"
 
 -- [[ Variables from old Mapper Extender ]]
 	local area_range_index = {}
@@ -655,6 +658,7 @@
 			send_gmcp_packet("request quest")
 			toggle_con_overwrite_triggers()
 			check_for_updates()
+			apply_xset_gqalias()
 		end
 	end
 
@@ -4011,6 +4015,24 @@ end
 		end
 	end
 
+--  [[ "xset gqalias" ]]
+    function xset_gqalias(name, line, wildcards)
+		local x = xset_gq_check_extra_aliases
+		x = (x == "on") and "off" or "on"
+		xset_gq_check_extra_aliases = x
+		set_variable("mcvar_xset_gq_check_extra_aliases", x)
+		apply_xset_gqalias()
+		InfoNote("\nExtra 'gq check' aliases are now ", string.upper(x), "\n")
+	end
+	
+	function apply_xset_gqalias()
+	  if (xset_gq_check_extra_aliases == "on") then
+	    EnableAlias ("extra_gq_check_aliases", true)
+	  else
+	    EnableAlias("extra_gq_check_aliases", false)
+	  end
+	end
+
 --	[[ "xset vidblain" ]]
 	function xset_vidblain(name, line, wildcards)
 		local x = xset_vidblain_onoff
@@ -6150,6 +6172,7 @@ end
 			"go",
 			"xset nx",
 			"xset con_overwrite",
+			"xset gqalias",
 			"sound",
 			"xrt|xrun",
 			"cp|gq",
@@ -6318,6 +6341,11 @@ end
 			ColourNote("antiquewhite", "", unpack({helpWrap("  * none: do nothing.")}))
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("When you scan or consider, mobs found in the current room are added to the mobs database.")}))
+
+		elseif str == "xset gqalias" then
+			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset gqalias")
+			Note()
+			ColourNote("antiquewhite", "", unpack({helpWrap("Enable or disable extra 'qq' and 'gg' aliases for 'gquest check'.")}))
 
 		elseif str == "xset con_overwrite" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset con_overwrite")
@@ -8015,7 +8043,12 @@ end
 			script="do_gq_info"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
-	<alias	match="^(?:gq (?:c|ch|check)|gg|qq)$"
+	<alias	match="^gg|qq$"
+			script="do_gq_check"
+			name="extra_gq_check_aliases"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+			
+	<alias	match="^(?:gq (?:c|ch|check))$"
 			script="do_gq_check"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
@@ -8153,6 +8186,10 @@ end
 
 	<alias	match="^xset (?:mark|start)$"
 			script="xset_to_mark"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias  match="^xset gqalias$"
+			script="xset_gqalias"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 	<alias  match="^xset vidblain$"

@@ -1721,16 +1721,17 @@ end
 		end
 	end
 
-	function set_target_from_main_target_list(index)
+	function set_target_from_main_target_list(index, keyword)
 		local target = main_target_list[index]
 		local activity = current_activity
 		if activity == "none" then
 			activity = nil
 		end
+		keyword = keyword or target.kw
 
 		change_target({
 			name = target.mob,
-			keyword = target.kw,
+			keyword = keyword,
 			room_name = target.roomName,
 			index = index,
 			area = target.arid,
@@ -3269,7 +3270,7 @@ end
 		else
 			for i, target in ipairs(main_target_list) do
 				if current_room.arid == target.arid and mob == target.mob:lower():sub(1, 30) then
-					set_target_from_main_target_list(i)
+					set_target_from_main_target_list(i, current_target and current_target.keyword)
 					break
 				end
 			end

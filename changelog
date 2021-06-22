@@ -2,6 +2,9 @@
     "5.86": {
         "features": [
             "Toggle whether `gg` and `qq` can be used as aliases for gq check with `xset gqalias`."
+        ],
+        "fix": [
+            "When using `ht <mob>` explicitly and it finds a campaign target, keep the keyword the same as what was entered so quick kill uses it."
         ]
     },
     "5.85": {
@@ -25,7 +28,7 @@
             "Gquests are cleared properly when they end",
             "Current target is kept when you kill a different target on your list",
             "Mobs with weird names like '(Helper) Fenix' should show up in the targets list and on con/scan properly",
-            "Delays in cexits should now be taken into account when doing your nx action.",
+            "Delays in cexits should now be taken into account when doing your nx action."
         ]
     },
     "5.82": {

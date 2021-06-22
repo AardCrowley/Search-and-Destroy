@@ -8077,7 +8077,7 @@ end
 			script="quick_kill"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
-	<alias	match="^xset (?:kk|ak|qk|qkill)(?: (?<arg>.+))$"
+	<alias	match="^xset (?:kk|ak|qk|qkill)(?: (?<arg>.+))?$"
 			script="xset_quick_kill_command"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 

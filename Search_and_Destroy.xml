@@ -7313,12 +7313,15 @@ end
 
 	function setup_scan_con_triggers()
 		local flags_string = "(?<flags>(?: ?\\[AFK\\]| ?\\((?:" .. table.concat(SCAN_FLAGS, "|") .. ")\\))*)?"
-		local match = "^ {5}-" .. flags_string .. " (?<mob_name>.+[^\\.])$"
+		local match = "^ {5}-" .. flags_string .. " (?<mob_name>.+)$"
 		local name
 
-		local flags = trigger_flag.Enabled + trigger_flag.OmitFromOutput + trigger_flag.IgnoreCase + trigger_flag.RegularExpression
+		local flags = trigger_flag.OmitFromOutput + trigger_flag.IgnoreCase + trigger_flag.RegularExpression
 
-		AddTriggerEx("", match, "", flags, -1, 0, "", "scan_mob", sendto.script, 100)
+		AddTriggerEx("scan_mob", match, "", flags, -1, 0, "", "scan_mob", sendto.script, 100)
+		SetTriggerOption("scan_mob", "group", "scan")
+
+		flags = flags + trigger_flag.Enabled
 
 		for i, str in ipairs(CONSIDER_OUTCOMES) do
 			match = "^" .. flags_string .. " ?" .. str

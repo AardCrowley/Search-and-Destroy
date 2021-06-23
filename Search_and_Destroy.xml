@@ -7313,7 +7313,7 @@ end
 
 	function setup_scan_con_triggers()
 		local flags_string = "(?<flags>(?: ?\\[AFK\\]| ?\\((?:" .. table.concat(SCAN_FLAGS, "|") .. ")\\))*)?"
-		local match = "^ {5}-" .. flags_string .. " (?<mob_name>.+)$"
+		local match = "^ {5}-" .. flags_string .. " (?<mob_name>.+[^\\.])$"
 		local name
 
 		local flags = trigger_flag.Enabled + trigger_flag.OmitFromOutput + trigger_flag.IgnoreCase + trigger_flag.RegularExpression

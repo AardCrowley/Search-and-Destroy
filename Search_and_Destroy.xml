@@ -1708,8 +1708,6 @@ end
 			return false
 		elseif target.mob ~= current_target.name then
 			return false
-		elseif target.kw ~= current_target.keyword then
-			return false
 		elseif target.roomName ~= current_target.room_name then
 			return false
 		elseif target.arid ~= current_target.area then
@@ -2262,11 +2260,13 @@ end
 			for i, target in ipairs(main_target_list) do
 				if target_matches_current_target(target) then
 					target_found = true
+					DebugNote("Current target found in list after update")
 					set_target_from_main_target_list(i)
 					break
 				end
 			end
 			if not target_found then
+				DebugNote("Current target not found in target list after update. Clearing")
 				clear_target()
 			end
 			xg_draw_window()

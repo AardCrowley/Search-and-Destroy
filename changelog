@@ -10,7 +10,8 @@
             "When using `ht <mob>` explicitly and it finds a campaign target, keep the keyword the same as what was entered so quick kill uses it.",
             "Name line in graffiti won't be hidden (it was accidentally matching scan)",
             "cp targets should be properly crossed off the target list even if you are on a gq",
-            "target highlighting should be more accurate, particularly when switching between gq and cp targets"
+            "target highlighting should be more accurate, particularly when switching between gq and cp targets",
+            "Fix targets sometimes not being kept after killing a different target"
         ]
     },
     "5.85": {

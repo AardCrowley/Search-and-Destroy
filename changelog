@@ -3,6 +3,9 @@
         "features": [
             "Toggle whether `gg` and `qq` can be used as aliases for gq check with `xset gqalias`."
         ],
+        "changes": [
+            "Made it so that when finding rooms of targets it will only show exact room matches. When doing a room search with 'xm' it will continue to show partial matches."
+        ],
         "fix": [
             "When using `ht <mob>` explicitly and it finds a campaign target, keep the keyword the same as what was entered so quick kill uses it.",
             "Name line in graffiti won't be hidden (it was accidentally matching scan)",

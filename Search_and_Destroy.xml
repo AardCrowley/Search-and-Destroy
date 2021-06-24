@@ -1882,7 +1882,7 @@ end
 				InfoNote("room: ", qt.room)
 			end
 		end
-		search_rooms(string.format("%s|%s", qt.room, qt.arid), "area", qt.mob)
+		search_rooms_exact(qt.room, qt.arid, qt.mob)
 	end
 
 	function quest_status_gmcp(q)	-- sets quest status when you take a new quest, kill qmob, complete quest, etc.
@@ -2885,7 +2885,7 @@ end
 							xrun_to(t.arid, true)
 						end
 					else	-- Room cp:  get target room from mapper, but don't move yet.  "go" takes you to room.
-						search_rooms(t.roomName .. "|" .. t.arid, "area", t.mob)
+						search_rooms_exact(t.roomName, t.arid, t.mob)
 					end
 				else
 					InfoNote(string.format("\nYou can't run there while you're %s!\n", character_state_string()))
@@ -3281,7 +3281,8 @@ end
 			end
 		end
 		xg_draw_window()
-		search_rooms(room, 'area', Trim(wildcards.mobname))
+		search_rooms_exact(room, current_room.arid, Trim(wildcards.mobname))
+
 		if go_after then
 			goto_number(nil, nil, {})
 		end
@@ -3489,117 +3490,92 @@ end
 	end
 
 -- [[ Room search processes ]]
-	local search_rooms_sql =
-		"SELECT r.uid as uid, r.name as name, info, r.area as area, " ..
-		"ifnull(a.name, r.area) as area_name, 1 as DisplayOrder " ..
-		"FROM rooms r " ..
-		"LEFT OUTER JOIN areas a ON r.area = a.uid " ..
-		"WHERE r.name = %s " .. -- room
-		"AND (%s = 'all' OR (a.name = %s OR r.area = %s)) " .. -- area_id x3
-		"UNION " ..
-		"SELECT r.uid, r.name, info, r.area, " ..
-		"ifnull(a.name, r.area) as area_name, 0 as DisplayOrder " ..
-		"FROM rooms r " ..
-		"LEFT OUTER JOIN areas a ON r.area = a.uid " ..
-		"WHERE r.name <> %s " ..	-- room
-		"AND r.name LIKE %s " .. 	-- like
-		"AND (%s = 'all' OR (a.name = %s OR r.area = %s)) " .. -- area_id x3
-		"ORDER BY area, DisplayOrder DESC "
+	function search_rooms_exact(room, arid, mob_name)
+		local select = string.format([[
+			SELECT uid, name, area
+			FROM rooms
+			WHERE name = %s AND area = %s
+			ORDER BY area
+		]] ,fixsql(room), fixsql(arid))
+		search_rooms(select, mob_name)
+	end
 
-	function search_rooms(room_name, searchType, fullMobName)
-		if (room_name == nil) or (room_name == "") then
-			Note("map_area() error : room name isn't known")
-		else
-			local ri = current_room
-			local parts = split(room_name, "[^|]+") -- pipe delimited:  room|area
-			local room = parts[1]
-			local arid
-			if (#parts == 2) then
-				arid = parts[2]
-			else
-				if (current_room ~= nil) then
-					arid = ri.arid
-				else
-					InfoNote("Area not known, falling back to mapper list")
-					Execute("mapper list " .. parts[1])
-				end
+	function search_rooms_fuzzy(room, arid)
+		arid = arid or "all"
+		local like_room = "%"..room.."%"
+		local select = string.format([[
+			SELECT uid, name, area, 1 as DisplayOrder
+			FROM rooms r
+			WHERE name = %s AND (%s = 'all' OR area = %s)
+			UNION
+			SELECT uid, name, area, 0 as DisplayOrder
+			FROM rooms
+			WHERE name <> %s AND name LIKE %s AND (%s = 'all' OR area = %s)
+			ORDER BY area, DisplayOrder DESC;
+		]],	fixsql(room), fixsql(arid), fixsql(arid),
+			fixsql(room), fixsql(like_room),  fixsql(arid), fixsql(arid))
+		search_rooms(select)
+	end
+
+	function search_rooms(query, mob_name)
+		local db = assert(sqlite3.open(mapper_db_file))
+		local results = {}
+		local roomid_list = {}
+		local has_results = false
+		for row in db:nrows(query) do
+			has_results = true
+			local id = (tonumber(row.uid) or -1) -- sanitize text room ids for "unmappable" (nomap) rooms that are now being mapped
+			table.insert(results, {
+				rmid = id,
+				name = row.name,
+				arid = row.area,
+			})
+			if (id > 0) then	-- make a list of room ids
+				table.insert(roomid_list, fixsql(row.uid))
 			end
-			if (room == nil) then
-				Note("map_area() - Room not known")
-				return
-			end
-			local like = "%"..room.."%"
-			-- i forget what this does? Strip out a leading " ?
-			--if string.sub(room,1,1) == "\"" and string.sub(room,-1) == "\"" then
-			--	like = string.sub(room,2,-2)
-			--end
-			local select = string.format(search_rooms_sql,	fixsql(room),
-															fixsql(arid), fixsql(arid), fixsql(arid),
-															fixsql(room),
-															fixsql(like),
-															fixsql(arid), fixsql(arid), fixsql(arid))
-			local db = assert(sqlite3.open(mapper_db_file))
-			local results = {}
-			local roomid_list = {}
-			local has_results = false
-			for row in db:nrows(select) do
-				has_results = true
-				local id = (tonumber(row.uid) or -1) -- sanitize text room ids for "unmappable" (nomap) rooms that are now being mapped
-				results[#results + 1] = {
-					rmid = id,
-					name = row.name,
-					info = row.info,
-					area = row.area_name,
-					arid = row.area, --or row.area_name -- make safe against bad dbs
-					notes = row.notes,
-				}
-				if (id > 0) then	-- make a list of room ids
-					roomid_list[#roomid_list + 1] = id
-				end
-
-			end   -- finding rooms
-
-			if has_results then
-				local notes_query = string.format("SELECT uid, notes FROM bookmarks WHERE uid in (%s);", table.concat(roomid_list, ","))
-				for row in db:nrows(notes_query) do
-					for i, room in ipairs(results) do
-						if tostring(room.rmid) == row.uid then
-							room.notes = row.notes
-							break
-						end
-					end
-				end
-			end
-
-			db:close_vm()
-
-			if has_results and fullMobName then
-				local SnDdb = assert(sqlite3.open(snd_db_file))
-				local count_by_room = {}
-				local sum = 0
-
-				select = string.format("SELECT roomid, seen_count FROM mobs WHERE zone = %s AND mob = %s AND roomid in (%s);", fixsql(arid), fixsql(fullMobName), table.concat(roomid_list, ","))
-
-				for row in SnDdb:nrows(select) do
-					count_by_room[row.roomid] = row.seen_count
-					sum = sum + row.seen_count
-				end
-				SnDdb:close_vm()
-
-				for i, result in ipairs(results) do
-					result.seen_count = count_by_room[result.rmid] or 0
-					if sum > 0 then
-						result.percentage = (result.seen_count / sum)
-					else
-						result.percentage = 0
-					end
-				end
-
-				table.sort(results, sort_rooms_by_seen_count)
-			end
-
-			search_rooms_results(results)
 		end
+
+		if has_results then
+			local notes_query = string.format("SELECT uid, notes FROM bookmarks WHERE uid in (%s);", table.concat(roomid_list, ","))
+			for row in db:nrows(notes_query) do
+				for i, room in ipairs(results) do
+					if tostring(room.rmid) == row.uid then
+						room.notes = row.notes
+						break
+					end
+				end
+			end
+		end
+
+		db:close_vm()
+
+		if has_results and mob_name then
+			local SnDdb = assert(sqlite3.open(snd_db_file))
+			local count_by_room = {}
+			local sum = 0
+
+			select = string.format("SELECT roomid, seen_count FROM mobs WHERE mob = %s AND roomid in (%s);",fixsql(mob_name), table.concat(roomid_list, ","))
+			DebugNote("Searching for mob: ", select)
+
+			for row in SnDdb:nrows(select) do
+				count_by_room[row.roomid] = row.seen_count
+				sum = sum + row.seen_count
+			end
+			SnDdb:close_vm()
+
+			for i, result in ipairs(results) do
+				result.seen_count = count_by_room[result.rmid] or 0
+				if sum > 0 then
+					result.percentage = (result.seen_count / sum)
+				else
+					result.percentage = 0
+				end
+			end
+
+			table.sort(results, sort_rooms_by_seen_count)
+		end
+
+		search_rooms_results(results)
 	end
 
 	function sort_rooms_by_seen_count(a, b)
@@ -3636,7 +3612,7 @@ end
 			if (last_area ~= v.arid) then
 				local padding = string.rep(" ", width - 5 - #v.arid)
 				if (mapper_area_index == 0) then
-					local areaLine = string.format("%2d   %s%s", mapper_area_index, v.arid, padding)
+					local areaLine = string.format("%3d  %s%s", mapper_area_index, v.arid, padding)
 					Hyperlink("go " .. mapper_area_index, areaLine, "go to area " .. v.arid, "silver", background, 0, 1)
 					gotoList[mapper_area_index] = v.arid
 					gotoArea = v.arid
@@ -3651,7 +3627,7 @@ end
 			end
 			background = (line_num % 2) == 0 and text_colors.alternating_row or ""
 			local name = ellipsify(string.gsub(v.name, "@[a-zA-Z]", ""), 38)
-			local text = string.format("%2d   %-38s  %-7s ", mapper_area_index, name, string.format("(%s)", v.rmid))
+			local text = string.format("%3d  %-38s  %-7s ", mapper_area_index, name, string.format("(%s)", v.rmid))
 			Hyperlink("go " .. mapper_area_index, text, "go to item " .. mapper_area_index, "lightblue", background, 0, 1)
 
 			local instruction = "mapper where " .. v.rmid
@@ -3698,11 +3674,11 @@ end
 	end
 
 	function map_area(name, line, wildcards)
-		search_rooms(wildcards.loc, 'area')
+		search_rooms_fuzzy(wildcards.loc, current_room.arid)
 	end
 
 	function map_area_all(name, line, wildcards)
-		search_rooms(wildcards.loc .. "|all", 'all')
+		search_rooms_fuzzy(wildcards.loc)
 	end
 
 --	[[ "xwhere" command ]]
@@ -3883,6 +3859,9 @@ end
 		if anex_automatic_onoff == "on" then
 			if (anex_tnl_cutoff > 0) then
 				local level = tonumber(gmcp("char.status.level"))
+				if not level then
+					return
+				end
 				if (level < 200) then
 					if (noexp_onoff == "on") and (player_on_cp == "yes") then
 						InfoNote("Search and Destroy: Turning noexp OFF (must level to get new cp)")

@@ -2015,7 +2015,7 @@ end
 	end
 
 	function cp_mob_killed()
-		if current_activity == "cp" then
+		if current_activity ~= "gq" then
 			xcp_retry_stat = 1
 			qw_reset(false)
 			last_kill_index = get_last_kill_index()

@@ -6,7 +6,7 @@
         "changes": [
             "Made it so that when finding rooms of targets it will only show exact room matches. When doing a room search with 'xm' it will continue to show partial matches."
         ],
-        "fix": [
+        "fixes": [
             "When using `ht <mob>` explicitly and it finds a campaign target, keep the keyword the same as what was entered so quick kill uses it.",
             "Name line in graffiti won't be hidden (it was accidentally matching scan)",
             "cp targets should be properly crossed off the target list even if you are on a gq",

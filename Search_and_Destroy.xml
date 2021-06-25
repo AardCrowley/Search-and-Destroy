@@ -2030,6 +2030,8 @@ end
 			xg_draw_window()
 
 			DoAfterSpecial(0.1, "do_cp_check()", 12)
+		else
+			DebugNote("Skipping cp update because current activity is ", current_activity)
 		end
 	end
 

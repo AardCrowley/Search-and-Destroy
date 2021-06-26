@@ -63,6 +63,10 @@
 
 	async_ok, async = pcall (require, "async")
 
+	function ifc(condition, ctrue, cfalse)
+		if condition then return ctrue else return cfalse end
+	end
+
 	function mapFind(query)
 		return CallPlugin("b6eae87ccedd84f510b74714", "map_find_query", query)
 	end

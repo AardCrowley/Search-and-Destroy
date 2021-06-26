@@ -200,7 +200,7 @@
 -- [[ Vidblain navigation ]]
 	local xset_vidblain_level = tonumber(GetVariable("mcvar_xset_vidblain_level")) or 300
 	local xset_vidblain_onoff = GetVariable("mcvar_xset_vidblain_onoff") or "off"
-	
+
 -- [[ Extra GQ aliases ]]
 	local xset_gq_check_extra_aliases = GetVariable("mcvar_xset_gq_check_extra_aliases") or "on"
 
@@ -4035,7 +4035,7 @@ end
 		apply_xset_gqalias()
 		InfoNote("\nExtra 'gq check' aliases are now ", string.upper(x), "\n")
 	end
-	
+
 	function apply_xset_gqalias()
 		if (xset_gq_check_extra_aliases == "on") then
 			EnableAlias ("extra_gq_check_aliases", true)
@@ -6651,114 +6651,145 @@ end
 		end
 	end
 
-	function mobLookup (name, location, level, exact)
-		SnDdb = sqlite3.open(snd_db_file)
+function onSearch(name, line, wildcards)
+    local zone, name, level, sendit = wildcards[1], wildcards[2], tonumber(wildcards[3]) or nil, false
 
-		if exact ~= "" or exact ~= nil then exact = false end
+    if #name < 1 then
+        name = zone
+        zone = "all"
+        sendit = true
+    elseif #name >= 1 and #name < 2 then
+        InfoNote("*** You need at least 2 characters of the mob name!")
+    else
+        sendit = true
+    end
 
-		local locFound, locQuery, searchQuery, lvlQuery, searchMsg = false, "SELECT * FROM area WHERE key LIKE '%s'", "", " AND area.minlvl <= %s AND area.maxlvl >= %s", "Search for " .. name .. " in  " .. location
+    if sendit then
+        if level then
+            mobLookup(name, zone, level)
+        else
+            mobLookup(name, zone)
+    else
+        InfoNote("*** Syntax error! Use: ", "xmsearch <areakey|here|all> <mob>")
+    end
+end
 
-		if location ~= "" or location ~= nil then
-			if location:upper() == "HERE" then
-				location = gmcp("room.info.zone")
-			elseif location:upper() == "ALL" then
-				location = "%"
-			end
+function mobLookup(name, location, level, exact)
 
-			locQuery = locQuery:format(fixSQL(location))
+    SnDdb = sqlite3.open(snd_db_file)
 
-			for a in SnDdb:rows(locQuery) do
-				if a[1] then
-					locFound = true
-				end
-			end
-		end
+    if exact ~= "" or exact ~= nil then exact = false else exact = true end
 
-		if locFound then
-			if exact then
-				searchQuery = "SELECT * FROM mobs, area WHERE zone LIKE '" .. fixSQL(location)  .. "' AND mob LIKE '" .. fixSQL(name) .. "'"
-			else
-				searchQuery = "SELECT * FROM mobs, area WHERE zone LIKE '" .. fixSQL(location) .. "' AND mob LIKE '%" .. fixSQL(name) .. "%'"
-			end
-		else
-			if exact then
-				searchQuery = "SELECT * FROM mobs, area WHERE mobs.mob LIKE '" .. fixSQL(name) .. "' AND mobs.room LIKE '" .. fixSQL(location) .. "' AND area.key = mobs.zone"
-			else
-				searchQuery = "SELECT * FROM mobs, area WHERE mobs.mob LIKE '%" .. fixSQL(name) .. "%' AND mobs.room LIKE '%" .. fixSQL(location) .. "%' AND area.key = mobs.zone"
-			end
-		end
+    local locFound      = false
+    local locQuery      = "SELECT * FROM area WHERE key LIKE '%s'"
+    local searchQuery   = "SELECT * FROM mobs, area WHERE %s LIKE '%s' AND mob LIKE '%s'%s AND area.key = mobs.zone ORDER BY mobs.zone, mobs.kill_count DESC"
+    local lvlQuery      = " AND area.minlvl <= %s AND area.maxlvl >= %s"
+    local searchMsg     =  "Searching for %s in %s"
+    local zone_search, loc_search, name_search, level_search = ifc(locFound, "zone", "mobs.room"), ifc(locFound, fixSQL(location), "%" .. fixSQL(location) .. "%"), ifc(exact, fixSQL(name), "%" .. fixSQL(name) .. "%"), ifc(tonumber(level), lvlQuery:format(level,level), "")
 
-		if tonumber(level) then
-			searchQuery = searchQuery .. lvlQuery:format(level, level)
-		end
+    if location ~= "" or location ~= nil then
+        if location:upper() == "HERE" then
+            location = gmcp("room.info.zone")
+        elseif location:upper() == "ALL" then
+            location = "%"
+        end
 
-		searchQuery = searchQuery .. " and area.noquest LIKE 'false' and mobs.zone = area.key ORDER BY mobs.zone, mobs.seen_count DESC"
+        locQuery = locQuery:format(fixSQL(location))
 
-		SnDdb:close()
+        for a in SnDdb:rows(locQuery) do
+            if a[1] then
+                locFound = true
+            end
+        end
+    end
 
-		showResults(searchQuery, searchMsg)
-	end
+    searchQuery = searchQuery:format(zone_search, loc_search, name_search, level_search)
 
-	function showResults(query, msg)
-		DebugNote("Exceuting mob search query: ", query)
-		SnDdb = sqlite3.open(snd_db_file)
-		mshow = {}
-		local searchMsg, failure = msg, "No matches found!"
+    SnDdb:close()
 
-		local dividers = "+" .. string.rep("-", 30) .. "+" .. string.rep("-", 25) .. "+" .. string.rep("-", 13) .. "+" .. string.rep("-", 12) .. "+" .. string.rep("-", 7) .. "+"
+    showResults(searchQuery, searchMsg)
+end
 
-		ColourNote("orange", "", searchMsg .. " ...")
-		ColourNote("dimgray", "", dividers)
-		ColourNote("dimgray", "", "| ", "white", "", "Mob name" .. string.rep(" ", 28-#"Mob name"), "dimgray", "", " | ", "green", "", "Room name" .. string.rep(" ", 23-#"Room name"), "dimgray", "", " | ", "cyan", "", "ID" .. string.rep(" ", 11-#"ID"), "dimgray", "", " | ", "yellow", "", "Zone" .. string.rep(" ", 10-#"Zone"), "dimgray", "", " | ", "white", "", "Count ", "dimgray", "", "|"  )
+function showResults(query, msg)
+    DebugNote("Executing search query: ", query)
+    SnDdb = sqlite3.open(snd_db_file)
+    mshow = {}
 
-		ColourNote("dimgray", "", dividers)
+    local searchMsg, failure = msg, "No matches found!"
 
-		local count = 0
+    local dividers = "+" .. string.rep("-", 30) .. "+" .. string.rep("-", 25) .. "+" .. string.rep("-", 13) .. "+" .. string.rep("-", 12) .. "+" .. string.rep("-", 7) .. "+"
 
-		for a in SnDdb:rows(query) do
-			count = count + 1
-			if #a > 0 then
-				mName, rName, rID, zName, mobCount = count .. ". " .. a[1], a[2], tostring(a[3]), a[4], a[5]
-				if #mName > 28 then
-					mName = string.sub(mName, 1, 28)
-				end
+    InfoNote(searchMsg)
+    ColorNote("dimgray", "", dividers)
+    ColourNote(
+        "dimgray", "", "| ",
+        "white", "", string.format("%-28s", "Mob name"),
+        "dimgray", "", " | ",
+        "green", "", string.format("%-23s", "Room name"),
+        "dimgray", "", " | ",
+        "cyan", "", string.format("%-11s", "ID"),
+        "dimgray", "", " | ",
+        "yellow", "", string.format("%-10s", "Zone"),
+        "dimgray", "", " | ",
+        "white", "", "Kills",
+        "dimgray", "", " |"
+    )
 
-				if #rName > 23 then
-					rName = string.sub(rName, 1, 23)
-				end
+    ColourNote("dimgray", "", dividers)
 
-				ridStr = count .. ". " .. rID
+    local count = 0
 
-				bgColor = "black"
+    for a in SnDdb:rows(query) do
+        count = count + 1
+        if #a > 0 then
+            mName, rName, rID, zName, mobKills = count .. ". " .. a[1], a[2], tostring(a[3]), a[4], a[6]
 
-				if count%2 == 0 then
-					bgColor = "midnightblue"
-				end
+            if #mName > 28 then
+                mName = mName:sub(1, 28)
+            end
 
-				table.insert(mshow, {a[1], zName, rID})
+            if #rName > 23 then
+                rName = rName:sub(1, 23)
+            end
 
-				ColourTell("dimgray", "", "|", "white", bgColor, " " .. string.format("%-29s",mName), "dimgray", "", "|", "limegreen", bgColor, " " .. string.format("%-24s", rName), "dimgray", "", "|", "cyan", bgColor, " " .. count .. ". ")
-				Hyperlink("mapper goto " .. rID, rID, "goto id", "cyan", bgColor, 0, 1)
-				ColourTell("", bgColor,  string.rep(" ", 12-#ridStr),"dimgray", "", "|", "yellow", bgColor, " " .. string.format("%-11s", zName), "dimgray", "", "|", "white", bgColor, " " .. string.format("%-5d", mobCount), "dimgray", bgColor, " |\n")
+            bgColor = ifc(count%2 == 0, "midnightblue", "black")
 
-			end
-		end
+            table.insert(mshow, {a[1], zName, rID})
 
-		if count == 0 then
-			ColourNote("dimgray", "", "| ", "tomato", "", string.format("%-89s", failure), "dimgray", "", " |")
-		end
+            ColourTell(
+                "dimgray", bgColor, "| ",
+                "white", bgColor, string.format("%-29s", mName),
+                "dimgray", bgColor, " | ",
+                "limegreen", bgColor, string.format("%-24s", rName),
+                "dimgray", bgColor, " | ",
+                "cyan", bgColor, Hyperlink("mapper goto " .. rID, rID, "goto " .. rID, "cyan", bgColor, 0, 1)
+            )
+            ColourTell(
+                "", bgColor, string.format("%-12s", rID),
+                "dimgray", bgColor, " | ",
+                "yellow", bgColor, string.format("%-11s", zName),
+                "dimgray", bgColor, " | ",
+                "white", bgColor, string.format("%-5d", mobKills),
+                "dimgray", bgColor, " |\n",
+            )
+        end
+    end
 
-		ColourNote("dimgray", "", dividers)
+    if count == 0 then
+        ColourNote("dimgray", "", "| ", "tomato", "", string.format("%-90s", failure), "dimgray", "", "|")
+    end
 
-		if count > 0 and count < 2 then
-			ColourNote("orange", "", count .. " match found")
-		elseif count > 1 then
-			ColourNote("orange", "", count .. " matches found")
-		end
+    ColourNote("dimgray", "", dividers)
 
-		SnDdb:close()
-		SnDdb = nil
-	end
+    if count == 1 then
+        InfoNote("1 match found!")
+    elseif count > 1 then
+        InfoNote(count .. " matches found!")
+    end
+
+    SnDdb:close()
+    SnDdb = nil
+end
 
 	function mobShow(name, line, args)
 		if #mshow ~= 0 then
@@ -6779,32 +6810,6 @@ end
 
 	function fixSQL (str)
 		return str:gsub("'", "''")
-	end
-
-	function onSearch(name, line, wildcards)
-		local param1, param2, param3 = wildcards[1], wildcards[2], (tonumber(wildcards[3]) and tonumber(wildcards[3])) or nil
-
-		local zone, name, sendit = param1, param2, false
-
-		if #name < 1 then
-			name = zone
-			zone = "all"
-			sendit = true
-		 elseif #name >= 1 and #name < 2 then
-			InfoNote("*** You need at least 2 characters of the mob name!")
-		else
-			sendit = true
-		end
-
-		if sendit then
-			if param3 then
-				mobLookup(name, zone, param3)
-			else
-				mobLookup(name, zone)
-			end
-		else
-			InfoNote("*** Syntax error! Use: ", "msearch <areakey|here|all> <mob>")
-		end
 	end
 
 	function strip_colours (s)
@@ -8062,7 +8067,7 @@ end
 			script="do_gq_check"
 			name="extra_gq_check_aliases"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-			
+
 	<alias	match="^(?:gq (?:c|ch|check))$"
 			script="do_gq_check"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>

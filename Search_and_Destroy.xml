@@ -6771,7 +6771,7 @@ function showResults(query, msg)
                 "yellow", bgColor, string.format("%-11s", zName),
                 "dimgray", bgColor, " | ",
                 "white", bgColor, string.format("%-5d", mobKills),
-                "dimgray", bgColor, " |\n",
+                "dimgray", bgColor, " |\n"
             )
         end
     end

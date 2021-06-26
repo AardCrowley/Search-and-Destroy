@@ -1,7 +1,8 @@
 {
     "5.87": {
         "fixes": [
-            "Potential fix for crash during hunt trick"
+            "Potential fix for crash during hunt trick",
+            "Potential fix for cp target list sometimes not getting updated after a kill"
         ]
     },
     "5.86": {

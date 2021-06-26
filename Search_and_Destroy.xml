@@ -6669,6 +6669,7 @@ function onSearch(name, line, wildcards)
             mobLookup(name, zone, level)
         else
             mobLookup(name, zone)
+	end
     else
         InfoNote("*** Syntax error! Use: ", "xmsearch <areakey|here|all> <mob>")
     end

@@ -3408,8 +3408,10 @@ end
 		if has_activity_target() then
 			qw.index = ix
 			qw_exact()
-		else
+		elseif has_target() then
 			qw_arg(ix, current_target.keyword)
+		else
+			DebugNote("You no longer have a target. Stopping hunt trick.")
 		end
 		ht_reset()
 	end

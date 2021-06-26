@@ -356,7 +356,7 @@
 				local ri = gmcp("room.info")
 				ri.maze = (string.match(ri.details, "maze") == "maze") and 1 or 0
 				previous_room = current_room or { rmid="-2", arid="-2" }
-				current_room = { rmid = ri.num, arid = ri.zone, exits = ri.exits, maze = ri.maze } or {}
+				current_room = { rmid = ri.num, arid = ri.zone, exits = ri.exits, maze = ri.maze, name = ri.name } or {}
 				if (current_room.rmid == previous_room.rmid) then
 					-- do nothing
 				else
@@ -2021,6 +2021,7 @@ end
 			last_kill_index = get_last_kill_index()
 			if last_kill_index and main_target_list[last_kill_index] then
 				main_target_list[last_kill_index].is_dead = "yes"
+				record_target_killed(main_target_list[last_kill_index])
 			end
 			if is_cp_mob_targeted() then
 				if current_target.index == last_kill_index then
@@ -2045,6 +2046,25 @@ end
 		end
 		DebugNote("Couldn't find last mob kill on target list")
 		return nil
+	end
+
+	function record_target_killed(target)
+		-- a mob was killed as part of a cp/gq
+		queries = {
+			string.format([[
+				INSERT OR IGNORE INTO mobs (mob,room,roomid,zone)
+				VALUES (%s,%s,%s,%s);
+			]], fixsql(target.mob), fixsql(current_room.name), tonumber(current_room.rmid), fixsql(current_room.arid)),
+			string.format([[
+				UPDATE mobs
+				SET kill_count = kill_count + 1
+				WHERE mob = %s AND roomid = %i;
+			]],  fixsql(target.mob), tonumber(current_room.rmid)),
+		}
+		local db = assert(sqlite3.open(snd_db_file))
+		execute_in_transaction(db, queries)
+		DebugNote("Increment mob kill count for ", target.mob, " in room ", current_room.rmid)
+		db:close_vm()
 	end
 
 	function player_level_up()
@@ -2290,8 +2310,10 @@ end
 		end
 		last_kill_index = get_last_kill_index()
 		if last_kill_index and main_target_list[last_kill_index] then
-			local x = tonumber(main_target_list[last_kill_index].qty) - 1
-			main_target_list[last_kill_index].qty = x
+			local target = main_target_list[last_kill_index]
+			local x = tonumber(target.qty) - 1
+			record_target_killed(target)
+			target.qty = x
 			if (#main_target_list > 1) then
 				if x and (x > 0) then
 					xg_draw_window()
@@ -2300,7 +2322,7 @@ end
 					qw_reset(false)
 					DebugNote("Setting xcp_retry_stat to ", 1)
 					xcp_retry_stat = 1
-					main_target_list[last_kill_index].is_dead = "yes"
+					target.is_dead = "yes"
 					if is_gq_mob_targeted() then
 						if current_target.index == last_kill_index then
 							xcp_clear_target(false)

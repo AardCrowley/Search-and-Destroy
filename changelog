@@ -1,7 +1,8 @@
 {
     "5.88": {
         "fixes": [
-            "Fix for rare bug in quick where"
+            "Fix for rare bug in quick where",
+            "Fix for (wounded) and (aimed) being included in mob names in mobs db"
         ]
     },
     "5.87": {

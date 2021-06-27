@@ -76,7 +76,7 @@
 
 	PLUGIN_VERSION  = GetPluginInfo(GetPluginID(), 19)
 	PLUGIN_NAME 	= GetPluginInfo(GetPluginID(), 1)
-	SCHEMA_VERSION  = 3
+	SCHEMA_VERSION  = 4
 
 	UPDATE_CHECK_INTERVAL = 60 * 60 -- Check once per hour
 	local last_update_check = -1
@@ -435,6 +435,10 @@
 			add_kills_column(db)
 		end
 
+		if current_version < 4 then
+			remove_bad_mobs(db)
+		end
+
 		InfoNote("Migration complete!")
 		db:execute(string.format("PRAGMA user_version = %i;", SCHEMA_VERSION))
 
@@ -535,6 +539,13 @@
 				FROM old_mobs;
 			DROP TABLE old_mobs;
 			COMMIT;
+		]])
+	end
+
+	function remove_bad_mobs(db)
+		DebugNote("removing wounded and aimed mobs from the db")
+		db:execute([[
+			DELETE FROM mobs WHERE mob LIKE "%(wounded)%" OR mob LIKE "%(aimed)%";
 		]])
 	end
 
@@ -7319,6 +7330,8 @@ end
 		"U",
 		"White Aura",
 		"W",
+		"wounded",
+		"aimed"
 	}
 
 	local CONSIDER_OUTCOMES = {

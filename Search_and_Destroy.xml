@@ -6711,7 +6711,7 @@ end
 
 	    SnDdb:close()
 
-    	showResults(searchQuery, searchMsg)
+    	showResults(searchQuery, searchMsg:format(name, location))
 	end
 
 	function showResults(query, msg)

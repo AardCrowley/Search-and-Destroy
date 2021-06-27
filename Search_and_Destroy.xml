@@ -6771,10 +6771,12 @@ end
             	    "white", bgColor, string.format("%-29s", mName),
                 	"dimgray", bgColor, " | ",
 	                "limegreen", bgColor, string.format("%-24s", rName),
-                	"dimgray", bgColor, " | ",
-                	"cyan", bgColor, Hyperlink("mapper goto " .. rID, rID, "goto " .. rID, "cyan", bgColor, 0, 1)
-            	)
-            	ColourTell(
+                	"dimgray", bgColor, " | "
+				)
+
+					Hyperlink("mapper goto " .. rID, rID, "goto " .. rID, "cyan", bgColor, 0, 1)
+
+				ColourTell(
 	                "", bgColor, string.format("%-12s", rID),
                 	"dimgray", bgColor, " | ",
                 	"yellow", bgColor, string.format("%-11s", zName),

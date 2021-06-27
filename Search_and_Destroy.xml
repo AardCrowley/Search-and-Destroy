@@ -6700,7 +6700,7 @@ end
         	locQuery = locQuery:format(fixSQL(location))
 
 	        for a in SnDdb:rows(locQuery) do
-				Debug("A1 " .. a[1])s
+				Debug("A1 " .. a[1])
     	        if a[1] then
         	        locFound = true
             	end
@@ -6764,19 +6764,19 @@ end
 
     	        ColourTell(
         	        "dimgray", bgColor, "| ",
-            	    "white", bgColor, string.format("%-29s", mName),
+            	    "white", bgColor, string.format("%-28s", mName),
                 	"dimgray", bgColor, " | ",
-	                "limegreen", bgColor, string.format("%-24s", rName),
+	                "limegreen", bgColor, string.format("%-23s", rName),
                 	"dimgray", bgColor, " | "
 				)
 
-					Hyperlink("mapper goto " .. rID, rID, "goto " .. rID, "cyan", bgColor, 0, 1)
+					Hyperlink("mapper goto " .. rID, string.format("%-11s", rID), "goto " .. rID, "cyan", bgColor, 0, 1)
 
 				ColourTell(
                 	"dimgray", bgColor, " | ",
-                	"yellow", bgColor, string.format("%-11s", zName),
+                	"yellow", bgColor, string.format("%-10s", zName),
                 	"dimgray", bgColor, " | ",
-                	"white", bgColor, string.format("%-5d", mobKills),
+                	"white", bgColor, string.format("%5d", mobKills),
                 	"dimgray", bgColor, " |\n"
             	)
         	end

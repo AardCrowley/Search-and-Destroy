@@ -6689,7 +6689,6 @@ end
     	local searchQuery   = "SELECT * FROM mobs, area WHERE %s LIKE '%s' AND mob LIKE '%s'%s AND area.key = mobs.zone ORDER BY mobs.zone, mobs.kill_count DESC"
     	local lvlQuery      = " AND area.minlvl <= %s AND area.maxlvl >= %s"
     	local searchMsg     =  "Searching for %s in %s"
-    	local zone_search, loc_search, name_search, level_search = ifc(locFound, "zone", "mobs.room"), ifc(locFound, fixSQL(location), "%" .. fixSQL(location) .. "%"), ifc(exact, fixSQL(name), "%" .. fixSQL(name) .. "%"), ifc(tonumber(level), lvlQuery:format(level,level), "")
 
     	if location ~= "" or location ~= nil then
         	if location:upper() == "HERE" then
@@ -6701,11 +6700,14 @@ end
         	locQuery = locQuery:format(fixSQL(location))
 
 	        for a in SnDdb:rows(locQuery) do
+				Debug("A1 " .. a[1])s
     	        if a[1] then
         	        locFound = true
             	end
         	end
     	end
+
+		local zone_search, loc_search, name_search, level_search = ifc(locFound, "zone", "mobs.room"), ifc(locFound, fixSQL(location), "%" .. fixSQL(location) .. "%"), ifc(exact, fixSQL(name), "%" .. fixSQL(name) .. "%"), ifc(tonumber(level), lvlQuery:format(level,level), "")
 
     	searchQuery = searchQuery:format(zone_search, loc_search, name_search, level_search)
 

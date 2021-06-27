@@ -6733,7 +6733,7 @@ end
         	"dimgray", "", " | ",
         	"green", "", string.format("%-23s", "Room name"),
         	"dimgray", "", " | ",
-        	"cyan", "", string.format("%-11s", "ID"),
+        	"cyan", "", string.format("%-7s", "ID"),
         	"dimgray", "", " | ",
         	"yellow", "", string.format("%-10s", "Zone"),
         	"dimgray", "", " | ",
@@ -6770,7 +6770,7 @@ end
                 	"dimgray", bgColor, " | "
 				)
 
-					Hyperlink("mapper goto " .. rID, string.format("%-11s", rID), "goto " .. rID, "cyan", bgColor, 0, 1)
+					Hyperlink("mapper goto " .. rID, string.format("%-7s", rID), "goto " .. rID, "cyan", bgColor, 0, 1)
 
 				ColourTell(
                 	"dimgray", bgColor, " | ",

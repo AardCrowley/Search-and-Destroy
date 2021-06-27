@@ -6746,13 +6746,7 @@ end
     	for a in SnDdb:rows(query) do
 	        count = count + 1
     	    if #a > 0 then
-				DebugNote("A1 is ... " .. a[1])
-				DebugNote("A2 is ... " .. a[2])
-				DebugNote("A3 is ... " .. a[3])
-				DebugNote("A4 is ... " .. a[4])
-				DebugNote("A5 is ... " .. a[5])
-				DebugNote("A6 is ... " .. a[6])
-        	    mName, rName, rID, zName, mobKills = count .. ". " .. a[1], a[2], tostring(a[3]), a[4], a[6]
+ss        	    mName, rName, rID, zName, mobKills = count .. ". " .. a[1], a[2], tostring(a[3]), a[4], a[6]
 
 	            if #mName > 28 then
     	            mName = mName:sub(1, 28)
@@ -6777,7 +6771,6 @@ end
 					Hyperlink("mapper goto " .. rID, rID, "goto " .. rID, "cyan", bgColor, 0, 1)
 
 				ColourTell(
-	                "", bgColor, string.format("%-12s", rID),
                 	"dimgray", bgColor, " | ",
                 	"yellow", bgColor, string.format("%-11s", zName),
                 	"dimgray", bgColor, " | ",

@@ -6722,7 +6722,7 @@ end
 
     	local searchMsg, failure = msg, "No matches found!"
 
-    	local dividers = "+" .. string.rep("-", 30) .. "+" .. string.rep("-", 25) .. "+" .. string.rep("-", 13) .. "+" .. string.rep("-", 12) .. "+" .. string.rep("-", 7) .. "+"
+    	local dividers = "+" .. string.rep("-", 30) .. "+" .. string.rep("-", 25) .. "+" .. string.rep("-", 9) .. "+" .. string.rep("-", 12) .. "+" .. string.rep("-", 7) .. "+"
 
     	InfoNote(searchMsg)
     	ColourNote("dimgray", "", dividers)

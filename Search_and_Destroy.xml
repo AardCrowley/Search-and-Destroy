@@ -6655,146 +6655,151 @@ end
 		end
 	end
 
-function onSearch(name, line, wildcards)
-    local zone, name, level, sendit = wildcards[1], wildcards[2], tonumber(wildcards[3]) or nil, false
+--[[Mob searching]]--
 
-    if #name < 1 then
-        name = zone
-        zone = "all"
-        sendit = true
-    elseif #name >= 1 and #name < 2 then
-        InfoNote("*** You need at least 2 characters of the mob name!")
-    else
-        sendit = true
-    end
+	function onSearch(name, line, wildcards)
+    	local zone, name, level, sendit = wildcards[1], wildcards[2], tonumber(wildcards[3]) or nil, false
+		DebugNote(zone, name, level)
 
-    if sendit then
-        if level then
-            mobLookup(name, zone, level)
-        else
-            mobLookup(name, zone)
+    	if #name < 1 then
+        	name = zone
+	        zone = "all"
+    	    sendit = true
+    	elseif #name >= 1 and #name < 2 then
+        	InfoNote("*** You need at least 2 characters of the mob name!")
+    	else
+        	sendit = true
+    	end
+
+    	if sendit then
+			mobLookup(name, zone, ifc(level, level, ""))
+	    else
+    	    InfoNote("*** Syntax error! Use: ", "xmsearch <areakey|here|all> <mob>")
+    	end
 	end
-    else
-        InfoNote("*** Syntax error! Use: ", "xmsearch <areakey|here|all> <mob>")
-    end
-end
 
-function mobLookup(name, location, level, exact)
+	function mobLookup(name, location, level, exact)
 
-    SnDdb = sqlite3.open(snd_db_file)
+    	SnDdb = sqlite3.open(snd_db_file)
 
-    if exact ~= "" or exact ~= nil then exact = false else exact = true end
+    	if exact ~= "" or exact ~= nil then exact = false else exact = true end
 
-    local locFound      = false
-    local locQuery      = "SELECT * FROM area WHERE key LIKE '%s'"
-    local searchQuery   = "SELECT * FROM mobs, area WHERE %s LIKE '%s' AND mob LIKE '%s'%s AND area.key = mobs.zone ORDER BY mobs.zone, mobs.kill_count DESC"
-    local lvlQuery      = " AND area.minlvl <= %s AND area.maxlvl >= %s"
-    local searchMsg     =  "Searching for %s in %s"
-    local zone_search, loc_search, name_search, level_search = ifc(locFound, "zone", "mobs.room"), ifc(locFound, fixSQL(location), "%" .. fixSQL(location) .. "%"), ifc(exact, fixSQL(name), "%" .. fixSQL(name) .. "%"), ifc(tonumber(level), lvlQuery:format(level,level), "")
+    	local locFound      = false
+    	local locQuery      = "SELECT * FROM area WHERE key LIKE '%s'"
+    	local searchQuery   = "SELECT * FROM mobs, area WHERE %s LIKE '%s' AND mob LIKE '%s'%s AND area.key = mobs.zone ORDER BY mobs.zone, mobs.kill_count DESC"
+    	local lvlQuery      = " AND area.minlvl <= %s AND area.maxlvl >= %s"
+    	local searchMsg     =  "Searching for %s in %s"
+    	local zone_search, loc_search, name_search, level_search = ifc(locFound, "zone", "mobs.room"), ifc(locFound, fixSQL(location), "%" .. fixSQL(location) .. "%"), ifc(exact, fixSQL(name), "%" .. fixSQL(name) .. "%"), ifc(tonumber(level), lvlQuery:format(level,level), "")
 
-    if location ~= "" or location ~= nil then
-        if location:upper() == "HERE" then
-            location = gmcp("room.info.zone")
-        elseif location:upper() == "ALL" then
-            location = "%"
-        end
+    	if location ~= "" or location ~= nil then
+        	if location:upper() == "HERE" then
+            	location = gmcp("room.info.zone")
+        	elseif location:upper() == "ALL" then
+	            location = "%"
+        	end
 
-        locQuery = locQuery:format(fixSQL(location))
+        	locQuery = locQuery:format(fixSQL(location))
 
-        for a in SnDdb:rows(locQuery) do
-            if a[1] then
-                locFound = true
-            end
-        end
-    end
+	        for a in SnDdb:rows(locQuery) do
+    	        if a[1] then
+        	        locFound = true
+            	end
+        	end
+    	end
 
-    searchQuery = searchQuery:format(zone_search, loc_search, name_search, level_search)
+    	searchQuery = searchQuery:format(zone_search, loc_search, name_search, level_search)
 
-    SnDdb:close()
+	    SnDdb:close()
 
-    showResults(searchQuery, searchMsg)
-end
+    	showResults(searchQuery, searchMsg)
+	end
 
-function showResults(query, msg)
-    DebugNote("Executing search query: ", query)
-    SnDdb = sqlite3.open(snd_db_file)
-    mshow = {}
+	function showResults(query, msg)
+    	DebugNote("Executing search query: ", query)
+    	SnDdb = sqlite3.open(snd_db_file)
+    	mshow = {}
 
-    local searchMsg, failure = msg, "No matches found!"
+    	local searchMsg, failure = msg, "No matches found!"
 
-    local dividers = "+" .. string.rep("-", 30) .. "+" .. string.rep("-", 25) .. "+" .. string.rep("-", 13) .. "+" .. string.rep("-", 12) .. "+" .. string.rep("-", 7) .. "+"
+    	local dividers = "+" .. string.rep("-", 30) .. "+" .. string.rep("-", 25) .. "+" .. string.rep("-", 13) .. "+" .. string.rep("-", 12) .. "+" .. string.rep("-", 7) .. "+"
 
-    InfoNote(searchMsg)
-    ColourNote("dimgray", "", dividers)
-    ColourNote(
-        "dimgray", "", "| ",
-        "white", "", string.format("%-28s", "Mob name"),
-        "dimgray", "", " | ",
-        "green", "", string.format("%-23s", "Room name"),
-        "dimgray", "", " | ",
-        "cyan", "", string.format("%-11s", "ID"),
-        "dimgray", "", " | ",
-        "yellow", "", string.format("%-10s", "Zone"),
-        "dimgray", "", " | ",
-        "white", "", "Kills",
-        "dimgray", "", " |"
-    )
+    	InfoNote(searchMsg)
+    	ColourNote("dimgray", "", dividers)
+    	ColourNote(
+        	"dimgray", "", "| ",
+        	"white", "", string.format("%-28s", "Mob name"),
+        	"dimgray", "", " | ",
+        	"green", "", string.format("%-23s", "Room name"),
+        	"dimgray", "", " | ",
+        	"cyan", "", string.format("%-11s", "ID"),
+        	"dimgray", "", " | ",
+        	"yellow", "", string.format("%-10s", "Zone"),
+        	"dimgray", "", " | ",
+        	"white", "", "Kills",
+        	"dimgray", "", " |"
+    	)
 
-    ColourNote("dimgray", "", dividers)
+    	ColourNote("dimgray", "", dividers)
 
-    local count = 0
+    	local count = 0
 
-    for a in SnDdb:rows(query) do
-        count = count + 1
-        if #a > 0 then
-            mName, rName, rID, zName, mobKills = count .. ". " .. a[1], a[2], tostring(a[3]), a[4], a[6]
+    	for a in SnDdb:rows(query) do
+	        count = count + 1
+    	    if #a > 0 then
+				DebugNote("A1 is ... " .. a[1])
+				DebugNote("A2 is ... " .. a[2])
+				DebugNote("A3 is ... " .. a[3])
+				DebugNote("A4 is ... " .. a[4])
+				DebugNote("A5 is ... " .. a[5])
+				DebugNote("A6 is ... " .. a[6])
+        	    mName, rName, rID, zName, mobKills = count .. ". " .. a[1], a[2], tostring(a[3]), a[4], a[6]
 
-            if #mName > 28 then
-                mName = mName:sub(1, 28)
-            end
+	            if #mName > 28 then
+    	            mName = mName:sub(1, 28)
+            	end
 
-            if #rName > 23 then
-                rName = rName:sub(1, 23)
-            end
+            	if #rName > 23 then
+	                rName = rName:sub(1, 23)
+            	end
 
-            bgColor = ifc(count%2 == 0, "midnightblue", "black")
+            	bgColor = ifc(count%2 == 0, "midnightblue", "black")
 
-            table.insert(mshow, {a[1], zName, rID})
+	            table.insert(mshow, {a[1], zName, rID})
 
-            ColourTell(
-                "dimgray", bgColor, "| ",
-                "white", bgColor, string.format("%-29s", mName),
-                "dimgray", bgColor, " | ",
-                "limegreen", bgColor, string.format("%-24s", rName),
-                "dimgray", bgColor, " | ",
-                "cyan", bgColor, Hyperlink("mapper goto " .. rID, rID, "goto " .. rID, "cyan", bgColor, 0, 1)
-            )
-            ColourTell(
-                "", bgColor, string.format("%-12s", rID),
-                "dimgray", bgColor, " | ",
-                "yellow", bgColor, string.format("%-11s", zName),
-                "dimgray", bgColor, " | ",
-                "white", bgColor, string.format("%-5d", mobKills),
-                "dimgray", bgColor, " |\n"
-            )
-        end
-    end
+    	        ColourTell(
+        	        "dimgray", bgColor, "| ",
+            	    "white", bgColor, string.format("%-29s", mName),
+                	"dimgray", bgColor, " | ",
+	                "limegreen", bgColor, string.format("%-24s", rName),
+                	"dimgray", bgColor, " | ",
+                	"cyan", bgColor, Hyperlink("mapper goto " .. rID, rID, "goto " .. rID, "cyan", bgColor, 0, 1)
+            	)
+            	ColourTell(
+	                "", bgColor, string.format("%-12s", rID),
+                	"dimgray", bgColor, " | ",
+                	"yellow", bgColor, string.format("%-11s", zName),
+                	"dimgray", bgColor, " | ",
+                	"white", bgColor, string.format("%-5d", mobKills),
+                	"dimgray", bgColor, " |\n"
+            	)
+        	end
+    	end
 
-    if count == 0 then
-        ColourNote("dimgray", "", "| ", "tomato", "", string.format("%-90s", failure), "dimgray", "", "|")
-    end
+    	if count == 0 then
+	        ColourNote("dimgray", "", "| ", "tomato", "", string.format("%-90s", failure), "dimgray", "", "|")
+	    end
 
-    ColourNote("dimgray", "", dividers)
+	    ColourNote("dimgray", "", dividers)
 
-    if count == 1 then
-        InfoNote("1 match found!")
-    elseif count > 1 then
-        InfoNote(count .. " matches found!")
-    end
+	    if count == 1 then
+        	InfoNote("1 match found!")
+    	elseif count > 1 then
+	        InfoNote(count .. " matches found!")
+	    end
 
-    SnDdb:close()
-    SnDdb = nil
-end
+    	SnDdb:close()
+    	SnDdb = nil
+	end
 
 	function mobShow(name, line, args)
 		if #mshow ~= 0 then

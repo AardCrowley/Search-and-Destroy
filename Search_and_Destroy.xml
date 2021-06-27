@@ -3267,6 +3267,10 @@ end
 	end
 
 	function qw_match(name, line, wildcards)
+		if not has_target() then
+			return
+		end
+
 		local mob = Trim(wildcards.mobname):lower()
 		local room = wildcards.roomname
 		local parts
@@ -7790,7 +7794,7 @@ end
 	<trigger match="^There is no \w.+ around here\.$"
 		script="qw_no_match"
 		name="trg_quick_where_no_match" group="QuickWhere"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+		enabled="n"	regexp="y" sequence="50" keep_evaluating="y" send_to="12" > </trigger>
 
 <!-- HUNT TRICK -->
 	<trigger match="^You are (?:almost )?certain that \w.+ is (?:north|south|east|west|up|down) from here\.|You are confident that \w.+ passed through here, heading (?:north|south|east|west|up|down)\.|The trail of \w.+ is confusing, but you're reasonably sure \w.+ headed (?:north|south|east|west|up|down)\.|There are traces of \w.+ having been here. Perhaps they lead (?:north|south|east|west|up|down)\?|You have no idea what you\'re doing\, but maybe \w.+ is (?:north|south|east|west|up|down)\?|You couldn\'t find a path to \w.+ from here\.|\w.+ is here\!$"

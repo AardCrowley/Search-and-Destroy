@@ -1969,10 +1969,8 @@ end
 	end
 
 	function cp_info_line(name, line, wildcards)
-		local t = cp_info_list
-		local mob = wildcards.mob
-		local loc = wildcards.loc
-		table.insert(t, { mob=mob, loc=loc } )
+		local mob, loc = parse_mob_target(wildcards.target)
+		table.insert(cp_info_list, { mob=mob, loc=loc } )
 	end
 
 	function cp_info_end()
@@ -1998,13 +1996,8 @@ end
 	end
 
 	function cp_check_line(name, line, wildcards)
-		local t = cp_check_list
-		local mob = wildcards.mob
-		local qty = 1
-		local kw = ""
-		local loc = wildcards.loc
-		local is_dead = ((wildcards.isdead == "") and "no" or "yes")
-		table.insert(t, { mob=mob, qty=qty, loc=loc, is_dead=is_dead })
+		local mob, loc, is_dead = parse_mob_target(wildcards.target)
+		table.insert(cp_check_list, { mob=mob, qty=1, loc=loc, is_dead=is_dead })
 	end
 
 	function cp_check_end(name, line, wildcards)
@@ -2204,9 +2197,8 @@ end
 	end
 
 	function gq_info_line(name, line, wildcards)
-		local mob = wildcards.mob
 		local qty = wildcards.qty
-		local loc = wildcards.loc
+		local mob, loc = parse_mob_target(wildcards.target)
 		table.insert(potential_gq.targets, { mob=mob, qty=qty, loc=loc } )
 	end
 
@@ -2261,14 +2253,66 @@ end
 		end
 	end
 
+	-- Parses the mob and location out of a target line, returning them
+	-- separately, along with a boolean for whether or not the mob is dead.
+	-- This is parenthesis aware so it should properly handle parentheses in both
+	-- the location name and target name
+	function parse_mob_target(target_line)
+		local char, location, i
+		local temp = ""
+		local mob_name = ""
+		local paren_counter = 0
+		local dead = "no"
+
+		for i = 1, #target_line do
+			char = target_line:sub(i, i)
+			if char == "(" then
+				paren_counter = paren_counter + 1
+				if paren_counter == 1 then
+					mob_name = mob_name .. temp
+					temp = char
+				else
+					temp = temp .. char
+				end
+			elseif char == ")" then
+				paren_counter = paren_counter - 1
+				temp = temp .. char
+
+				if paren_counter == 0 then
+					if i == #target_line then
+						location = temp
+					else
+						mob_name = mob_name .. temp
+					end
+					temp = ""
+				end
+			else
+				temp = temp .. char
+			end
+		end
+
+		if location then
+			location = Trim(location)
+			location = location:sub(2, #location-1)
+			if location:match(" - Dead$") then
+				location = location:sub(1, #location - 7)
+				dead = "yes"
+			end
+		else
+			ErrorNote("The target line ", target_line, " could not be parsed properly. Contact Naricain and Crowley to get it fixed")
+			return nil
+		end
+
+		mob_name = Trim(mob_name)
+
+		return mob_name, location, dead
+	end
+
 	function gq_check_line(name, line, wildcards)
 		EnableTrigger("trg_gq_check_end", true)
-		local t = gq_check_list
-		local mob = wildcards.mob
 		local qty = wildcards.qty
-		local loc = wildcards.loc
-		local is_dead = (wildcards.isdead == "" and "no" or "yes")
-		table.insert(t, { mob=mob, qty=qty, loc=loc, is_dead=is_dead })
+		local mob, loc, is_dead = parse_mob_target(wildcards.target)
+		table.insert(gq_check_list, { mob=mob, qty=qty, loc=loc, is_dead=is_dead })
 	end
 
 	function gq_check_end()
@@ -4125,6 +4169,7 @@ end
 		EnableTrigger("trg_cp_check_line", true)
 		Simulate("\n")
 		if (area_room_type == "area") then
+			Simulate("You still have to kill * red velvet (tm) lipstick (Andolor's Ocean Adventure Park)\n")
 			Simulate("You still have to kill * the crypt thing (The Gauntlet)\n")
 			Simulate("You still have to kill * an ultroloth (The Lower Planes)\n")
 			Simulate("You still have to kill * (Helper) Fenix (The School of Horror)\n")
@@ -4142,6 +4187,8 @@ end
 			Simulate("You still have to kill * Don Crumble (Zangar's Demonic Grotto)\n") -- nohunt
 			Simulate("You still have to kill * A very large firefly (Kobold Siege Camp)\n") -- nohunt/nowhere
 		else
+			Simulate("You still have to kill * red velvet (tm) lipstick (Skirting a Fissure)\n")
+			Simulate("You still have to kill * a staggering barbegazi (Cell block A (Lower))\n")
 			Simulate("You still have to kill * a former court jester (The Labyrinth)\n")
 			Simulate("You still have to kill * the iron golem (Audience Chamber)\n")
 			Simulate("You still have to kill * probably a fake mob (Probably a Fake Room)\n")
@@ -4384,6 +4431,7 @@ end
 
 	function gq_area_targets()
 		return {
+			{ count = 1, name = "red velvet (tm) lipstick", location = "Andolor's Ocean Adventure Park"},
 			{ count = 2, name = "a horse", location =  "Kul Tiras" },
 			{ count = 1, name = "a horse", location =  "Kul Tiras" },
 			{ count = 1, name = "a treble clef", location =  "Art of Melody" },
@@ -4404,6 +4452,7 @@ end
 
 	function gq_room_targets()
 		return {
+			{ count = 1, name = "red velvet (tm) lipstick", location = "Cell block A (Lower)" },
 			{ count = 1, name = "Earshda the receptionist", location = "The Reception Area" },
 			{ count = 1, name = "a chorus girl", location = "Upstage Centre" },
 			{ count = 1, name = "a caretaker", location = "Entering Room 5" },
@@ -6673,143 +6722,143 @@ end
 --[[Mob searching]]--
 
 	function onSearch(name, line, wildcards)
-    	local zone, name, level, sendit = wildcards[1], wildcards[2], tonumber(wildcards[3]) or nil, false
+		local zone, name, level, sendit = wildcards[1], wildcards[2], tonumber(wildcards[3]) or nil, false
 		DebugNote(zone, name, level)
 
-    	if #name < 1 then
-        	name = zone
-	        zone = "all"
-    	    sendit = true
-    	elseif #name >= 1 and #name < 2 then
-        	InfoNote("*** You need at least 2 characters of the mob name!")
-    	else
-        	sendit = true
-    	end
+		if #name < 1 then
+			name = zone
+			zone = "all"
+			sendit = true
+		elseif #name >= 1 and #name < 2 then
+			InfoNote("*** You need at least 2 characters of the mob name!")
+		else
+			sendit = true
+		end
 
-    	if sendit then
+		if sendit then
 			mobLookup(name, zone, ifc(level, level, ""))
-	    else
-    	    InfoNote("*** Syntax error! Use: ", "xmsearch <areakey|here|all> <mob>")
-    	end
+		else
+			InfoNote("*** Syntax error! Use: ", "xmsearch <areakey|here|all> <mob>")
+		end
 	end
 
 	function mobLookup(name, location, level, exact)
 
-    	SnDdb = sqlite3.open(snd_db_file)
+		SnDdb = sqlite3.open(snd_db_file)
 
-    	if exact ~= "" or exact ~= nil then exact = false else exact = true end
+		if exact ~= "" or exact ~= nil then exact = false else exact = true end
 
-    	local locFound      = false
-    	local locQuery      = "SELECT * FROM area WHERE key LIKE '%s'"
-    	local searchQuery   = "SELECT * FROM mobs, area WHERE %s LIKE '%s' AND mob LIKE '%s'%s AND area.key = mobs.zone ORDER BY mobs.zone, mobs.kill_count DESC"
-    	local lvlQuery      = " AND area.minlvl <= %s AND area.maxlvl >= %s"
-    	local searchMsg     =  "Searching for %s in %s"
+		local locFound      = false
+		local locQuery      = "SELECT * FROM area WHERE key LIKE '%s'"
+		local searchQuery   = "SELECT * FROM mobs, area WHERE %s LIKE '%s' AND mob LIKE '%s'%s AND area.key = mobs.zone ORDER BY mobs.zone, mobs.kill_count DESC"
+		local lvlQuery      = " AND area.minlvl <= %s AND area.maxlvl >= %s"
+		local searchMsg     =  "Searching for %s in %s"
 
-    	if location ~= "" or location ~= nil then
-        	if location:upper() == "HERE" then
-            	location = gmcp("room.info.zone")
-        	elseif location:upper() == "ALL" then
-	            location = "%"
-        	end
+		if location ~= "" or location ~= nil then
+			if location:upper() == "HERE" then
+				location = gmcp("room.info.zone")
+			elseif location:upper() == "ALL" then
+				location = "%"
+			end
 
-        	locQuery = locQuery:format(fixSQL(location))
+			locQuery = locQuery:format(fixSQL(location))
 
-	        for a in SnDdb:rows(locQuery) do
-    	        if a[1] then
-        	        locFound = true
-            	end
-        	end
-    	end
+			for a in SnDdb:rows(locQuery) do
+				if a[1] then
+					locFound = true
+				end
+			end
+		end
 
 		local zone_search, loc_search, name_search, level_search = ifc(locFound, "zone", "mobs.room"), ifc(locFound, fixSQL(location), "%" .. fixSQL(location) .. "%"), ifc(exact, fixSQL(name), "%" .. fixSQL(name) .. "%"), ifc(tonumber(level), lvlQuery:format(level,level), "")
 
-    	searchQuery = searchQuery:format(zone_search, loc_search, name_search, level_search)
+		searchQuery = searchQuery:format(zone_search, loc_search, name_search, level_search)
 
-	    SnDdb:close()
+		SnDdb:close()
 
-    	showResults(searchQuery, searchMsg:format(name, location))
+		showResults(searchQuery, searchMsg:format(name, location))
 	end
 
 	function showResults(query, msg)
-    	DebugNote("Executing search query: ", query)
-    	SnDdb = sqlite3.open(snd_db_file)
-    	mshow = {}
+		DebugNote("Executing search query: ", query)
+		SnDdb = sqlite3.open(snd_db_file)
+		mshow = {}
 
-    	local searchMsg, failure = msg, "No matches found!"
+		local searchMsg, failure = msg, "No matches found!"
 
-    	local dividers = "+" .. string.rep("-", 30) .. "+" .. string.rep("-", 25) .. "+" .. string.rep("-", 9) .. "+" .. string.rep("-", 12) .. "+" .. string.rep("-", 7) .. "+"
+		local dividers = "+" .. string.rep("-", 30) .. "+" .. string.rep("-", 25) .. "+" .. string.rep("-", 9) .. "+" .. string.rep("-", 12) .. "+" .. string.rep("-", 7) .. "+"
 
-    	InfoNote(searchMsg)
-    	ColourNote("dimgray", "", dividers)
-    	ColourNote(
-        	"dimgray", "", "| ",
-        	"white", "", string.format("%-28s", "Mob name"),
-        	"dimgray", "", " | ",
-        	"green", "", string.format("%-23s", "Room name"),
-        	"dimgray", "", " | ",
-        	"cyan", "", string.format("%-7s", "ID"),
-        	"dimgray", "", " | ",
-        	"yellow", "", string.format("%-10s", "Zone"),
-        	"dimgray", "", " | ",
-        	"white", "", "Kills",
-        	"dimgray", "", " |"
-    	)
+		InfoNote(searchMsg)
+		ColourNote("dimgray", "", dividers)
+		ColourNote(
+			"dimgray", "", "| ",
+			"white", "", string.format("%-28s", "Mob name"),
+			"dimgray", "", " | ",
+			"green", "", string.format("%-23s", "Room name"),
+			"dimgray", "", " | ",
+			"cyan", "", string.format("%-7s", "ID"),
+			"dimgray", "", " | ",
+			"yellow", "", string.format("%-10s", "Zone"),
+			"dimgray", "", " | ",
+			"white", "", "Kills",
+			"dimgray", "", " |"
+		)
 
-    	ColourNote("dimgray", "", dividers)
+		ColourNote("dimgray", "", dividers)
 
-    	local count = 0
+		local count = 0
 
-    	for a in SnDdb:rows(query) do
-	        count = count + 1
-    	    if #a > 0 then
-        	    mName, rName, rID, zName, mobKills = count .. ". " .. a[1], a[2], tostring(a[3]), a[4], a[6]
+		for a in SnDdb:rows(query) do
+			count = count + 1
+			if #a > 0 then
+				mName, rName, rID, zName, mobKills = count .. ". " .. a[1], a[2], tostring(a[3]), a[4], a[6]
 
-	            if #mName > 28 then
-    	            mName = mName:sub(1, 28)
-            	end
+				if #mName > 28 then
+					mName = mName:sub(1, 28)
+				end
 
-            	if #rName > 23 then
-	                rName = rName:sub(1, 23)
-            	end
+				if #rName > 23 then
+					rName = rName:sub(1, 23)
+				end
 
-            	bgColor = ifc(count%2 == 0, "midnightblue", "black")
+				bgColor = ifc(count%2 == 0, "midnightblue", "black")
 
-	            table.insert(mshow, {a[1], zName, rID})
+				table.insert(mshow, {a[1], zName, rID})
 
-    	        ColourTell(
-        	        "dimgray", bgColor, "| ",
-            	    "white", bgColor, string.format("%-28s", mName),
-                	"dimgray", bgColor, " | ",
-	                "limegreen", bgColor, string.format("%-23s", rName),
-                	"dimgray", bgColor, " | "
+				ColourTell(
+					"dimgray", bgColor, "| ",
+					"white", bgColor, string.format("%-28s", mName),
+					"dimgray", bgColor, " | ",
+					"limegreen", bgColor, string.format("%-23s", rName),
+					"dimgray", bgColor, " | "
 				)
 
 					Hyperlink("mapper goto " .. rID, string.format("%-7s", rID), "goto " .. rID, "cyan", bgColor, 0, 1)
 
 				ColourTell(
-                	"dimgray", bgColor, " | ",
-                	"yellow", bgColor, string.format("%-10s", zName),
-                	"dimgray", bgColor, " | ",
-                	"white", bgColor, string.format("%5d", mobKills),
-                	"dimgray", bgColor, " |\n"
-            	)
-        	end
-    	end
+					"dimgray", bgColor, " | ",
+					"yellow", bgColor, string.format("%-10s", zName),
+					"dimgray", bgColor, " | ",
+					"white", bgColor, string.format("%5d", mobKills),
+					"dimgray", bgColor, " |\n"
+				)
+			end
+		end
 
-    	if count == 0 then
-	        ColourNote("dimgray", "", "| ", "tomato", "", string.format("%-90s", failure), "dimgray", "", "|")
-	    end
+		if count == 0 then
+			ColourNote("dimgray", "", "| ", "tomato", "", string.format("%-90s", failure), "dimgray", "", "|")
+		end
 
-	    ColourNote("dimgray", "", dividers)
+		ColourNote("dimgray", "", dividers)
 
-	    if count == 1 then
-        	InfoNote("1 match found!")
-    	elseif count > 1 then
-	        InfoNote(count .. " matches found!")
-	    end
+		if count == 1 then
+			InfoNote("1 match found!")
+		elseif count > 1 then
+			InfoNote(count .. " matches found!")
+		end
 
-    	SnDdb:close()
-    	SnDdb = nil
+		SnDdb:close()
+		SnDdb = nil
 	end
 
 	function mobShow(name, line, args)
@@ -7638,18 +7687,18 @@ end
 		group="trg_gq_info"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
-	<trigger match="^Kill at least (?<qty>\d) \* (?<mob>.+) \((?<loc>[^(]+)\)\.$"
+	<trigger match="^Kill at least (?<qty>\d) \* (?<target>.+)\.$"
 		script="gq_info_line"
 		group="trg_gq_info"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
-	<trigger match="^You still have to kill (?<qty>[1-3]) \* (?<mob>.+) \((?<loc>[^(]+?)(?<isdead> - Dead)?\)$"
+	<trigger match="^You still have to kill (?<qty>[1-3]) \* (?<target>.+)$"
 		script="gq_check_line"
 		name="trg_gq_check_line" group="trg_gq_check"
 		enabled="n"	regexp="y" sequence="500" keep_evaluating="y" omit_from_output="y" send_to="12" >
 			<send>	EnableTrigger("trg_gq_check_end", true) </send> </trigger>
 
-	<trigger match="^(?!You still have to kill [1-3] \* .+ \(\S[^(]+?(?: - Dead)?\))$"
+	<trigger match="^(?!You still have to kill [1-3] \* .+ \(\S.+?(?: - Dead)?\))$"
 		script="gq_check_end"
 		name="trg_gq_check_end" group="trg_gq_check"
 		enabled="n"	regexp="y" sequence="500" keep_evaluating="y" omit_from_output="n" send_to="12" > </trigger>
@@ -7725,26 +7774,26 @@ end
 					EnableTrigger("trg_cp_info_line", true)
 					EnableTrigger("trg_cp_info_end", true) </send> </trigger>
 
-	<trigger match="^Find and kill 1 \* (?<mob>.+) \((?<loc>[^(]+)\)$"
+	<trigger match="^Find and kill 1 \* (?<target>.+)$"
 		script="cp_info_line"
 		name="trg_cp_info_line" group="trg_campaign"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
-	<trigger match="^(?!Find and kill 1 \* .+ \([^(]+\))$"
+	<trigger match="^(?!Find and kill 1 \* .+ \(.+\))$"
 		script="cp_info_end"
 		name="trg_cp_info_end" group="trg_campaign"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
 			<send>	EnableTrigger("trg_cp_info_line", false)
 					EnableTrigger("trg_cp_info_end", false) </send> </trigger>
 
-	<trigger match="^You still have to kill \* (?<mob>.+) \((?<loc>[^(]+?)(?<isdead> - Dead)?\)$"
+	<trigger match="^You still have to kill \* (?<target>.+)$"
 		script="cp_check_line"
 		name="trg_cp_check_line" group="trg_campaign"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12" >
 			<send>	EnableTrigger("trg_cp_check_end", true)</send> </trigger>
 
 
-	<trigger match="^(?!You still have to kill \* .+ \([^(]+?(?: - Dead)?\))$"
+	<trigger match="^(?!You still have to kill \* .+ \(.+?(?: - Dead)?\))$"
 		script="cp_check_end"
 		name="trg_cp_check_end" group="trg_campaign"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12" >

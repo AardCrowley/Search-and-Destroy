@@ -418,7 +418,7 @@
 
 		if current_version >= SCHEMA_VERSION then return end
 
-		InfoNote("Migrating datase")
+		InfoNote("Migrating database")
 
 		-- Inidividual migrations go here
 		if current_version == 0 then

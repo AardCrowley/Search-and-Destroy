@@ -6348,7 +6348,7 @@ end
 		elseif str == "xmap" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xmap move <roomID> <walk|run>")
 			Note()
-			ColourNote("antiquewhite", "", unpack({helpWrap("Moves between rooms at default speed (see 'help xset speed') without argument, or, with argument, walks (without portals) or runs (with portals) to the supplied room ID.")}))
+			ColourNote("antiquewhite", "", unpack({helpWrap("Moves between rooms at default speed (see 'xhelp xset speed') without argument, or, with argument, walks (without portals) or runs (with portals) to the supplied room ID.")}))
 
 		elseif str == "roomnote" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": roomnote <area|area areakey>")
@@ -6399,14 +6399,14 @@ end
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("Moves to the next room in the list, or with '-', the previous room.")}))
 			Note()
-			ColourNote("antiquewhite", "", unpack({helpWrap("See 'help xset nx' for information about the action that will be taken upon arriving in the room.")}))
+			ColourNote("antiquewhite", "", unpack({helpWrap("See 'xhelp xset nx' for information about the action that will be taken upon arriving in the room.")}))
 
 		elseif str == "go" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": go <index #>")
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("Moves to the first room in the index, or with a supplied argument to the index number supplied.")}))
 			Note()
-			ColourNote("antiquewhite", "", unpack({helpWrap("See 'help xset nx' for information about the action that will be taken upon arriving in the room.")}))
+			ColourNote("antiquewhite", "", unpack({helpWrap("See 'xhelp xset nx' for information about the action that will be taken upon arriving in the room.")}))
 
 		elseif str == "xset nx" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset nx <smartscan|con|scan|scanhere|qs|none>")
@@ -6455,7 +6455,7 @@ end
 		elseif str == "xcp mode" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xcp mode <ht|qw|off>")
 			Note()
-			ColourNote("antiquewhite", "", unpack({helpWrap("Without an argument, displays your current default action to take when searching for a mob using 'xcp' (see 'help xcp'). With an argument, sets your default action to 'ht' (hunt trick, 'help ht'), 'qw' (quick where, 'help qw'), or 'off' (no action taken).")}))
+			ColourNote("antiquewhite", "", unpack({helpWrap("Without an argument, displays your current default action to take when searching for a mob using 'xcp' (see 'xhelp xcp'). With an argument, sets your default action to 'ht' (hunt trick, 'xhelp ht'), 'qw' (quick where, 'xhelp qw'), or 'off' (no action taken).")}))
 
 		elseif str == "xcp quest" or str == "quest"then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xcp quest")

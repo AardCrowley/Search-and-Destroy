@@ -6987,13 +6987,15 @@ end
 			end
 
 			for i, s in ipairs(style) do
-				if string.match(s.text, "^%s*%(.+%)%s*$") then
+				if string.match(s.text, "^%s*%(.+%)%s*$") or s.text == " " then
+					NoteStyle(s.style)
 					ColourTell(RGBColourToName(s.textcolour), RGBColourToName(s.backcolour), s.text)
 				else
 					break
 				end
 			end
 
+			NoteStyle(0)
 			ColourNote("silver", "", mob_name, details.colour, "", string.format(" (%s)", details.level_range))
 		end
 	end

@@ -1,4 +1,9 @@
 {
+    "5.89": {
+        "changes": [
+            "shopkeepers and protected mobs show up on overwritten con"
+        ]
+    },
     "5.88": {
         "fixes": [
             "Fix for rare bug in quick where",

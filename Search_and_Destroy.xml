@@ -7016,9 +7016,11 @@ end
 
 			ColourTell("silver", "", mob_name)
 			NoteStyle(1)
-			ColourNote("white", "", " (safe)")
-		else
-			print("no overwrite")
+			if name == "consider_shopkeeper" then
+				ColourNote("gold", "", " (shopkeeper)")
+			else
+				ColourNote("white", "", " (divine protection)")
+			end
 		end
 	end
 
@@ -8035,11 +8037,11 @@ end
 <!-- Consider -->
 
 	<trigger match="^(?<name>.+) has divine protection\.$"
-		script="consider_unkillable" name="consider_unkillable" group="consider"
+		script="consider_unkillable" name="consider_protected" group="consider"
 		enabled="y" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
 
 	<trigger match="^If you killed (?<name>.+), who would serve .+ customers\?$"
-		script="consider_unkillable" name="consider_unkillable2" group="consider"
+		script="consider_unkillable" name="consider_shopkeeper" group="consider"
 		enabled="y" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
 
 	<trigger match="^$"

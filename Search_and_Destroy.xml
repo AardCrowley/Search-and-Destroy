@@ -6998,8 +6998,26 @@ end
 		end
 	end
 
-	function consider_unkillable()
+	function consider_unkillable(name, line, wildcards, style)
 		EnableTrigger("consider_end", true)
+
+		if is_con_overwritten() and not con_after_scan then
+			local mob_name = Trim(wildcards.name)
+
+			for i, s in ipairs(style) do
+				if string.match(s.text, "^%s*%(.+%)%s*$") then
+					ColourTell(RGBColourToName(s.textcolour), RGBColourToName(s.backcolour), s.text)
+				else
+					break
+				end
+			end
+
+			ColourTell("silver", "", mob_name)
+			NoteStyle(1)
+			ColourNote("white", "", " (safe)")
+		else
+			print("no overwrite")
+		end
 	end
 
 	function consider_end()
@@ -8006,8 +8024,12 @@ end
 
 <!-- Consider -->
 
-	<trigger match="^(.+ has divine protection\.|If you killed .+, who would serve .+ customers\?)$"
+	<trigger match="^(?<name>.+) has divine protection\.$"
 		script="consider_unkillable" name="consider_unkillable" group="consider"
+		enabled="y" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
+
+	<trigger match="^If you killed (?<name>.+), who would serve .+ customers\?$"
+		script="consider_unkillable" name="consider_unkillable2" group="consider"
 		enabled="y" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
 
 	<trigger match="^$"

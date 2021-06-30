@@ -1,5 +1,9 @@
 {
     "5.89": {
+        "features": [
+            "New command `xset table notes` that will show notes in the rooms table instead of [notes].",
+            "New command `xset table width <num>` that lets you configure how wide you want the room tables to be. It only expands the note portion of them. Number must be between 80 and 150",
+        ],
         "changes": [
             "shopkeepers and protected mobs show up on overwritten con"
         ]

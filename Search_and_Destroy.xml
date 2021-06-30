@@ -343,6 +343,10 @@
 -- [[ Image state ]]
 	local images_loaded = false
 
+-- [[ Table settings ]]
+	local table_notes = GetVariable("mcvar_xset_table_notes") or "off"
+	local table_width = tonumber(GetVariable("mcvar_xset_table_width")) or 80
+
 -- [[ S&D dev stuff ]]
 	local debug_mode = GetVariable("debug_mode") or "off"
 
@@ -3684,22 +3688,23 @@ end
 		gotoList = {}
 		local mapper_area_index = 0
 		local line_num = 0
+		local note_width = table_width - 62
 		local last_area = ""
 		local has_chance = #results > 0 and results[1].percentage
-		local width = 69
-		ColourTell("#808080", "", string.format("\nXCP  Location %36s", "(uid)"))
+		ColourTell("#808080", "", string.format("\nXCP  %-38s  %-7s  %-6s", "Location", "(uid)", ""))
 		if has_chance then
-			width = 80
-			ColourTell("#808080", "", string.format("%20s", "(chance)"))
+			note_width = note_width - 11
+			ColourTell("#808080", "", string.format("  %-9s", "(chance)"))
 		end
+		ColourTell("#808080", "", "  Notes")
 		print("")
-		ColourNote("#808080", "", string.rep("-", width))
+		ColourNote("#808080", "", string.rep("-", table_width))
 		for i,v in ipairs (results) do
 			line_num = line_num + 1
 			local background = (line_num % 2) == 0 and text_colors.alternating_row or ""
 			local instruction = "go " .. mapper_area_index
 			if (last_area ~= v.arid) then
-				local padding = string.rep(" ", width - 5 - #v.arid)
+				local padding = string.rep(" ", table_width - 5 - #v.arid)
 				if (mapper_area_index == 0) then
 					local areaLine = string.format("%3d  %s%s", mapper_area_index, v.arid, padding)
 					Hyperlink("go " .. mapper_area_index, areaLine, "go to area " .. v.arid, "silver", background, 0, 1)
@@ -3732,9 +3737,15 @@ end
 			end
 
 			if v.notes then
-				Hyperlink(string.format("roomnote %i", v.rmid), "  [notes]", v.notes, "lightgreen", background, 0, 1)
+				if show_notes_in_table() then
+					text = ellipsify(v.notes, note_width)
+				else
+					text = "[notes]"
+				end
+				text = string.format("  %-" .. note_width .. "s", text)
+				Hyperlink(string.format("roomnote %i", v.rmid), text, v.notes, "lightgreen", background, 0, 1)
 			else
-				ColourTell("", background, string.rep(" ", 9))
+				ColourTell("", background, string.rep(" ", note_width + 2))
 			end
 
 			print("")
@@ -3743,7 +3754,7 @@ end
 		if (mapper_area_index == 0) then
 			InfoNote("No matching rooms found.")
 		end
-		ColourNote("#808080", "", string.rep("-", width))
+		ColourNote("#808080", "", string.rep("-", table_width))
 		ColourNote("#808080", "", "Type 'go <index>' or click link to go to that room.\n")
 	end
 
@@ -6253,6 +6264,8 @@ end
 			"xset nx",
 			"xset con_overwrite",
 			"xset gqalias",
+			"xset table notes",
+			"xset table width",
 			"sound",
 			"xrt|xrun",
 			"cp|gq",
@@ -6426,7 +6439,14 @@ end
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset gqalias")
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("Enable or disable extra 'qq' and 'gg' aliases for 'gquest check'.")}))
-
+		elseif str == "table notes" or str == "xset table notes" then
+			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset table notes")
+			Note()
+			ColourNote("antiquewhite", "", unpack({helpWrap("When enabled, show room notes directly in the rooms table, up to the width available. Table width can be expanded with the `xset table width` command.")}))
+		elseif str == "table width" or str == "xset table width" then
+			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset table width <num>")
+			Note()
+			ColourNote("antiquewhite", "", unpack({helpWrap("Set the table width for room tables to the given number, between 80 and 150. This is particularly useful for showing notes when the xset table notes is enabled.")}))
 		elseif str == "xset con_overwrite" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset con_overwrite")
 			Note()
@@ -7341,6 +7361,28 @@ end
 
 	function is_sound_enabled()
 		return xset_sound_onoff == "on"
+	end
+
+	function xset_table_notes()
+		if table_notes == "on" then
+			table_notes = "off"
+			InfoNote("Room notes will no longer be shown directly in the tables")
+		else
+			table_notes = "on"
+			InfoNote("Room notes will be shown directly in the tables")
+		end
+		SetVariable("mcvar_xset_table_notes", table_notes)
+	end
+
+	function show_notes_in_table()
+		return table_notes == "on"
+	end
+
+	function xset_table_width(name, line, wildcards)
+		local width = tonumber(wildcards.width) or 80
+		table_width = math.min(150, math.max(80, width))
+		InfoNote("Set table width to ", table_width)
+		SetVariable("mcvar_xset_table_width", table_width)
 	end
 
 	function trigger_receive_xp()
@@ -8356,6 +8398,14 @@ end
 
 	<alias	match="^xset sound$"
 		script="xset_sound"
+		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xset table notes$"
+		script="xset_table_notes"
+		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xset table width (?<width>\d{2,3})$"
+		script="xset_table_width"
 		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 <!-- xset window commands -->

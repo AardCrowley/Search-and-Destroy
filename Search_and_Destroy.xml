@@ -7091,7 +7091,8 @@ end
 			if room.mobs and #room.mobs > 0 then
 				if room.header then
 					for j, style in ipairs(room.header) do
-						ColourTell(style[1], style[2], style[3])
+						NoteStyle(style.style)
+						ColourTell(style.color, style.bcolor, style.text)
 					end
 					print("")
 				end
@@ -7099,7 +7100,8 @@ end
 				for j, mob in ipairs(room.mobs) do
 					anything_seen = true
 					for k, style in ipairs(mob) do
-						ColourTell(unpack(style))
+						NoteStyle(style.style)
+						ColourTell(style.color, style.bcolor, style.text)
 					end
 					print("")
 				end
@@ -7108,7 +7110,8 @@ end
 			if #room.doors > 0 then
 				for j, door in ipairs(room.doors) do
 					for k, style in ipairs(door) do
-						ColourTell(unpack(style))
+						NoteStyle(style.style)
+						ColourTell(style.color, style.bcolor, style.text)
 					end
 					print("")
 				end
@@ -7179,7 +7182,12 @@ end
 	end
 
 	function convert_one_style(style)
-		return { RGBColourToName(style.textcolour), RGBColourToName(style.backcolour), style.text }
+		return {
+			style = style.style or 0,
+			color = RGBColourToName(style.textcolour),
+			bcolor = RGBColourToName(style.backcolour),
+			text = style.text,
+		}
 	end
 
 	function scan_mob(name, line, wildcards, style)
@@ -7197,7 +7205,7 @@ end
 			local padding = 5
 			local mob_styled_text = {}
 			for i, tag in ipairs(tags) do
-				table.insert(mob_styled_text, {tag.colour, "", tag.text})
+				table.insert(mob_styled_text, {style = 0, color = tag.colour, bcolor = "", text = tag.text})
 				padding = padding - #tag.text
 			end
 

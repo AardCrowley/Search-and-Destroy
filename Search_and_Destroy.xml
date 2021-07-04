@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.88" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley and Naricain" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="5.89" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley and Naricain" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -2094,6 +2094,7 @@ end
 	end
 
 	function player_not_on_cp()
+		DebugNote("Called player_not_on_cp")
 		player_on_cp = "no"
 		EnableTriggerGroup ("trg_campaign", false)
 		cp_info_level = "0"
@@ -2101,8 +2102,10 @@ end
 		cp_info_list = {}
 		cp_check_list = {}
 		if (player_on_gq == "yes") then
+			DebugNote("Still on gq, not clearing target list")
 			-- do nothing, we don't want to clear our gq info
 		else
+			DebugNote("Not on gq, clearing target list")
 			main_target_list = {}
 			room_targets_ignored = {}
 			area_room_type = "none"

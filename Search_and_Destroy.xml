@@ -7455,7 +7455,9 @@ end
 		"White Aura",
 		"W",
 		"wounded",
-		"aimed"
+		"aimed",
+		"Old",
+		"O",
 	}
 
 	local CONSIDER_OUTCOMES = {

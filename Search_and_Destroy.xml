@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.89" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley and Naricain" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="5.89" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley and Naricain" language="Lua" purpose="Find mobs faster." save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -118,9 +118,6 @@
 	local xcp_retry_stat
 	local xcp_index_attempt
 	local last_kill_index
-
-	local last_mob_damaged = nil
-	local last_mob_killed = nil
 
 -- [[ campaign data (cpmd) ]]
 	local cp_info_level = tonumber(GetVariable("mcvar_cp_level_taken")) or 0
@@ -2049,9 +2046,11 @@ end
 	end
 
 	function get_last_kill_index()
+		local en = gmcp("char.status.enemy")
+		print("get_last_kill_index: " .. en)
 		for i, target in ipairs(main_target_list) do
-			DebugNote("comparing ", last_mob_killed, " (", current_room.arid, ") to ", target.mob, " (",  target.arid, ")")
-			if current_room.arid == target.arid and last_mob_killed == target.mob then
+			DebugNote("comparing ", en, " (", current_room.arid, ") to ", target.mob, " (",  target.arid, ")")
+			if current_room.arid == target.arid and en == target.mob then
 				DebugNote("killed mob is number ", i)
 				return i
 			end
@@ -2853,7 +2852,7 @@ end
 		if #str <= max_length then
 			return str
 		else
-			return str:sub(1, max_length - 1) .. "…"
+			return str:sub(1, max_length - 1) .. "â¦"
 		end
 	end
 
@@ -4554,7 +4553,6 @@ end
 		mock_gq = mock_gquests[mock_gqid_joined]
 
 		if mock_gq.targets and #mock_gq.targets >= kill_num then
-			last_mob_killed = mock_gq.targets[kill_num].name
 
 			local curr_arid = current_room.arid
 			current_room.arid = areaNameXref[mock_gq.targets[kill_num].location] or curr_arid
@@ -4991,7 +4989,6 @@ end
 		if clicked then
 			color_1, color_2 = color_2, color_1
 		end
-
 		WindowRectOp(win,2, x,y,w,z, bgcolor)													-- Draw background and set color (black)
 		WindowRectOp(win,4, x,y,w,z, color_1, color_2)											-- Draw button border (left/top = light grey, right/bottom = darker grey)
 		WindowText(win, "bt1", text, tx,ty,w-1,z-1, text_color, false)								-- Draw button text ("button" font, light grey)
@@ -5001,7 +4998,18 @@ end
 				"" .. (tooltip or text), miniwin.cursor_arrow, 0)											-- Tooltip text, cursor shape (hand)
 		end
 	end
-
+	
+	function draw_button_1_B(L, T, text, hsName, tooltip, tdx, tdy)
+		local x,y,w,z = L, T, L+30, T+25											-- x and y values for button boundaries
+		local tx,ty = (x+tdx), (y+tdy)	-- x and y values for text location
+		local bgcolor = 0x000060	-- red
+		local color_1 = 0x80E0E0	-- yellow
+		local color_2 = 0x80E0E0	-- yellow
+		WindowRectOp (win,2, x,y,w,z, bgcolor)												-- Draw background and set color (black)
+		WindowRectOp (win,4, x,y,w,z, color_1, color_2)										-- Draw button border (left/top = light grey, right/bottom = darker grey)
+		WindowText(win, "bt1", text, tx,ty,w-1,z-1, color_1, false)								-- Draw button text ("button" font, light grey)
+	end
+	
 	local win_circle_readout_vars = {
 			["cp"] 	 = { cc, cc1="r", cc2y="", tc1="", tc2="", tdx="", tdy="", text="" },
 			["gq"] 	 = { cc1n="", cc2n="", cc1y="", cc2y="", tc1="", tc2="", tdx="", tdy="", text="" },
@@ -5315,13 +5323,13 @@ end
 		local hs_left, hs_top, hs_right, hs_bottom
 
 		if quest_target.qstat == "0" then
-			text = " You may now quest again"
+			text = " You may now quest again."
 			color = text_colors.quest_available
 		elseif has_active_quest() then
 			color = is_quest_mob_targeted() and text_colors.targeted or text_colors.normal
 			text = string.format(" Q) %s - '%s' (%s)", quest_target.mob, quest_target.room, quest_target.arid)
 		elseif quest_target.qstat == "3" then
-			text = " Quest complete! You may turn it in"
+			text = " Quest complete! You may turn it in."
 			color = text_colors.quest_complete
 		else
 			return false
@@ -5369,7 +5377,7 @@ end
 		local click = ((bit.band(flags, 0x20) == 0) and "L" or "R")
 		local left = WindowHotspotInfo(win, hotspot_id, 1)
 		local top = WindowHotspotInfo(win, hotspot_id, 2)
-		draw_button_1_A(left, top, b.text, hotspot_id.."2", "", b.tdx, b.tdy, true)
+		draw_button_1_B(left, top, b.text, hotspot_id.."2", "", b.tdx, b.tdy, true)
 		Redraw()
 	end
 
@@ -6095,7 +6103,7 @@ end
 			if upstream_version ~= tostring(PLUGIN_VERSION) then
 				callback(upstream_version)
 			elseif log_no_updates then
-				InfoNote("Search&Destroy: No new updates available")
+				InfoNote("Search & Destroy: No new updates available.")
 			end
 		end
 	end
@@ -6151,7 +6159,7 @@ end
 		set_variable("mcvar_automatic_update_checks", automatic_update_checks)
 
 
-		InfoNote("\nSearch&Destroy automatic update checking is now ", string.upper(automatic_update_checks))
+		InfoNote("\nSearch & Destroy automatic update checking is now ", string.upper(automatic_update_checks))
 	end
 
 	function download_sounds(callback)
@@ -6215,7 +6223,7 @@ end
 					if debug_mode == "on" then
 						SetClipboard(page)
 					end
-					DebugNote("Page data was too large for display and has been save to the clipboard")
+					DebugNote("Page data was too large for display and has been saved to the clipboard")
 				else
 					DebugNote("Page: ", page)
 				end
@@ -7344,7 +7352,7 @@ end
 		xset_sound_onoff = new_val
 		set_variable("mcvar_xset_sound_onoff", xset_sound_onoff)
 
-		InfoNote("\nSearch&Destroy Sounds are now ", string.upper(xset_sound_onoff))
+		InfoNote("\nSearch & Destroy: Sounds are now ", string.upper(xset_sound_onoff))
 	end
 
 	function xset_sound()
@@ -7386,20 +7394,6 @@ end
 		table_width = math.min(150, math.max(80, width))
 		InfoNote("Set table width to ", table_width)
 		SetVariable("mcvar_xset_table_width", table_width)
-	end
-
-	function trigger_receive_xp()
-		if last_mob_damaged then
-			DebugNote("I suspect you just killed ", last_mob_damaged, " in room ", current_room.rmid, " (", current_room.arid, ")")
-			last_mob_killed = last_mob_damaged
-		else
-			DebugNote("****** ", "I don't know which mob you just killed", " ******")
-		end
-		last_mob_damaged = nil
-	end
-
-	function trigger_damage_done(name, line, wildcards)
-		last_mob_damaged = Trim(wildcards.mob_name)
 	end
 
 	function set_variable(key, value)
@@ -7455,9 +7449,7 @@ end
 		"White Aura",
 		"W",
 		"wounded",
-		"aimed",
-		"Old",
-		"O",
+		"aimed"
 	}
 
 	local CONSIDER_OUTCOMES = {
@@ -7499,245 +7491,6 @@ end
 ]]>
 </script>
 <triggers>
-+<!-- Receive xp -->
-	<trigger match="^You (?:don't )?receive \d+(?:\+\d+)* experience points?\."
-		script="trigger_receive_xp" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-<!-- Damage triggers -->
-	<trigger match="^.+\w tickles +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w bruises +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w scratches +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w grazes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w nicks +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w scars +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w hits +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w injures +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w wounds +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w mauls +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w maims +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w mangles +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w mars +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w LACERATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w DECIMATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w DEVASTATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w ERADICATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w OBLITERATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w EXTIRPATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w INCINERATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w MUTILATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w DISEMBOWELS +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w MASSACRES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w DISMEMBERS +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w RENDS +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w - BLASTS - +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w -= DEMOLISHES =- +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w \*\* SHREDS \*\* +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w \*\*\*\* DESTROYS \*\*\*\* +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w \*\*\*\*\* PULVERIZES \*\*\*\*\* +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w -=- VAPORIZES -=- +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-==-> ATOMIZES <-==-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-:-> ASPHYXIATES <-:-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-\*-> RAVAGES <-\*-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <>\*<> FISSURES <>\*<> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <\*><\*> LIQUIDATES <\*><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <\*><\*><\*> EVAPORATES <\*><\*><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-=-> SUNDERS <-=-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <=-=><=-=> TEARS INTO <=-=><=-=> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <->\*<=> WASTES <=>\*<-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-\+-><-\*-> CREMATES <-\*-><-\+-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <\*><\*><\*><\*> ANNIHILATES <\*><\*><\*><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <--\*--><--\*--> IMPLODES <--\*--><--\*--> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-><-=-><-> EXTERMINATES <-><-=-><-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-==-><-==-> SHATTERS <-==-><-==-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <\*><-:-><\*> SLAUGHTERS <\*><-:-><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-\*-><-><-\*-> RUPTURES <-\*-><-><-\*-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-\*-><\*><-\*-> NUKES <-\*-><\*><-\*-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w -<\[=-\+-=\]<:::<>:::> GLACIATES <:::<>:::>\[=-\+-=\]>- +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-=-><-:-\*-:-><\*--\*> METEORITES <\*--\*><-:-\*-:-><-=-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-:-><-:-\*-:-><-\*-> SUPERNOVAS <-\*-><-:-\*-:-><-:-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w does UN\w+ things to +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w damages? +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +shreds +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +destroys +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +pulverizes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +vaporizes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +atomizes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +asphyxiates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +ravages +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +fissures +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +liquidates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +evaporates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +sunders +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +into +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +wastes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +cremates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +annihilates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +implodes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +exterminates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +shatters +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +slaughters +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +ruptures +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +nukes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +glaciates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +meteorites +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +supernovas +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^(?:You assassinate |You catch |You attempt to bury .* deep into |You lunge at)(?<mob_name>.*)(?: with cold efficiency\.| completely off-guard and inflict massive damage on .*\.|'s? back!|with a .*!)$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
 <!-- Gquest operations -->
 	<!-- group: trg_gq -->
 	<trigger match="^Quest Name\.\.\.\.\.\.\.\.\.: \[ Global quest # (?<gq_id>\d{1,5}) \]$"

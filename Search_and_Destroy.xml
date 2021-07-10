@@ -7512,24 +7512,27 @@ end
 <triggers>
 +<!-- Receive xp -->
 	<trigger match="^You (?:don't )?receive \d+(?:\+\d+)* experience points?\."
-		script="trigger_receive_xp" ignore_case="n" enabled="y" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
+		script="trigger_receive_xp" enabled="y" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
 
 <!-- Damage triggers -->
-	<trigger match="^\*?(?:\[\d+\] )?Your \w+ does UN(?:SPEAKABLE|THINKABLE|IMAGINABLE|BELIEVABLE) things to (?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" enabled="n" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
+<trigger match="^\*?(?:\[\d+\] )?Your [A-Za-z ]+ does UN(?:SPEAKABLE|THINKABLE|IMAGINABLE|BELIEVABLE) things to (?<mob_name>\S.*)! \[\d+\]$"
+		script="trigger_damage_done" enabled="y" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
 
-	<trigger match="^^\*?(?:\[\d+\] )?You damage (?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" enabled="n" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
+	<trigger match="^\*?(?:\[\d+\] )?You damage (?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" enabled="y" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
 
-	<trigger match="^\*?(?:\[\d+\] )?Your \w+ (?:damages|misses|tickles|bruises|scratches|grazes|nicks|scars|hits|injures|wounds|mauls|maims|mangles|mars|lacerates|decimates|devastates|eradicates|obliterates|extirpates|incinerates|mutilates|disembowels|massacres|dismembers|rends|blasts|demolishes|shreds|destroys|pulverizes|vaporizes|atomizes|asphyxiates|ravages|fissures|liquidates|evaporates|sunders|tears into|wastes|cremates|annihilates|implodes|exterminates|shatters|slaughters|ruptures|nukes|glaciates|meteorites|supernovas) (?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" enabled="n" regexp="y" sequence="1" keep_evaluating="y" ignore_case="y" > </trigger>
+	<trigger match="^\*?(?:\[\d+\] )?Your [A-Za-z ]+ (?:damages|misses|tickles|bruises|scratches|grazes|nicks|scars|hits|injures|wounds|mauls|maims|mangles|mars|lacerates|decimates|devastates|eradicates|obliterates|extirpates|incinerates|mutilates|disembowels|massacres|dismembers|rends|blasts|demolishes|shreds|destroys|pulverizes|vaporizes|atomizes|asphyxiates|ravages|fissures|liquidates|evaporates|sunders|tears into|wastes|cremates|annihilates|implodes|exterminates|shatters|slaughters|ruptures|nukes|glaciates|meteorites|supernovas) (?<mob_name>\S.*)[!\.] \[\d+\]$"
+		script="trigger_damage_done" enabled="y" regexp="y" sequence="1" keep_evaluating="y" ignore_case="y" > </trigger>
 
-	<trigger match="^\*?(?:\[\d+\] )?Your \w+ (?:- BLASTS -|-= DEMOLISHES =-|\*\* SHREDS \*\*|\*\*\*\* DESTROYS \*\*\*\*|\*\*\*\*\* PULVERIZES \*\*\*\*\*|-=- VAPORIZES -=-|<-==-> ATOMIZES <-==->|<-:-> ASPHYXIATES <-:->|<-\*-> RAVAGES <-\*->|<>\*<> FISSURES <>\*<>|<\*><\*> LIQUIDATES <\*><\*>|<\*><\*><\*> EVAPORATES <\*><\*><\*>|<-=-> SUNDERS <-=->|<=-=><=-=> TEARS INTO <=-=><=-=>|<->\*<=> WASTES <=>\*<->|<-\+-><-\*-> CREMATES <-\*-><-\+->|<\*><\*><\*><\*> ANNIHILATES <\*><\*><\*><\*>|<--\*--><--\*--> IMPLODES <--\*--><--\*-->|<-><-=-><-> EXTERMINATES <-><-=-><->|<-==-><-==-> SHATTERS <-==-><-==->|<\*><-:-><\*> SLAUGHTERS <\*><-:-><\*>|<-\*-><-><-\*-> RUPTURES <-\*-><-><-\*->|<-\*-><\*><-\*-> NUKES <-\*-><\*><-\*->|-<\[=-\+-=\]<:::<>:::> GLACIATES <:::<>:::>\[=-\+-=\]>-|	<-=-><-:-\*-:-><\*--\*> METEORITES <\*--\*><-:-\*-:-><-=->|<-:-><-:-\*-:-><-\*-> SUPERNOVAS <-\*-><-:-\*-:-><-:->) (?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" enabled="n" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
+	<trigger match="^\*?(?:\[\d+\] )?Your [A-Za-z ]+ (?:- BLASTS -|-= DEMOLISHES =-|\*\* SHREDS \*\*|\*\*\*\* DESTROYS \*\*\*\*|\*\*\*\*\* PULVERIZES \*\*\*\*\*|-=- VAPORIZES -=-|<-==-> ATOMIZES <-==->|<-:-> ASPHYXIATES <-:->|<-\*-> RAVAGES <-\*->|<>\*<> FISSURES <>\*<>|<\*><\*> LIQUIDATES <\*><\*>|<\*><\*><\*> EVAPORATES <\*><\*><\*>|<-=-> SUNDERS <-=->|<=-=><=-=> TEARS INTO <=-=><=-=>|<->\*<=> WASTES <=>\*<->|<-\+-><-\*-> CREMATES <-\*-><-\+->|<\*><\*><\*><\*> ANNIHILATES <\*><\*><\*><\*>|<--\*--><--\*--> IMPLODES <--\*--><--\*-->|<-><-=-><-> EXTERMINATES <-><-=-><->|<-==-><-==-> SHATTERS <-==-><-==->|<\*><-:-><\*> SLAUGHTERS <\*><-:-><\*>|<-\*-><-><-\*-> RUPTURES <-\*-><-><-\*->|<-\*-><\*><-\*-> NUKES <-\*-><\*><-\*->|-<\[=-\+-=\]<:::<>:::> GLACIATES <:::<>:::>\[=-\+-=\]>-|	<-=-><-:-\*-:-><\*--\*> METEORITES <\*--\*><-:-\*-:-><-=->|<-:-><-:-\*-:-><-\*-> SUPERNOVAS <-\*-><-:-\*-:-><-:->) (?<mob_name>\S.*)! \[\d+\]$"
+		script="trigger_damage_done" enabled="y" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
 
 	<trigger match="^(?:You assassinate |You catch |You attempt to bury .* deep into |You lunge at)(?<mob_name>.*)(?: with cold efficiency\.| completely off-guard and inflict massive damage on .*\.|'s? back!|with a .*!)$"
-		script="trigger_damage_done" enabled="n" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
-
+		script="trigger_damage_done" enabled="y" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
+	
+	<trigger match="^(?<mob_name>\S.*) is unaffected by your [A-Za-z ]+!$"
+		script="trigger_damage_done" enabled="y" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
+	
 <!-- Gquest operations -->
 	<!-- group: trg_gq -->
 	<trigger match="^Quest Name\.\.\.\.\.\.\.\.\.: \[ Global quest # (?<gq_id>\d{1,5}) \]$"

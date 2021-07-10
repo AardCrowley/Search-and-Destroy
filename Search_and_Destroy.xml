@@ -7511,7 +7511,7 @@ end
 </script>
 <triggers>
 +<!-- Receive xp -->
-	<trigger match="^You (?:don't )?receive \d+(?:\+\d+)* experience points?\."
+	<trigger match="^(?:You (?:don't )?receive \d+(?:\+\d+)* experience points?\.|That was a pointless no-experience kill!)$"
 		script="trigger_receive_xp" enabled="y" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
 
 <!-- Damage triggers -->

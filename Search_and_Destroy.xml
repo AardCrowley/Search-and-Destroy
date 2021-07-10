@@ -3184,9 +3184,9 @@ end
 					vidblain_nav_tbl = { i=0, j=0, rmid="", arid="", stat=1 }
 				end
 			else  -- arrived in vidblain proper
-				if (ch_state == "2") and (ch_state == vnt.stat) then  -- monitor char state for 3 ticks, if stable, start EIA timer and run to target area
+				if (ch_state == "3") and (ch_state == vnt.stat) then  -- monitor char state for 3 ticks, if stable, start EIA timer and run to target area
 					vnt.j = vnt.j + 1
-					if (vnt.j > 3) then
+					if (vnt.j > 2) then
 						EnableTimer("vidblain_nav_timer", false) -- stop vidblain timer
 						do_mapper_goto(vnt.rmid, "walk")
 						execute_in_area(vnt.arid, eiat.f)	-- start EIA timer

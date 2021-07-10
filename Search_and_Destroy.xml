@@ -7411,7 +7411,6 @@ end
 
 	function trigger_damage_done(name, line, wildcards)
 		last_mob_damaged = Trim(wildcards.mob_name)
-		print(last_mob_damaged)
 	end
 
 	function set_variable(key, value)

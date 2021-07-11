@@ -1967,9 +1967,10 @@ end
 	end
 
 	function cp_info_level_taken(name, line, wildcards)
-		local x = tonumber(wildcards.level)
-		cp_info_level = x
-		set_variable("mcvar_cp_level_taken", x)
+		--local x = tonumber(wildcards.level)
+		--cp_info_level = x
+		cp_info_level = tonumber(wildcards.level)
+		set_variable("mcvar_cp_level_taken", cp_info_level)
 	end
 
 	function cp_info_line(name, line, wildcards)
@@ -1978,8 +1979,7 @@ end
 	end
 
 	function cp_info_end()
-		player_on_cp = "yes"
-		current_activity = "cp"
+		player_is_on_cp()
 		local t = cp_info_list
 		area_room_type = area_room_type_check(t)
 		print("cp type detection: ".. area_room_type .." (level "..cp_info_level..")\n")
@@ -2005,30 +2005,31 @@ end
 	end
 
 	function cp_check_end(name, line, wildcards)
-		player_on_cp = "yes"
-		current_activity = "cp"
+		player_is_on_cp()
 		build_main_target_list("cp", area_room_type)
 		xcp_retry()
 	end
 
 --	[[ general cp status functions ]]
 	function player_start_new_cp()	-- called by line "good luck on your campaign" when starting new cp
-		player_on_cp = "yes"
+		player_is_on_cp()
 		can_get_new_cp = "no"
-		local x = tonumber(gmcp("char.status.level"))
-		cp_info_level = x
-		current_activity = "cp"
+		cp_info_level = tonumber(gmcp("char.status.level"))
+		--local x = tonumber(gmcp("char.status.level"))
+		--cp_info_level = x
+		
 		xg_draw_window()
 		if (noexp_onoff == "on") and (anex_tnl_cutoff > 0) then
 			InfoNote("Search and Destroy: Turning 'noexp' OFF (you have started a new CP)")
 			anex_set_noexp("off")
 		end
+		
 		do_cp_info()
 	end
 
 	function cp_mob_killed()
 		if current_activity ~= "gq" then
-			xcp_retry_stat = 1
+			xcp_retry_stat = 1	-- see function xcp_retry for explanation
 			qw_reset(false)
 			last_kill_index = get_last_kill_index()
 			if last_kill_index and main_target_list[last_kill_index] then
@@ -2086,6 +2087,8 @@ end
 
 	function player_is_on_cp()
 		player_on_cp = "yes"
+		current_activity = "cp"
+		EnableTriggerGroup("damage_message_triggers", true)
 	end
 
 	function do_cp_complete(name, line, wildcards)
@@ -2097,6 +2100,7 @@ end
 		DebugNote("Called player_not_on_cp")
 		player_on_cp = "no"
 		EnableTriggerGroup ("trg_campaign", false)
+		EnableTriggerGroup("damage_message_triggers", false)
 		cp_info_level = "0"
 		set_variable("mcvar_cp_level_taken", "0")
 		cp_info_list = {}
@@ -2211,7 +2215,6 @@ end
 
 	function gq_info_end()
 		EnableTriggerGroup("trg_gq_info", false)
-
 		if potential_gq.finished then
 			DebugNote("Looking at the info of a finished gq. No action needed")
 			return
@@ -2324,7 +2327,6 @@ end
 
 	function gq_check_end()
 		EnableTriggerGroup("trg_gq_check", false)
-
 		player_is_on_gq()
 		build_main_target_list("gq", area_room_type)
 		xcp_retry()
@@ -2453,6 +2455,7 @@ end
 
 	function player_is_on_gq()
 		EnableTriggerGroup("trg_gqmsg", true)
+		EnableTriggerGroup("damage_message_triggers", true)
 		player_on_gq = "yes"
 		current_activity = "gq"
 	end
@@ -2486,6 +2489,8 @@ end
 		if (player_on_cp == "yes") then
 			DoAfterSpecial(0.4, [[ InfoNote("Reloading your cp targets....")
 								do_cp_info() ]], sendto.script)
+		else
+			EnableTriggerGroup("damage_message_triggers", false)
 		end
 	end
 
@@ -7399,20 +7404,6 @@ end
 		SetVariable("mcvar_xset_table_width", table_width)
 	end
 
-	function trigger_receive_xp()
-		if last_mob_damaged then
-			DebugNote("I suspect you just killed ", last_mob_damaged, " in room ", current_room.rmid, " (", current_room.arid, ")")
-			last_mob_killed = last_mob_damaged
-		else
-			DebugNote("****** ", "I don't know which mob you just killed", " ******")
-		end
-		last_mob_damaged = nil
-	end
-
-	function trigger_damage_done(name, line, wildcards)
-		last_mob_damaged = Trim(wildcards.mob_name)
-	end
-
 	function set_variable(key, value)
 		SetVariable(key, value)
 		state_changed = true
@@ -7429,47 +7420,11 @@ end
 
 	local SCAN_FLAGS = {
 		-- Player flags
-		"P",
-		"Player",
-		"OPK",
-		"Linkdead",
-		"WANTED",
-		"HARDCORE",
-		"OPK",
-		"Linkdead",
-		"Raider",
-		"Traitor",
+		"P", "Player", "OPK", "Linkdead", "WANTED", "HARDCORE", "OPK", "Linkdead", "Raider", "Traitor",
 		-- Mob flags
-		"Animated",
-		"A",
-		"Angry",
-		"Charmed",
-		"C",
-		"Diseased",
-		"D",
-		"Golden Aura",
-		"G",
-		"Hidden",
-		"H",
-		"Invis",
-		"I",
-		"Marked",
-		"X",
-		"Red Aura",
-		"R",
-		"Stealth",
-		"S",
-		"Translucent",
-		"T",
-		"Undead",
-		"U",
-		"White Aura",
-		"W",
-		"wounded",
-		"aimed",
-		"Old",
-		"O",
-	}
+		"Animated", "A", "Angry", "Charmed", "C", "Diseased", "D", "Golden Aura", "G", "Hidden", "H",
+		"Invis", "I", "Marked", "X", "Red Aura", "R", "Stealth", "S", "Translucent", "T", "Undead", "U",
+		"White Aura", "W", "Wounded", "Aimed", "Old", "O" }
 
 	local CONSIDER_OUTCOMES = {
 		"You would stomp (?<mob_name>.+?) into the ground\\.$",
@@ -7484,8 +7439,7 @@ end
 		"(?<mob_name>.+?) would crush you like a bug!$",
 		"(?<mob_name>.+?) would dance on your grave!$",
 		"(?<mob_name>.+?) says 'BEGONE FROM MY SIGHT unworthy\\!'$",
-		"You would be completely annihilated by (?<mob_name>.+?)!$",
-	}
+		"You would be completely annihilated by (?<mob_name>.+?)!$"	}
 
 	function setup_scan_con_triggers()
 		local flags_string = "(?<flags>(?: ?\\[AFK\\]| ?\\((?:" .. table.concat(SCAN_FLAGS, "|") .. ")\\))*)?"
@@ -7506,30 +7460,55 @@ end
 			SetTriggerOption(name, "group", "consider")
 		end
 	end
+	
+	function trigger_receive_xp()
+		if last_mob_damaged then
+			DebugNote("I suspect you just killed ", last_mob_damaged, " in room ", current_room.rmid, " (", current_room.arid, ")")
+			last_mob_killed = last_mob_damaged
+		else
+			DebugNote("****** ", "I don't know which mob you just killed", " ******")
+		end
+		last_mob_damaged = nil
+	end
 
+	function trigger_damage_done(name, line, wildcards)
+		last_mob_damaged = Trim(wildcards.mob_name)
+		--print(last_mob_damaged)
+	end
 ]]>
 </script>
 <triggers>
-+<!-- Receive xp -->
+<!-- Last mob killed detecton - damage messages, receive exp -->
 	<trigger match="^(?:You (?:don't )?receive \d+(?:\+\d+)* experience points?\.|That was a pointless no-experience kill!)$"
-		script="trigger_receive_xp" enabled="y" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
+		script="trigger_receive_xp"
+		name="trg_dmgmsg_rec_exp" group="damage_message_triggers"
+		enabled="n" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
 
-<!-- Damage triggers -->
-<trigger match="^\*?(?:\[\d+\] )?Your [A-Za-z ]+ does UN(?:SPEAKABLE|THINKABLE|IMAGINABLE|BELIEVABLE) things to (?<mob_name>\S.*)! \[\d+\]$"
-		script="trigger_damage_done" enabled="y" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
+	<trigger match="^\*?(?:\[\d+\] )?Your [A-Za-z ]+ does UN(?:SPEAKABLE|THINKABLE|IMAGINABLE|BELIEVABLE) things to (?<mob_name>\S.*)! \[\d+\]$"
+		script="trigger_damage_done"
+		name="trg_dmgmsg_unspeakable" group="damage_message_triggers"
+		enabled="n" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
 
 	<trigger match="^\*?(?:\[\d+\] )?You damage (?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" enabled="y" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
+		script="trigger_damage_done"
+		name="trg_dmgmsg_damage_5" group="damage_message_triggers"
+		enabled="n" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
 
 	<trigger match="^\*?(?:\[\d+\] )?Your [A-Za-z ]+ (?:damages|misses|tickles|bruises|scratches|grazes|nicks|scars|hits|injures|wounds|mauls|maims|mangles|mars|lacerates|decimates|devastates|eradicates|obliterates|extirpates|incinerates|mutilates|disembowels|massacres|dismembers|rends|blasts|demolishes|shreds|destroys|pulverizes|vaporizes|atomizes|asphyxiates|ravages|fissures|liquidates|evaporates|sunders|tears into|wastes|cremates|annihilates|implodes|exterminates|shatters|slaughters|ruptures|nukes|glaciates|meteorites|supernovas) (?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" enabled="y" regexp="y" sequence="1" keep_evaluating="y" ignore_case="y" > </trigger>
+		script="trigger_damage_done"
+		name="trg_dmgmsg_basic" group="damage_message_triggers"
+		enabled="n" regexp="y" sequence="1" keep_evaluating="y" ignore_case="y" > </trigger>
 
 	<trigger match="^\*?(?:\[\d+\] )?Your [A-Za-z ]+ (?:- BLASTS -|-= DEMOLISHES =-|\*\* SHREDS \*\*|\*\*\*\* DESTROYS \*\*\*\*|\*\*\*\*\* PULVERIZES \*\*\*\*\*|-=- VAPORIZES -=-|<-==-> ATOMIZES <-==->|<-:-> ASPHYXIATES <-:->|<-\*-> RAVAGES <-\*->|<>\*<> FISSURES <>\*<>|<\*><\*> LIQUIDATES <\*><\*>|<\*><\*><\*> EVAPORATES <\*><\*><\*>|<-=-> SUNDERS <-=->|<=-=><=-=> TEARS INTO <=-=><=-=>|<->\*<=> WASTES <=>\*<->|<-\+-><-\*-> CREMATES <-\*-><-\+->|<\*><\*><\*><\*> ANNIHILATES <\*><\*><\*><\*>|<--\*--><--\*--> IMPLODES <--\*--><--\*-->|<-><-=-><-> EXTERMINATES <-><-=-><->|<-==-><-==-> SHATTERS <-==-><-==->|<\*><-:-><\*> SLAUGHTERS <\*><-:-><\*>|<-\*-><-><-\*-> RUPTURES <-\*-><-><-\*->|<-\*-><\*><-\*-> NUKES <-\*-><\*><-\*->|-<\[=-\+-=\]<:::<>:::> GLACIATES <:::<>:::>\[=-\+-=\]>-|	<-=-><-:-\*-:-><\*--\*> METEORITES <\*--\*><-:-\*-:-><-=->|<-:-><-:-\*-:-><-\*-> SUPERNOVAS <-\*-><-:-\*-:-><-:->) (?<mob_name>\S.*)! \[\d+\]$"
-		script="trigger_damage_done" enabled="y" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
+		script="trigger_damage_done"
+		name="trg_dmgmsg_full" group="damage_message_triggers"
+		enabled="n" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
 
 	<trigger match="^(?:You assassinate |You catch |You attempt to bury .* deep into |You lunge at)(?<mob_name>.*)(?: with cold efficiency\.| completely off-guard and inflict massive damage on .*\.|'s? back!|with a .*!)$"
-		script="trigger_damage_done" enabled="y" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
-	
+		script="trigger_damage_done"
+		name="trg_dmgmsg_skills" group="damage_message_triggers"
+		enabled="n" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
+		
 <!-- Gquest operations -->
 	<!-- group: trg_gq -->
 	<trigger match="^Quest Name\.\.\.\.\.\.\.\.\.: \[ Global quest # (?<gq_id>\d{1,5}) \]$"

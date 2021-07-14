@@ -4684,10 +4684,9 @@ end
 				local line = string.format("    note:'%s'", strip_colours(row.notes))
 				Hyperlink("xmapper move " .. row.uid, line, "go to room " .. row.uid, "lightblue", "black", 0, 1)
 			else
-				local line = string.format("    (%s) ", row.uid)
-				Hyperlink("xmapper move " .. row.uid, line, "go to room " .. row.uid, "lightblue", "black", 0, 1)
+				local line = string.format("    (%s) %s", row.uid, row.notes)
+				local styles = ColoursToStyles(line, ColourNameToRGB("lightblue"), ColourNameToRGB("black"), 0, 0)
 				
-				local styles = ColoursToStyles(row.notes, ColourNameToRGB("lightblue"), ColourNameToRGB("black"), 0, 0)
 				for _,style in pairs(styles[1]) do
 					Hyperlink("xmapper move " .. row.uid, style.text, "go to room " .. row.uid, RGBColourToName(style.textcolour), RGBColourToName(style.backcolour), 0, 1)
 				end

@@ -2301,7 +2301,7 @@ end
 		if location then
 			location = Trim(location)
 			location = location:sub(2, #location-1)
-			if location:match(" - Dead$") then
+			if location:match(" %- Dead$") then
 				location = location:sub(1, #location - 7)
 				dead = "yes"
 			end

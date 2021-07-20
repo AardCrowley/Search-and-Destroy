@@ -2243,7 +2243,7 @@ end
 	function do_gq_check()
 		player_is_on_gq()
 		local time_check = os.clock()					-- prevent double cp checks from different plugins
-		if ((time_check - last_cp_check) < 1.0) then
+		if ((time_check - last_gq_check) < 1.0) then
 			return
 		end
 		last_gq_check = time_check

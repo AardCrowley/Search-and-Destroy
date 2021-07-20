@@ -410,11 +410,23 @@
 		get_changelog(false)
 	end
 
+	function OnPluginEnable()
+		InfoNote("Enabled ", "Search and Destroy")
+		win_init = false
+		xg_create_window()
+	end
+
+	function OnPluginDisable()
+		InfoNote("Disabled ", "Search and Destroy")
+		WindowDelete(win)
+	end
+
 	function migrate_database()
 		local db = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
 		local current_version
 
 		create_initial_tables(db)
+		write_marks_to_db(db)
 
 		for row in db:nrows("PRAGMA user_version") do
 			current_version = row.user_version
@@ -551,6 +563,21 @@
 		db:execute([[
 			DELETE FROM mobs WHERE mob LIKE "%(wounded)%" OR mob LIKE "%(aimed)%";
 		]])
+	end
+
+	function write_marks_to_db(db)
+		DebugNote("writing start rooms to db")
+		load_area_start_rooms()
+		operations = {}
+		for arid, details in pairs(area_start_rooms) do
+			table.insert(operations, string.format([[
+				UPDATE area SET startRoom = %s
+				WHERE key = %s;
+			]],
+			fixsql(details.roomid),
+			fixsql(arid)))
+		end
+		execute_in_transaction(db, operations)
 	end
 
 	function get_changelog(all_changes)
@@ -4063,6 +4090,13 @@ end
 		end
 		local serial = serialize.save_simple(area_start_rooms)
 		set_variable("mcvar_areaStartRooms", serial)
+
+		local db = assert(sqlite3.open(snd_db_file))
+		operation = string.format("UPDATE area SET startRoom = %s WHERE key = %s;",
+			fixsql(ri.rmid), fixsql(ri.arid))
+		db:exec(operation)
+		db:close_vm()
+
 		InfoNote("\nxset mark: Room ", ri.rmid, " set as start of area ", ri.arid, ".\n")
 	end
 

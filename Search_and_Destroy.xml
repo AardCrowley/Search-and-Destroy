@@ -6255,7 +6255,7 @@ end
 			"roomnote",
 			"qw",
 			"ht",
-			"ah",
+			"ah|aha",
 			"ak|kk|qk",
 			"qs",
 			"xq",
@@ -6381,7 +6381,7 @@ end
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("Executes the 'hunt trick' for the current campaign target or supplied argument. Use 'stop' to stop the hunt trick, which will work in most cases but may fail if a mob has a keyword of 'stop'.")}))
 
-		elseif str == "ah" then
+		elseif str == "ah" or str == "aha" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": ah<a> <mobname>")
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("Automatically sends the 'hunt' command and executes the direction hunt leads you. Append 'a' in order to abort autohunting. This is useful for tracking quest mobs through mazes, or if you really want to, hunting players. However, you must have hunt practiced for it to work.")}))

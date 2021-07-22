@@ -1,4 +1,13 @@
 {
+    "5.9": {
+        "changes": [
+            "Notes are stripped of colour codes in the mobs table, and used to color the notes when displaying room/area notes. Courtesy of Karathos"
+        ],
+        "fixes": [
+            "Room names that end in ' Dead' like 'Halls of the Dead' no longer make mop show up as dead",
+            "Added sense life flags so that scan and con output shows up correctly for oracles"
+        ]
+    },
     "5.89": {
         "features": [
             "New command `xset table notes` that will show notes in the rooms table instead of [notes].",

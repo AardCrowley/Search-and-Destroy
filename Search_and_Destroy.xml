@@ -54,6 +54,9 @@
 				"You have now joined Global Quest # 4685. See 'help gquest' for available commands.", "You may win 2 more gquests at this level.", "You can be rewarded for 50 more kills this level."
 		]]--
 
+	
+	dofile (GetInfo(60) .. "aardwolf_colors.lua")
+	
 	require "movewindow"
 	require "serialize"
 	require "tprint"
@@ -3768,7 +3771,7 @@ end
 
 			if v.notes then
 				if show_notes_in_table() then
-					text = ellipsify(v.notes, note_width)
+					text = ellipsify(strip_colours(v.notes), note_width)
 				else
 					text = "[notes]"
 				end
@@ -4712,12 +4715,17 @@ end
 		for row in db:nrows(sql) do
 			found_notes = true
 			if (text_only == true) then
-				local line = string.format("    note:'%s'", row.notes)
+				local line = string.format("    note:'%s'", strip_colours(row.notes))
 				Hyperlink("xmapper move " .. row.uid, line, "go to room " .. row.uid, "lightblue", "black", 0, 1)
 			else
 				local line = string.format("    (%s) %s", row.uid, row.notes)
-				Hyperlink("xmapper move " .. row.uid, line, "go to room " .. row.uid, "lightblue", "black", 0, 1)
+				local styles = ColoursToStyles(line, ColourNameToRGB("lightblue"), ColourNameToRGB("black"), 0, 0)
+				
+				for _,style in pairs(styles[1]) do
+					Hyperlink("xmapper move " .. row.uid, style.text, "go to room " .. row.uid, RGBColourToName(style.textcolour), RGBColourToName(style.backcolour), 0, 1)
+				end
 			end
+
 			print("")
 		end
 		db:close_vm()

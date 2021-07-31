@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.89" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley and Naricain" language="Lua" purpose="Find mobs faster." save_state="y" requires="4.90" >
+<plugin version="5.9" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley and Naricain" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -54,10 +54,14 @@
 				"You have now joined Global Quest # 4685. See 'help gquest' for available commands.", "You may win 2 more gquests at this level.", "You can be rewarded for 50 more kills this level."
 		]]--
 
+	
+	dofile (GetInfo(60) .. "aardwolf_colors.lua")
+	
 	require "movewindow"
 	require "serialize"
 	require "tprint"
-	require "wait"
+	--require "wait"
+	require "..\\worlds\\plugins\\~lua_sd\\starling_sd_mods"
 
 	json = require "json"
 
@@ -65,10 +69,6 @@
 
 	function ifc(condition, ctrue, cfalse)
 		if condition then return ctrue else return cfalse end
-	end
-
-	function mapFind(query)
-		return CallPlugin("b6eae87ccedd84f510b74714", "map_find_query", query)
 	end
 
 	mshow                           = {}
@@ -87,7 +87,14 @@
 	local plugin_id_gmcp_mapper		= "b6eae87ccedd84f510b74714"
 	local plugin_id_z_order 		= "462b665ecb569efbf261422f"
 	local plugin_id_soundpack 		= "23832d1089f727f5f34abad8"
+	local pid = {	gmcp 	= "3e7dedbe37e44942dd46d264",
+					mapper 	= "b6eae87ccedd84f510b74714",
+					sound 	= "23832d1089f727f5f34abad8",
+					zord 	= "462b665ecb569efbf261422f" 	}
 
+	function mapFind(query)
+		return CallPlugin("b6eae87ccedd84f510b74714", "map_find_query", query)
+	end
 	local plugins_folder = GetPluginInfo(GetPluginID(), 20)
 	local db_file_1
 	local db_file_2
@@ -282,7 +289,7 @@
 	TEXT_COLOR_DETAILS = {
 		{ key = "normal",			default = "#E0E0E0", menu_name = "Normal mobs",
 			desc = "normal mobs" },
-		{ key = "targeted",			default = "#FF4000", menu_name = "Targeted mob",
+		{ key = "targeted",			default = "#FF6000", menu_name = "Targeted mob",
 			desc = "the currently targeted mob"},
 		{ key = "dead",				default = "#484848", menu_name = "Dead mobs",
 			desc = "a dead mobs" },
@@ -357,7 +364,7 @@
 
 --	[[ Plugin broadcast/receive process ]]
 	function OnPluginBroadcast(msg, id, name, text)
-		if (id == plugin_id_gmcp_handler) then
+		if (id == pid.gmcp) then
 			if (text == "char.status") then		-- character status
 				current_character_state = gmcp("char.status.state")
 			elseif (text == "room.info") then	-- current/previous room info
@@ -373,11 +380,11 @@
 						going_to_room = nil
 					end
 
-					if (#room_history == 300) then
-						room_history[300] = nil
+					if (#room_history == 501) then
+						room_history[501] = nil
 					end
 					table.insert(room_history, 1, room_history[0])
-					room_history[0] = { rmid = current_room.rmid, arid=current_room.arid }
+					room_history[0] = { rmid = current_room.rmid, arid=current_room.arid, name = current_room.name }
 				end
 
 			elseif (text == "comm.quest") then	-- quest info
@@ -410,11 +417,23 @@
 		get_changelog(false)
 	end
 
+	function OnPluginEnable()
+		InfoNote("Enabled ", "Search and Destroy")
+		win_init = false
+		xg_create_window()
+	end
+
+	function OnPluginDisable()
+		InfoNote("Disabled ", "Search and Destroy")
+		WindowDelete(win)
+	end
+
 	function migrate_database()
 		local db = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
 		local current_version
 
 		create_initial_tables(db)
+		write_marks_to_db(db)
 
 		for row in db:nrows("PRAGMA user_version") do
 			current_version = row.user_version
@@ -551,6 +570,21 @@
 		db:execute([[
 			DELETE FROM mobs WHERE mob LIKE "%(wounded)%" OR mob LIKE "%(aimed)%";
 		]])
+	end
+
+	function write_marks_to_db(db)
+		DebugNote("writing start rooms to db")
+		load_area_start_rooms()
+		operations = {}
+		for arid, details in pairs(area_start_rooms) do
+			table.insert(operations, string.format([[
+				UPDATE area SET startRoom = %s
+				WHERE key = %s;
+			]],
+			fixsql(details.roomid),
+			fixsql(arid)))
+		end
+		execute_in_transaction(db, operations)
 	end
 
 	function get_changelog(all_changes)
@@ -832,7 +866,7 @@
 		["longnight"] 	= { start = "26367" },
 		["losttime"] 	= { start = "28584" },
 		["lowlands"] 	= { start = "28044" },
-		["lplanes"] 	= { start = "29364" },
+		["lplanes"] 	= { start = "29364" },	-- start room for lplanes is amulet portal destination.
 		["maelstrom"] 	= { start = "38058" },		-- M --
 		["manor"] 		= { start = "10621" },
 		["masq"] 		= { start = "29840" },
@@ -915,7 +949,7 @@
 		["tombs"] 		= { start = "15385" },
 		["umari"] 		= { start = "36601" },		-- U --
 		["underdark"] 	= { start = "27341" },
-		["uplanes"] 	= { start = "29364" },
+		["uplanes"] 	= { start = "29364" },	-- start room for uplanes is amulet portal destination
 		["uprising"] 	= { start = "15382" },
 		["vale"] 		= { start =  "1036" },		-- V --
 		["verdure"] 	= { start = "24090" },
@@ -1274,7 +1308,69 @@
 		["Yggdrasil: The World Tree"] 			= "ygg",
 		["Zangar's Demonic Grotto"] 			= "zangar" }
 
--- 	[[ Lookup table: Game calendar data]]
+-- [[ Amulet of the Planes mobs]]
+	local amplanes = {
+		["lplanes"] = { 
+			["a bariaur"] 				= "236",	-- pool 1, Gladsheim
+			["a cleric einheriar"] 		= "236",
+			["a mage einheriar"] 		= "236",
+			["a paladin einheriar"] 	= "236",
+			["a per"] 					= "236",
+			["a psionic einheriar"]		= "236",
+			["a ranger einheriar"] 		= "236",
+			["a thief einheriar"]		= "236",
+			["a titan"] 				= "236",
+			["a warrior einheriar"] 	= "236",
+			["a larva"] 				= "251",	-- pool 2, Pandemonium
+			["a malelephant"] 			= "251",
+			["a nightmare"] 			= "251",
+			["a hordling"] 				= "266",	-- pool 3, Hades
+			["a night hag"] 			= "266",
+			["a yagnoloth"] 			= "266",
+			--["a Dergholoth"] 			= "281",	-- pool 4, Gehenna
+			--["a Hydroloth"] 			= "281",
+			--["a Mezzoloth"] 			= "281",
+			--["a Nycaloth"] 				= "281",
+			--["a Psicloth"] 				= "281",
+			["a vaporighu"] 			= "281",
+			["an Arcanaloth"] 			= "281", 
+			--["an Ultroloth"] 			= "281",
+			["the General of Gehenna"]	= "281",
+			["a Dergholoth"] 			= "301",	-- pool 5, Acheron
+			["a Hydroloth"] 			= "301",
+			["a Mezzoloth"] 			= "301",
+			["a Nycaloth"] 				= "301",
+			["a Psicloth"] 				= "301",
+			["an Ultroloth"] 			= "301"		},
+		["uplanes"] = { 
+			["a monadic deva"] 			= "10870",	-- pool 6, Twin Paradise
+			["an adamantite dragon"]	= "10870",
+			["an air sentinel"]			= "10870",
+			["a t'uen-rin"] 			= "10820",	-- pool 7, Arcadia
+			["a translator"] 			= "10820",
+			["an agathinon aasimon"]	= "10820",
+			["an astral deva"] 			= "10820",
+			["a hound archon"] 			= "10835",	-- pool 8, Seven Heavens
+			["a lantern archon"] 		= "10835",
+			["a noctral"] 				= "10835",
+			["a planetar aasimon"] 		= "10835",
+			["a sword archon"] 			= "10835",
+			["a tome archon"] 			= "10835",
+			["a warden archon"] 		= "10835",
+			["a zoveri"] 				= "10835",
+			["a balanea"] 				= "10890",	-- pool 10, Elysium
+			["a light aasimon"] 		= "10890",
+			["a moon dog"] 				= "10890",
+			["a movanic deva"] 			= "10890",
+			["a phoenix"] 				= "10890",
+			["a solar aasimon"] 		= "10890",
+			["a mortai"] 				= "10910",	-- pool 11, Beastlands
+			["a warden beast"] 			= "10910",
+			["an animal lord"] 			= "10910",
+			["an animal spirit"] 		= "10910"	} }
+
+
+-- 	[[ Lookup table: Game calendar data ]]
 	local gCalendar = { }
 
 --	[[ Load saved table data ]]
@@ -1899,7 +1995,11 @@ end
 				InfoNote("room: ", qt.room)
 			end
 		end
-		search_rooms_exact(qt.room, qt.arid, qt.mob)
+		if (qt.arid == "lplanes" or qt.arid == "uplanes") then
+			xrun_to(qt.arid, true)
+		else
+			search_rooms_exact(qt.room, qt.arid, qt.mob)
+		end
 	end
 
 	function quest_status_gmcp(q)	-- sets quest status when you take a new quest, kill qmob, complete quest, etc.
@@ -1967,8 +2067,6 @@ end
 	end
 
 	function cp_info_level_taken(name, line, wildcards)
-		--local x = tonumber(wildcards.level)
-		--cp_info_level = x
 		cp_info_level = tonumber(wildcards.level)
 		set_variable("mcvar_cp_level_taken", cp_info_level)
 	end
@@ -2015,9 +2113,6 @@ end
 		player_is_on_cp()
 		can_get_new_cp = "no"
 		cp_info_level = tonumber(gmcp("char.status.level"))
-		--local x = tonumber(gmcp("char.status.level"))
-		--cp_info_level = x
-		
 		xg_draw_window()
 		if (noexp_onoff == "on") and (anex_tnl_cutoff > 0) then
 			InfoNote("Search and Destroy: Turning 'noexp' OFF (you have started a new CP)")
@@ -2227,13 +2322,9 @@ end
 			set_variable("mcvar_gqid_joined", gqid_joined)
 			set_variable("mcvar_gqid_started", gqid_started)
 			set_variable("mcvar_gqid_extended", gqid_extended)
-
 			gq_info_efflvl = potential_gq.efflvl
 			set_variable("mcvar_gq_info_efflvl", gq_info_efflvl)
-
 			area_room_type = area_room_type_check(gq_info_list)
-
-			-- cp_info_level = tonumber(gmcp("char.status.level"))	-- room target builder will crash without a sensible value here.  Just use current player level.
 			DebugNote("gq type detection: ", area_room_type, " (level ", gq_info_efflvl, ")")
 			xg_draw_window()
 			DoAfterSpecial(0.1, "do_gq_check()", sendto.script)
@@ -2246,7 +2337,7 @@ end
 	function do_gq_check()
 		player_is_on_gq()
 		local time_check = os.clock()					-- prevent double cp checks from different plugins
-		if ((time_check - last_cp_check) < 1.0) then
+		if ((time_check - last_gq_check) < 1.0) then
 			return
 		end
 		last_gq_check = time_check
@@ -2304,7 +2395,7 @@ end
 		if location then
 			location = Trim(location)
 			location = location:sub(2, #location-1)
-			if location:match(" - Dead$") then
+			if location:match(" %- Dead$") then
 				location = location:sub(1, #location - 7)
 				dead = "yes"
 			end
@@ -2489,8 +2580,6 @@ end
 		if (player_on_cp == "yes") then
 			DoAfterSpecial(0.4, [[ InfoNote("Reloading your cp targets....")
 								do_cp_info() ]], sendto.script)
-		else
-			EnableTriggerGroup("damage_message_triggers", false)
 		end
 	end
 
@@ -2976,11 +3065,14 @@ end
 							InfoNote("Xcp action is off - no additional action\n")
 						end
 						if (ri.arid ~= t.arid) then	-- if you're not in target area, xrunto target area.
-							--Execute("xrt " .. t.arid)
 							xrun_to(t.arid, true)
 						end
 					else	-- Room cp:  get target room from mapper, but don't move yet.  "go" takes you to room.
-						search_rooms_exact(t.roomName, t.arid, t.mob)
+						if (qt.arid == "lplanes" or qt.arid == "uplanes") then
+							xrun_to(qt.arid, true)
+						else
+							search_rooms_exact(t.roomName, t.arid, t.mob)
+						end
 					end
 				else
 					InfoNote(string.format("\nYou can't run there while you're %s!\n", character_state_string()))
@@ -3062,8 +3154,8 @@ end
 		local rmid = rmid
 		local arid = arid or getAreaFromRoomId(rmid)
 		if (is_vidblain_area(rmid) == true) then -- if target is in a vidblain area,
-			if(is_vidblain_area(ri.rmid) == false) then	-- but if you are not
-				vidblain_nav(rmid, arid)
+			if(is_vidblain_area(ri.rmid) == false) then	-- but you are not,
+				vidblain_nav(rmid, arid)	-- run vidblain navigation, UNLESS it's turned off OR player level is at or above the 'xset vidblain level' setting (allows use of portals to vidblain areas)
 			else
 				do_mapper_goto(rmid, "walk")
 			end
@@ -3189,7 +3281,7 @@ end
 					vidblain_nav_tbl = { i=0, j=0, rmid="", arid="", stat=1 }
 				end
 			else  -- arrived in vidblain proper
-				if (ch_state == "3") and (ch_state == vnt.stat) then  -- monitor char state for 3 ticks, if stable, start EIA timer and run to target area
+				if (ch_state == "3") and (ch_state == vnt.stat) then  -- monitor char state for 2 ticks, if stable, start EIA timer and run to target area
 					vnt.j = vnt.j + 1
 					if (vnt.j > 2) then
 						EnableTimer("vidblain_nav_timer", false) -- stop vidblain timer
@@ -3598,6 +3690,8 @@ end
 			WHERE name = %s AND area = %s
 			ORDER BY area
 		]] ,fixsql(room), fixsql(arid))
+
+			
 		search_rooms(select, mob_name)
 	end
 
@@ -3746,7 +3840,7 @@ end
 
 			if v.notes then
 				if show_notes_in_table() then
-					text = ellipsify(v.notes, note_width)
+					text = ellipsify(strip_colours(v.notes), note_width)
 				else
 					text = "[notes]"
 				end
@@ -4068,6 +4162,13 @@ end
 		end
 		local serial = serialize.save_simple(area_start_rooms)
 		set_variable("mcvar_areaStartRooms", serial)
+
+		local db = assert(sqlite3.open(snd_db_file))
+		operation = string.format("UPDATE area SET startRoom = %s WHERE key = %s;",
+			fixsql(ri.rmid), fixsql(ri.arid))
+		db:exec(operation)
+		db:close_vm()
+
 		InfoNote("\nxset mark: Room ", ri.rmid, " set as start of area ", ri.arid, ".\n")
 	end
 
@@ -4090,7 +4191,11 @@ end
 		end
 		start_room_type = "default"						-- If 'xset mark' isn't set, look up start room from the table areaDefaultStartRooms.
 		if areaDefaultStartRooms[arid] then 	-- Note, Upper/Lower Planes have the same default room.  More development needed here.
-			return areaDefaultStartRooms[arid].start		-- exact match on area id
+			if (exact == true) and (arid == "lplanes" or arid == "uplanes") then
+				return amplanes[arid][current_target.name]
+			else
+				return areaDefaultStartRooms[arid].start		-- exact match on area id
+			end
 		end
 		for k,v in pairs (areaDefaultStartRooms) do
 			if k:lower() == arid then -- exact match
@@ -4149,10 +4254,8 @@ end
 	local is_vidblain_area_sql = "SELECT area FROM rooms WHERE uid = %s "
 
 	function is_vidblain_area(roomid)
-		local level = tier_level()--tonumber(gmcp("char.status.level")) + 10 * tonumber(gmcp("char.base.tier"))
+		local level = tier_level()
 		if (xset_vidblain_onoff == "on") and (level < xset_vidblain_level) then
-			--local worldPath = GetInfo(66) .. Trim(sanitize_filename(WorldName()))
-			--local db = assert(sqlite3.open(worldPath .. ".db"))
 			local db = assert(sqlite3.open(mapper_db_file))
 			local select = string.format (is_vidblain_area_sql, fixsql(roomid))
 			local ar
@@ -4683,12 +4786,17 @@ end
 		for row in db:nrows(sql) do
 			found_notes = true
 			if (text_only == true) then
-				local line = string.format("    note:'%s'", row.notes)
+				local line = string.format("    note:'%s'", strip_colours(row.notes))
 				Hyperlink("xmapper move " .. row.uid, line, "go to room " .. row.uid, "lightblue", "black", 0, 1)
 			else
 				local line = string.format("    (%s) %s", row.uid, row.notes)
-				Hyperlink("xmapper move " .. row.uid, line, "go to room " .. row.uid, "lightblue", "black", 0, 1)
+				local styles = ColoursToStyles(line, ColourNameToRGB("lightblue"), ColourNameToRGB("black"), 0, 0)
+				
+				for _,style in pairs(styles[1]) do
+					Hyperlink("xmapper move " .. row.uid, style.text, "go to room " .. row.uid, RGBColourToName(style.textcolour), RGBColourToName(style.backcolour), 0, 1)
+				end
 			end
+
 			print("")
 		end
 		db:close_vm()
@@ -4861,8 +4969,8 @@ end
 			if (win_state == "min") then
 				mouseup_drag(0, "hsMinimize")
 			end
-			if (IsPluginInstalled(plugin_id_z_order) and GetPluginInfo(plugin_id_z_order, 17)) then
-				CallPlugin(plugin_id_z_order, "registerMiniwindow", win)
+			if (IsPluginInstalled(pid.zord) and GetPluginInfo(pid.zord, 17)) then
+				CallPlugin(pid.zord, "registerMiniwindow", win)
 			end
 			xg_draw_window()
 		end
@@ -5589,9 +5697,9 @@ end
 			xg_draw_window()
 			InfoNote("Window font changed to ", string.format("%s Size %i (%s)", win_font, win_font_size, new_font.style))
 		elseif (result == "Bring To Front") then
-			CallPlugin(plugin_id_z_order,"boostMe", win)
+			CallPlugin(pid.zord,"boostMe", win)
 		elseif (result == "Send To Back") then
-			CallPlugin(plugin_id_z_order,"dropMe", win)
+			CallPlugin(pid.zord,"dropMe", win)
 		elseif (result == "Collapse Window") then
 			win_state = "min"
 			win_height = win_height_min
@@ -5777,13 +5885,13 @@ end
 	end
 
 	function gmcp(s)
-	local ret, datastring = CallPlugin(plugin_id_gmcp_handler, "gmcpdata_as_string", s)
+	local ret, datastring = CallPlugin(pid.gmcp, "gmcpdata_as_string", s)
 	pcall(loadstring("data = "..datastring))
 	return data
 	end
 
 	function send_gmcp_packet(s)
-	CallPlugin(plugin_id_gmcp_handler, "Send_GMCP_Packet", s)
+	CallPlugin(pid.gmcp, "Send_GMCP_Packet", s)
 	end
 
 	function int(n)
@@ -5860,10 +5968,15 @@ end
 
 -- [[ Random stuff that doesn't fit anywhere else (?) ]]
 	function xtest_roomhist()
-		ColourNote("#00FFFF", "", "\ni: 0    r: " .. string.format("%-5s", room_history[0].rmid) .. "  a: " .. room_history[0].arid)
-		for i,v in ipairs (room_history) do
-			print("i: " .. string.format("%-3s", i) .. "  r: " .. string.format("%-5s", v.rmid) .. "  a: " .. string.format("%-10s", v.arid))
+		local rh = room_history
+		--ColourNote("#00FFFF", "", "\ni: 0    r: " .. string.format("%-5s", rh[0].rmid) .. "  a: " .. rh[0].arid)
+		--for i,v in ipairs (room_history) do
+		--	print("i: " .. string.format("%-3s", i) .. "  r: " .. string.format("%-5s", v.rmid) .. "  a: " .. string.format("%-10s", v.arid))
+		--end
+		for i=#rh,1,-1 do
+			print(" " .. string.format("%3s", i) .. "   r: " .. string.format("%-5s", rh[i].rmid) .. "  a: " .. string.format("%-10s", rh[i].arid) .. "     " .. rh[i].name)
 		end
+		ColourNote("#00FFFF", "", "   0   r: " .. string.format("%-5s", rh[0].rmid) .. "  a: " .. string.format("%-10s", rh[0].arid) .. "     " .. rh[0].name)
 		print("")
 	end
 
@@ -6111,7 +6224,7 @@ end
 			if upstream_version ~= tostring(PLUGIN_VERSION) then
 				callback(upstream_version)
 			elseif log_no_updates then
-				InfoNote("Search & Destroy: No new updates are currently available.")
+				InfoNote("Search & Destroy: No new updates available.")
 			end
 		end
 	end
@@ -6271,7 +6384,7 @@ end
 			"roomnote",
 			"qw",
 			"ht",
-			"ah",
+			"ah|aha",
 			"ak|kk|qk",
 			"qs",
 			"xq",
@@ -6397,7 +6510,7 @@ end
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("Executes the 'hunt trick' for the current campaign target or supplied argument. Use 'stop' to stop the hunt trick, which will work in most cases but may fail if a mob has a keyword of 'stop'.")}))
 
-		elseif str == "ah" then
+		elseif str == "ah" or str == "aha" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": ah<a> <mobname>")
 			Note()
 			ColourNote("antiquewhite", "", unpack({helpWrap("Automatically sends the 'hunt' command and executes the direction hunt leads you. Append 'a' in order to abort autohunting. This is useful for tracking quest mobs through mazes, or if you really want to, hunting players. However, you must have hunt practiced for it to work.")}))
@@ -7099,8 +7212,8 @@ end
 
 	function play_target_found_sound()
 		DebugNote("Play target found here sound")
-		if is_sound_enabled() and IsPluginInstalled(plugin_id_soundpack) and GetPluginInfo(plugin_id_soundpack, 17) then
-			CallPlugin(plugin_id_soundpack, "TriggerEvent", "quest_target_found")
+		if is_sound_enabled() and IsPluginInstalled(pid.sound) and GetPluginInfo(pid.sound, 17) then
+			CallPlugin(pid.sound, "TriggerEvent", "quest_target_found")
 		end
 	end
 
@@ -7439,7 +7552,7 @@ end
 		"(?<mob_name>.+?) would crush you like a bug!$",
 		"(?<mob_name>.+?) would dance on your grave!$",
 		"(?<mob_name>.+?) says 'BEGONE FROM MY SIGHT unworthy\\!'$",
-		"You would be completely annihilated by (?<mob_name>.+?)!$"	}
+		"You would be completely annihilated by (?<mob_name>.+?)!$"		}
 
 	function setup_scan_con_triggers()
 		local flags_string = "(?<flags>(?: ?\\[AFK\\]| ?\\((?:" .. table.concat(SCAN_FLAGS, "|") .. ")\\))*)?"
@@ -7460,7 +7573,7 @@ end
 			SetTriggerOption(name, "group", "consider")
 		end
 	end
-	
+
 	function trigger_receive_xp()
 		if last_mob_damaged then
 			DebugNote("I suspect you just killed ", last_mob_damaged, " in room ", current_room.rmid, " (", current_room.arid, ")")
@@ -7470,13 +7583,13 @@ end
 		end
 		last_mob_damaged = nil
 	end
-
 	function trigger_damage_done(name, line, wildcards)
 		last_mob_damaged = Trim(wildcards.mob_name)
-		--print(last_mob_damaged)
 	end
+	
 ]]>
 </script>
+
 <triggers>
 <!-- Last mob killed detecton - damage messages, receive exp -->
 	<trigger match="^(?:You (?:don't )?receive \d+(?:\+\d+)* experience points?\.|That was a pointless no-experience kill!)$"
@@ -7503,12 +7616,12 @@ end
 		script="trigger_damage_done"
 		name="trg_dmgmsg_full" group="damage_message_triggers"
 		enabled="n" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
-
+	
 	<trigger match="^(?:You assassinate |You catch |You attempt to bury .* deep into |You lunge at)(?<mob_name>.*)(?: with cold efficiency\.| completely off-guard and inflict massive damage on .*\.|'s? back!|with a .*!)$"
 		script="trigger_damage_done"
 		name="trg_dmgmsg_skills" group="damage_message_triggers"
 		enabled="n" regexp="y" sequence="1" keep_evaluating="y"> </trigger>
-		
+
 <!-- Gquest operations -->
 	<!-- group: trg_gq -->
 	<trigger match="^Quest Name\.\.\.\.\.\.\.\.\.: \[ Global quest # (?<gq_id>\d{1,5}) \]$"
@@ -8322,7 +8435,7 @@ end
 			group="Mob_Database"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
-	<alias 	match="^x?mgo(?:to)? (\d+)$"
+	<alias 	match="^xmgo(?:to)? (\d+)$"
 			script="mobGo"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 

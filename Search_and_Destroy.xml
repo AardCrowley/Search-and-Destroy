@@ -8075,7 +8075,7 @@ end
 		name="trg_anex_automatic_on"
 		enabled="y" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
 
-	<trigger match="^You (?:don't )?receive (\d+)(?:\+\d+)? experience points?\.$"
+	<trigger match="^You (?:don't )?receive (\d+)(?:\+\d+)* experience points?\.$"
 		script="anex_mobdeath_xp1"
 		name="trg_anex_mobdeath_xp1"
 		enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>

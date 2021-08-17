@@ -1,4 +1,9 @@
 {
+    "5.91": {
+        "fixes": [
+            "Quick fix to 'xset index areas' errors due to new area added"
+            ]
+    },
     "5.9": {
         "changes": [
             "Notes are stripped of colour codes in the mobs table, and used to color the notes when displaying room/area notes. Courtesy of Karathos"

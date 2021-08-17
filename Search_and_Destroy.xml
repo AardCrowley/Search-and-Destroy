@@ -1349,9 +1349,9 @@ function area_index_line(name, line, wildcards) -- 1055
 	SnDdb = assert(sqlite3.open(GetInfo(66) .. "/SnDdb.db"))
 	local sqlQuery = "INSERT INTO area VALUES (\"%s\", \"%s\", \"%d\", \"%d\", \"%d\", \"%d\", \"%s\", \"%s\", \"%s\")"
 	
-	if not areaDefaultStartRooms[arid] then areaDefaultStartRooms[arid] = {start = "-1", noquest = false} end
 	local areaName = Trim(wildcards.areaName)
 	local arid = Trim(wildcards.arid)
+	if not areaDefaultStartRooms[arid] then areaDefaultStartRooms[arid] = {start = "-1", noquest = false} end
 	local minLvl = tonumber(Trim(wildcards.min)) or 1
 	local maxLvl = tonumber(Trim(wildcards.max)) or 201
 	local levelLock = tonumber(Trim(wildcards.lock)) or 0

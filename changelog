@@ -1,4 +1,9 @@
 {
+    "5.93": {
+        "changes": [
+            "Remove Naricain as maintainer"
+        ]
+    },
     "5.92": {
         "fixes": [
             "Fix xset index areas again"

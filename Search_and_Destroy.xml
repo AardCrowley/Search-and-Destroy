@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.92" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley and Naricain" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="5.92" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -46,8 +46,8 @@
 <![CDATA[
 --Line 152
 	--[[ This script was originally improved upon by Starling, and as such, she deserves credit for the work put into the plugin. In order to ensure future compliance
-		 with Aardwolf and MUSHclient, maintenance will now be provided by Crowley and Naricain. If you have any questions, feel free to shoot us a message on Personal
-		 or through tells. We will make changes as we see fit to the code. // Crowley and Naricain
+		 with Aardwolf and MUSHclient, maintenance will now be provided by Crowley. If you have any questions, feel free to shoot us a message on Personal
+		 or through tells. We will make changes as we see fit to the code. // Crowley
 
 
 		Fix gq: You are no longer part of Global Quest # 4683 and will be unable to rejoin. -- gq quit
@@ -356,7 +356,7 @@
 	versionURL      = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/master/VERSION"
 	pluginURL       = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/%s/Search_and_Destroy.xml"
 	changelogURL    = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/v%s/changelog"
-	soundsURL       = "https://raw.githubusercontent.com/AardNaricain/Search-and-Destroy/download-sounds/%s"
+	soundsURL       = "https://raw.githubusercontent.com/AardCrowley/Search-and-Destroy/v5.9/%s"
 
 --	[[ Plugin broadcast/receive process ]]
 	function OnPluginBroadcast(msg, id, name, text)
@@ -397,7 +397,7 @@
 		ColourNote("#808080", "", "\n+=================================================================+")
 		ColourNote("#FF3000", "", "    " .. current_sd_version .. " installed at " .. os.date() )
 		print("")
-		ColourNote("#FF3000", "", "    " .. "For support, contact Crowley and Naricain" )
+		ColourNote("#FF3000", "", "    " .. "For support, contact Crowley" )
 		ColourNote("#FF3000", "", "    " .. "Note: It's beneficial to run 'xset index areas' if you have never run it before." )
 		ColourNote("#808080", "", "+=================================================================+\n")
 		windowinfo = movewindow.install (win, miniwin.pos_center, miniwin.create_absolute_location, false, nil, {mouseup=MouseUp, mousedown=LeftClickOnly, dragmove=LeftClickOnly, dragrelease=LeftClickOnly},{x=win_pos_x, y=win_pos_y})
@@ -2339,7 +2339,7 @@ end
 				dead = "yes"
 			end
 		else
-			ErrorNote("The target line ", target_line, " could not be parsed properly. Contact Naricain and Crowley to get it fixed")
+			ErrorNote("The target line ", target_line, " could not be parsed properly. Contact Crowley to get it fixed")
 			return nil
 		end
 
@@ -6338,7 +6338,7 @@ end
 
 		if str == "" or "" == nil or str == "xhelp" then
 			ColourNote("darkcyan", "", "Plugin name    ", "antiquewhite", "", " : Search & Destroy")
-			ColourNote("darkcyan", "", "Maintained by  ", "antiquewhite", "", " : Crowley and Naricain")
+			ColourNote("darkcyan", "", "Maintained by  ", "antiquewhite", "", " : Crowley")
 			ColourNote("darkcyan", "", "Original Author", "antiquewhite", "", " : WinkleWinkle")
 			ColourNote("darkcyan", "", "Credit to      ", "antiquewhite", "", " : Nokfah and Starling")
 			Note()
@@ -6385,7 +6385,7 @@ end
 		elseif str == "index areas" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset index areas")
 			Note()
-			ColourNote("antiquewhite", "", unpack({helpWrap("Occasionally, SnD does not realize you've mapped an area for whatever reason. This becomes apparent when you see a lot of red links on your campaign or global quest check list. When this happen, this command SHOULD fix it, but again, only if you've mapped the areas linked in red. If it does not, something else is amiss, and you should probably note Crowley or Naricain about it.")}))
+			ColourNote("antiquewhite", "", unpack({helpWrap("Occasionally, SnD does not realize you've mapped an area for whatever reason. This becomes apparent when you see a lot of red links on your campaign or global quest check list. When this happen, this command SHOULD fix it, but again, only if you've mapped the areas linked in red. If it does not, something else is amiss, and you should probably note Crowley about it.")}))
 
 		elseif str == "silent" then
 			ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset silent <on|off>")

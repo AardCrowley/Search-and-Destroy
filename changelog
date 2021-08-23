@@ -1,4 +1,9 @@
 {
+    "5.92": {
+        "fixes": [
+            "Fix xset index areas again"
+            ]
+    },
     "5.91": {
         "fixes": [
             "Quick fix to 'xset index areas' errors due to new area added"

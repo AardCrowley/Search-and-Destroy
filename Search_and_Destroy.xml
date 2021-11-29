@@ -1113,7 +1113,7 @@
 		["Gnoll's Quarry"] 						= "quarry",
 		["Gold Rush"] 							= "goldrush",
 		["Guardian's Spyre of Knowledge"] 		= "spyreknow",
-		["Wayfarer's Caravan"] 						= "caravan",
+		["Gypsy Caravan"] 						= "caravan",
 		["Halls of the Damned"] 				= "damned",
 		["Hatchling Aerie"] 					= "hatchling",
 		["Hedgehogs' Paradise"] 				= "hedge",
@@ -1784,7 +1784,7 @@ end
 		change_target({
 			name = target.mob,
 			keyword = keyword,
-			room_name = target.roomName,
+			room_name = target.roomName or "missing",
 			index = index,
 			area = target.arid,
 			activity = current_activity,
@@ -1795,7 +1795,7 @@ end
 		change_target({
 			name = quest_target.mob,
 			keyword = gmkw(quest_target.mob, quest_target.arid),
-			room_name = quest_target.room,
+			room_name = quest_target.room or "missing",
 			area = quest_target.arid,
 			activity = "quest",
 		})
@@ -1911,7 +1911,7 @@ end
 			qt.mob = GetVariable("mcvar_qt_mob")
 			qt.arid = GetVariable("mcvar_qt_arid")
 			qt.areaName = GetVariable("mcvar_qt_areaName")
-			qt.room = GetVariable("mcvar_qt_mob")
+			qt.room = GetVariable("mcvar_qt_mob") or "missing"
 			if (bool == true) then
 				InfoNote("\n'Target quest mob' (xq) not done - the mob is currently dead, or you can't see it (check detects).")
 				InfoNote("\n'The last known location, before it went missing, was:\n")
@@ -2886,7 +2886,7 @@ end
 		if #str <= max_length then
 			return str
 		else
-			return str:sub(1, max_length - 1) .. "…"
+			return str:sub(1, max_length - 1) .. "â¦"
 		end
 	end
 

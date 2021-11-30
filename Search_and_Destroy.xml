@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.93" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="5.94" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -48,11 +48,7 @@
 	--[[ This script was originally improved upon by Starling, and as such, she deserves credit for the work put into the plugin. In order to ensure future compliance
 		 with Aardwolf and MUSHclient, maintenance will now be provided by Crowley. If you have any questions, feel free to shoot us a message on Personal
 		 or through tells. We will make changes as we see fit to the code. // Crowley
-
-
-		Fix gq: You are no longer part of Global Quest # 4683 and will be unable to rejoin. -- gq quit
-				"You have now joined Global Quest # 4685. See 'help gquest' for available commands.", "You may win 2 more gquests at this level.", "You can be rewarded for 50 more kills this level."
-		]]--
+	]]--
 
 
 	dofile (GetInfo(60) .. "aardwolf_colors.lua")
@@ -166,7 +162,8 @@
 	-- 		index = 4, -- nil if not a cp/gq target (like when you do "qw <name>", or for quest targets)
 	-- 		activity = "cp", -- cp, gq, quest, or nil
 	-- }
-	local current_target = nil
+	--local current_target = nil
+	local current_target = {keyword = false, name = false, room_name = false, area = false, index = false, activity = false}
 
 
 -- [[ time of next quest or when the current one expires ]]
@@ -1756,7 +1753,7 @@ end
 	end
 
 	function target_matches_current_target(target, index)
-		if not current_target then
+		if not current_target.name then
 			return false
 		elseif target.mob ~= current_target.name then
 			return false
@@ -1782,22 +1779,22 @@ end
 		keyword = keyword or target.kw
 
 		change_target({
-			name = target.mob,
-			keyword = keyword,
-			room_name = target.roomName or "missing",
-			index = index,
-			area = target.arid,
-			activity = current_activity,
+			name = target.mob or false,
+			keyword = keyword or false,
+			room_name = target.roomName or false,
+			index = index or false,
+			area = target.arid or false,
+			activity = current_activity or false,
 		})
 	end
 
 	function set_target_from_quest(quest_target)
 		change_target({
-			name = quest_target.mob,
-			keyword = gmkw(quest_target.mob, quest_target.arid),
-			room_name = quest_target.room or "missing",
-			area = quest_target.arid,
-			activity = "quest",
+			name = quest_target.mob or false,
+			keyword = gmkw(quest_target.mob, quest_target.arid) or false,
+			room_name = quest_target.room or false,
+			area = quest_target.arid or false,
+			activity = "quest" or false,
 		})
 	end
 
@@ -1809,7 +1806,7 @@ end
 	end
 
 	function clear_target()
-		change_target(nil)
+		change_target({name = false, keyword = false, room_name = false, index = false, area = false, activity = false})
 	end
 
 	-- Function that should be called whenever the target changes. This will
@@ -1831,7 +1828,7 @@ end
 	end
 
 	function update_target_keyword(new_keyword)
-		if not current_target then
+		if not current_target.name then
 			return
 		end
 
@@ -2886,7 +2883,7 @@ end
 		if #str <= max_length then
 			return str
 		else
-			return str:sub(1, max_length - 1) .. "â¦"
+			return str:sub(1, max_length - 1) .. "…"
 		end
 	end
 
@@ -5316,7 +5313,7 @@ end
 	end
 
 	function has_target()
-		return not not current_target
+		return not not current_target.name
 	end
 
 	function is_cp_or_gq_mob_targeted()

@@ -1,13 +1,12 @@
 {
     "5.97": {
+        "changes": [
+            "Some behind the scenes changes..."
+            ],
         "fixes": [
             "Fixed the errors based on the new areas (hopefully)."
-            ],
-        "changes": [
-            "Some behind the scenes changes, I think..."
             ]
     },
-
 {
     "5.93": {
         "changes": [

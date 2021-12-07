@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.95" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
+<plugin version="5.96" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
 <description trim="n"> </description> </plugin>
 
 <!-- Isolinear intermatrix (utility module) -->
@@ -44,13 +44,6 @@
 
 <script>
 <![CDATA[
---Line 152
-	--[[ This script was originally improved upon by Starling, and as such, she deserves credit for the work put into the plugin. In order to ensure future compliance
-		 with Aardwolf and MUSHclient, maintenance will now be provided by Crowley. If you have any questions, feel free to shoot us a message on Personal
-		 or through tells. We will make changes as we see fit to the code. // Crowley
-	]]--
-
-
 	dofile (GetInfo(60) .. "aardwolf_colors.lua")
 
 	require "movewindow"
@@ -1072,6 +1065,7 @@
 		["Battlefields of Adaldar"] 			= "adaldar",
 		["Black Lagoon"] 						= "lagoon",
 		["Black Rose"] 							= "blackrose",
+		["Bloodlust Dungeon"]						= "dungeon",
 		["Brightsea and Glimmerdim"]			= "glimmerdim",
 		["Canyon Memorial Hospital"] 			= "canyon",
 		["Castle Vlad-Shamir"] 					= "vlad",
@@ -1234,6 +1228,7 @@
 		["The Imperial City of Reme"] 			= "reme",
 		["The Infestation"] 					= "infest",
 		["The Keep of Kearvek"] 				= "kearvek",
+		["The Keep of the Asherodan"]				= "asherodan",
 		["The Killing Fields"] 					= "fields",
 		["The Labyrinth"] 						= "labyrinth",
 		["The Land of Oz"] 						= "landofoz",
@@ -1939,10 +1934,10 @@ end
 			DebugNote("Quest time: ", quest_time)
 		end
 		if (q.action == "start") then									-- you've just taken a new quest
-			quest_target = { qstat = "2", mob = q.targ,	areaName = q.area, arid = areaNameXref[q.area], room = (string.gsub(q.room, "@[bcgmrwyBCDGMRWY]", "")) }
+			quest_target = { qstat = "2", mob = q.targ,	areaName = q.area, arid = areaNameXref[q.area] or q.area, room = (string.gsub(q.room, "@[bcgmrwyBCDGMRWY]", "")) }
 			target_quest_mob(true)
 		elseif (q.action == "status" and q.targ and q.timer) then		-- on quest, qmob not yet killed
-			quest_target = { qstat="2", mob = q.targ, areaName = q.area, arid = areaNameXref[q.area], room = (string.gsub(q.room, "@[bcgmrwyBCDGMRWY]", "")) }
+			quest_target = { qstat="2", mob = q.targ, areaName = q.area, arid = areaNameXref[q.area] or q.area, room = (string.gsub(q.room, "@[bcgmrwyBCDGMRWY]", "")) }
 			target_quest_mob(true)
 		else
 			if (q.action == "killed") then	-- you've just killed the target
@@ -7537,8 +7532,6 @@ end
 			SetTriggerOption(name, "group", "consider")
 		end
 	end
-
-]]>
 </script>
 <triggers>
 +<!-- Receive xp -->

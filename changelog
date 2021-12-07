@@ -1,4 +1,9 @@
 {
+    "5.98": {
+        "fixes": [
+            "Just a changelog fix. Silly me."
+            ]
+    },
     "5.97": {
         "changes": [
             "Some behind the scenes changes..."

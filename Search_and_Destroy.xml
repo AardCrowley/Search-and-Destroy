@@ -7532,6 +7532,7 @@ end
 			SetTriggerOption(name, "group", "consider")
 		end
 	end
+]]>
 </script>
 <triggers>
 +<!-- Receive xp -->

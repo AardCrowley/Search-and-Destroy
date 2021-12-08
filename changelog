@@ -1,4 +1,10 @@
 {
+    "5.99": {
+        "fixes": [
+            "Mobs should highlight once again.",
+            "'qw' and 'ht' should work properly again."
+           ]
+    }
     "5.98": {
         "fixes": [
             "Just a changelog fix. Silly me."

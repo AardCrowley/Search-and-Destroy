@@ -1381,7 +1381,7 @@ local areaNameXref = {
     ["Zangar's Demonic Grotto"] = "zangar",
     -- New areas
     ["The Keep of the Asheradon"] = "asheradon",
-    ["Bloodlust Dungeon"] = "bloodlust"
+    ["Bloodlust Dungeon"] = "dungeon"
 }
 
 -- 	[[ Lookup table: Game calendar data]]

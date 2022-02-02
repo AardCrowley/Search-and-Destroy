@@ -1380,7 +1380,7 @@ local areaNameXref = {
     ["Yggdrasil: The World Tree"] = "ygg",
     ["Zangar's Demonic Grotto"] = "zangar",
     -- New areas
-    ["The Keep of the Asheradon"] = "asheradon",
+    ["The Keep of the Asherodan"] = "asherodan",
     ["Bloodlust Dungeon"] = "dungeon"
 }
 

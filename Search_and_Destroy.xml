@@ -9723,7 +9723,7 @@ end
 			script="do_gq_info"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
-	<alias	match="^gg|qq$"
+	<alias	match="^(?:gg|qq)$"
 			script="do_gq_check"
 			name="extra_gq_check_aliases"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>

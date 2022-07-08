@@ -377,6 +377,8 @@ local xset_sound_onoff =
     (IsPluginInstalled(plugin_id_soundpack) and GetPluginInfo(plugin_id_soundpack, 17) and "on") or
     "off"
 
+local xset_express_onoff = GetVariable("mcvar_xset_express_onoff") or "on"
+
 local target_nearby_sound = "target_nearby.wav"
 local other_target_here_sound = "other_target_here.wav"
 
@@ -1380,7 +1382,7 @@ local areaNameXref = {
     ["Yggdrasil: The World Tree"] = "ygg",
     ["Zangar's Demonic Grotto"] = "zangar",
     -- New areas
-    ["The Keep of the Asherodan"] = "asherodan",
+    ["The Keep of the Asheradon"] = "asheradon",
     ["Bloodlust Dungeon"] = "dungeon"
 }
 
@@ -2707,6 +2709,11 @@ function build_main_target_list(cp_or_gq, area_or_room)
     end
     xg_draw_window()
     DebugNote("Print target links after build main target list")
+	--[[
+	if debug_mode == "on" then
+		tprint(main_target_list)
+	end
+	]]
     print_target_links(main_target_list)
 end
 
@@ -2810,7 +2817,45 @@ function build_area_targets(cp_gq, sqla)
                 end
             end
         elseif #possibilities == 1 then
-            table.insert(t, possibilities[1])
+			local table_add = possibilities[1]
+			local query = 
+			string.format(
+                [[
+					SELECT roomid, kill_count
+					FROM mobs
+					WHERE mob = %s AND zone = %s;
+				]],
+                fixsql(v.mob), fixsql(table_add.arid))
+			local stmt = SnDdb:prepare(query)
+			local result_table = {}
+			while true do
+				local result = stmt:step()
+				-- exit loop if done
+				if result == sqlite3.DONE then
+					break
+				end
+				-- should have ROW result
+				assert(result == sqlite3.ROW, "Row not found.")
+				-- get all values into a table
+				local row = stmt:get_named_values()
+				table.insert(result_table, row)
+			end
+			-- done with this statement
+			stmt:finalize()
+			if #result_table == 1 then
+				table_add.roomid = result_table[1]["roomid"]
+				table_add.kills = result_table[1]["kill_count"]
+				table_add.results = #result_table
+				table.insert(t, table_add)
+				if tonumber(table_add.kills) > 2 then
+					DebugNote("Express target found:", v.mob)
+				end
+			else
+				--table_add.room = nil
+				--table_add.kills = nil
+				table_add.results = #result_table or nil
+				table.insert(t, table_add)
+			end
         else
             table.insert(
                 t,
@@ -2927,22 +2972,29 @@ function build_room_targets(cp_gq, sqlr, sqla)
             if #possibilities > 1 then
                 local mobs_by_room_query =
                     string.format(
-                    "SELECT DISTINCT(zone) FROM mobs WHERE mob = %s AND room = %s AND zone IN (%s);",
+                    "SELECT DISTINCT(zone), kill_count, COUNT(roomid) FROM mobs WHERE mob = %s AND room = %s AND zone IN (%s);",
                     fixsql(v.mob),
                     fixsql(v.loc),
                     table.concat(areas_sql, ",")
                 )
                 local mob_found = false
                 for row in SnDdb:nrows(mobs_by_room_query) do
-                    for i, possibility in ipairs(possibilities) do
+					for i, possibility in ipairs(possibilities) do
                         if possibility.arid == row.zone then
                             mob_found = true
                             possibility.found = true
-                            break
+							if tonumber(row["COUNT(roomid)"]) == 1 then
+								possibility.kills = row.kill_count
+								possibility.results = 1
+								if tonumber(possibility.kills) > 2 then
+									DebugNote("Express target found:", possibility.mob)
+								end
+							end
+							break
                         end
                     end
                 end
-
+				
                 if not mob_found then
                     local mobs_by_area_query =
                         string.format(
@@ -2991,8 +3043,47 @@ function build_room_targets(cp_gq, sqlr, sqla)
                     end
                 end
             elseif #possibilities == 1 then
-                table.insert(high_chance, possibilities[1])
-            end
+				local table_add = possibilities[1]
+				local query = 
+				string.format(
+					[[
+						SELECT roomid, kill_count
+						FROM mobs
+						WHERE mob = %s AND zone = %s;
+					]],
+					fixsql(v.mob), fixsql(table_add.arid))
+				local stmt = SnDdb:prepare(query)
+				local result_table = {}
+				while true do
+					local result = stmt:step()
+					-- exit loop if done
+					if result == sqlite3.DONE then
+						break
+					end
+					-- should have ROW result
+					assert(result == sqlite3.ROW, "Row not found.")
+					-- get all values into a table
+					local row = stmt:get_named_values()
+					table.insert(result_table, row)
+				end
+				-- done with this statement
+				stmt:finalize()
+			
+				if #result_table == 1 then
+					table_add.roomid = result_table[1]["roomid"]
+					table_add.kills = result_table[1]["kill_count"]
+					table_add.results = #result_table
+					table.insert(high_chance, table_add)
+					if tonumber(table_add.kills) > 2 then
+						DebugNote("Express target found:", v.mob)
+					end
+				else
+					--table_add.room = nil
+					--table_add.kills = nil
+					table_add.results = #result_table or nil
+					table.insert(high_chance, table_add)
+				end
+			end
         else -- no results were returned: either the mob is dead, or the location is unknown.
             if (dead == "yes") then -- mob is dead
                 local results_found = false
@@ -3115,7 +3206,7 @@ function ellipsify(str, max_length)
     if #str <= max_length then
         return str
     else
-        return str:sub(1, max_length - 1) .. "…"
+        return str:sub(1, max_length - 1) .. "â¦"
     end
 end
 
@@ -3228,7 +3319,11 @@ function xcp_goto_target(index)
             set_target_from_main_target_list(index)
             if is_character_ready() then
                 DebugNote("Character ready")
-                if (t.link_type == "area") then -- Area cp links - "xcp" goes to target area, then runs Hunt Trick to get target room.
+				if ((tonumber(t.results) == 1) and (tonumber(t.kills) > 2) and (xset_express_onoff == "on")) then
+					DebugNote("Going directly to express target.")
+					set_going_to_room(t.roomid)
+					goto_room_id(tostring(t.roomid), t.arid)
+                elseif (t.link_type == "area") then -- Area cp links - "xcp" goes to target area, then runs Hunt Trick to get target room.
                     if (action == "ht" and current_activity == "cp") then -- do hunt trick or quick where after arriving in area.
                         local func = function()
                             do_hunt_trick(1, t.kw)
@@ -7035,7 +7130,8 @@ function onHelp(name, line, wildcards)
         "snd reload",
         "snd check_update",
         "snd changelog",
-        "summary"
+        "summary",
+		"express"
     }
 
     local headers = {
@@ -7709,6 +7805,20 @@ function onHelp(name, line, wildcards)
                 {
                     helpWrap(
                         "Toggles sounds. Currently this is only used to signify that a target is in a nearby room as determined by scan, or that one of the targets on your campaign/gquest, but not your current target, is in the same room as you. For full functionality, the soundpack plugin is expected to be enabled."
+                    )
+                }
+            )
+        )
+	elseif str == "express" then
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset express")
+        Note()
+        ColourNote(
+            "antiquewhite",
+            "",
+            unpack(
+                {
+                    helpWrap(
+                        "Toggles Express mode on or off. Express mode will look through your cp or gq targets for mobs that are always in the same room. If such mobs are found, when they are selected as the current target, you will go directly to the mob's room, thus bypassing going to the start of the area first."
                     )
                 }
             )
@@ -8865,6 +8975,18 @@ function is_sound_enabled()
     return xset_sound_onoff == "on"
 end
 
+function xset_express()
+    if xset_express_onoff == "on" then
+			xset_express_onoff = "off"
+			set_variable("mcvar_xset_express_onoff", xset_express_onoff)
+			InfoNote("\nSearch&Destroy Express mode is now ", string.upper(xset_express_onoff))
+    else
+        xset_express_onoff = "on"
+		set_variable("mcvar_xset_express_onoff", xset_express_onoff)
+		InfoNote("\nSearch&Destroy Express mode is now ", string.upper(xset_express_onoff))
+    end
+end
+
 function xset_table_notes()
     if table_notes == "on" then
         table_notes = "off"
@@ -9723,7 +9845,7 @@ end
 			script="do_gq_info"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
-	<alias	match="^(?:gg|qq)$"
+	<alias	match="^gg|qq$"
 			script="do_gq_check"
 			name="extra_gq_check_aliases"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
@@ -9918,6 +10040,10 @@ end
 
 	<alias	match="^xset table width (?<width>\d{2,3})$"
 		script="xset_table_width"
+		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+		
+	<alias	match="^xset express$"
+		script="xset_express"
 		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 <!-- xset window commands -->

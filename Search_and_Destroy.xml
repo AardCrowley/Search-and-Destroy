@@ -3320,9 +3320,16 @@ function xcp_goto_target(index)
             if is_character_ready() then
                 DebugNote("Character ready")
 				if ((tonumber(t.results) == 1) and (tonumber(t.kills) > 2) and (xset_express_onoff == "on")) then
-					DebugNote("Going directly to express target.")
-					set_going_to_room(t.roomid)
-					goto_room_id(tostring(t.roomid), t.arid)
+					local func = function()
+						set_going_to_room(t.roomid)
+						goto_room_id(tostring(t.roomid), t.arid)
+						DebugNote("Attempting to go directly to an express target.")
+					end						
+					execute_in_area(t.arid, func)
+					if (ri.arid ~= t.arid) then -- if you're not in target area, xrunto target area.
+                        --Execute("xrt " .. t.arid)
+                        xrun_to(t.arid, true)
+                    end
                 elseif (t.link_type == "area") then -- Area cp links - "xcp" goes to target area, then runs Hunt Trick to get target room.
                     if (action == "ht" and current_activity == "cp") then -- do hunt trick or quick where after arriving in area.
                         local func = function()
@@ -5966,7 +5973,7 @@ function xg_show_target_links()
             counts = string.format("(%i/%i) ", v.index, v.duplicates)
         end
         local link = string.format("%2s) %s%s%s - %s", index, counts, qty, mob, location)
-        local color = ColourNameToRGB(color_for_target(v, target_matches_current_target(v, index)))
+		local color = ColourNameToRGB(color_for_target(v, target_matches_current_target(v, index)))
         local hs_left = 6
         local hs_top = (targ_list_top + ((index - 1) * font_height))
         local hs_right = math.min(hs_left + WindowTextWidth(win, font, link), win_width - 5)
@@ -5977,8 +5984,14 @@ function xg_show_target_links()
             hs_left = hs_left + added_width
             hs_right = math.min(hs_right + added_width, win_width - 5)
         end
-        WindowText(win, font, link, hs_left, hs_top, 0, 0, color, false)
-        if (hs_bottom > win_height - resize_tag) then -- Prevent list item's hotspot from overlapping with the resize tag
+        local right_end = WindowText(win, font, link, hs_left, hs_top, 0, 0, color, false)
+		if ((tonumber(v.results) == 1) and (tonumber(v.kills) > 2) and (xset_express_onoff == "on")) then
+			local added_width = WindowTextWidth(win, font, "   (Express)")
+			WindowText(win, font, "   (Express)", right_end, hs_top, 0, 0, ColourNameToRGB(text_colors.targeted), false)
+            hs_left = hs_left + added_width
+            hs_right = math.min(hs_right + added_width, win_width - 5)
+		end        
+		if (hs_bottom > win_height - resize_tag) then -- Prevent list item's hotspot from overlapping with the resize tag
             hs_right = math.min(hs_right, win_width - resize_tag - 5)
         end
         table.insert(win_target_hotspots, index)
@@ -8977,13 +8990,17 @@ end
 
 function xset_express()
     if xset_express_onoff == "on" then
-			xset_express_onoff = "off"
-			set_variable("mcvar_xset_express_onoff", xset_express_onoff)
-			InfoNote("\nSearch&Destroy Express mode is now ", string.upper(xset_express_onoff))
+		xset_express_onoff = "off"
+		set_variable("mcvar_xset_express_onoff", xset_express_onoff)
+		InfoNote("\nSearch&Destroy Express mode is now ", string.upper(xset_express_onoff))
+		xg_draw_window()
+        Redraw()
     else
         xset_express_onoff = "on"
 		set_variable("mcvar_xset_express_onoff", xset_express_onoff)
 		InfoNote("\nSearch&Destroy Express mode is now ", string.upper(xset_express_onoff))
+		xg_draw_window()
+        Redraw()
     end
 end
 

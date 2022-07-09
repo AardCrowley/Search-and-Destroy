@@ -820,6 +820,7 @@ local areaDefaultStartRooms = {
     ["arena"] = {start = "25768"},
     ["arisian"] = {start = "28144"},
     ["ascent"] = {start = "43150"},
+	["asherodan"] = {start = "37400", vidblain = true},
     ["astral"] = {start = "27882"},
     ["atlantis"] = {start = "10573"},
     ["autumn"] = {start = "13839"},
@@ -1122,7 +1123,8 @@ local vidblain_area_list = {
     ["imperial"] = {},
     ["omentor"] = {},
     ["sendhian"] = {},
-    ["vidblain"] = {}
+    ["vidblain"] = {},
+	["asherodan"] = {}
 }
 
 --	[[ Lookup table to get area id from area long name ]]
@@ -1382,7 +1384,7 @@ local areaNameXref = {
     ["Yggdrasil: The World Tree"] = "ygg",
     ["Zangar's Demonic Grotto"] = "zangar",
     -- New areas
-    ["The Keep of the Asheradon"] = "asheradon",
+    ["The Keep of the Asherodan"] = "asherodan",
     ["Bloodlust Dungeon"] = "dungeon"
 }
 

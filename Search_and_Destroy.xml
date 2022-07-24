@@ -19,7 +19,13 @@
 		script=""
 		enabled="n" send_to="12">
 			<send>	execute_in_area_tick() </send> </timer>
-
+			
+	<timer name="execute_in_room_timer"
+		second="0.1"
+		script=""
+		enabled="n" send_to="12">
+			<send>	execute_in_room_tick() </send> </timer>
+	
 	<timer name="vidblain_nav_timer"
 		second="0.1"
 		script=""
@@ -3208,7 +3214,7 @@ function ellipsify(str, max_length)
     if #str <= max_length then
         return str
     else
-        return str:sub(1, max_length - 1) .. "â¦"
+        return str:sub(1, max_length - 1) .. "Ã¢ÂÂ¦"
     end
 end
 
@@ -3327,11 +3333,12 @@ function xcp_goto_target(index)
 						goto_room_id(tostring(t.roomid), t.arid)
 						DebugNote("Attempting to go directly to an express target.")
 					end						
-					execute_in_area(t.arid, func)
 					if (ri.arid ~= t.arid) then -- if you're not in target area, xrunto target area.
-                        --Execute("xrt " .. t.arid)
-                        xrun_to(t.arid, true)
-                    end
+                        execute_in_room(get_start_room(t.arid, true), func)
+						xrun_to(t.arid, true)
+                    else
+						func()
+					end						
                 elseif (t.link_type == "area") then -- Area cp links - "xcp" goes to target area, then runs Hunt Trick to get target room.
                     if (action == "ht" and current_activity == "cp") then -- do hunt trick or quick where after arriving in area.
                         local func = function()
@@ -3636,10 +3643,58 @@ function execute_in_area_tick()
     end
 end
 
+--	[[ Execute in Room ]]
 function execute_in_room(rmid, func)
+    local ri = current_room
+    local ch_state = current_character_state
+    local fn
+    if (type(func) == "function") then
+        fn = func
+    else
+        fn = function()
+        end
+    end
+    execute_in_room_tbl = {i = 0, j = 0, rmid = rmid, f = fn, stat = ch_state}
+    if (ri.rmid == rmid) then -- in target room
+        func()
+        execute_in_room_tbl = {i = 0, j = 0, arid = "", f = "", stat = 1}
+    elseif (ri.rmid == nil) then --
+        print("execute_in_room - nil room id")
+        send_gmcp_packet("request room")
+    else
+        EnableTimer("execute_in_room_timer", true)
+    end
 end
 
 function execute_in_room_tick()
+    local ri = current_room
+    local ch_state = current_character_state
+    local eiat = execute_in_room_tbl
+    if (ri.rmid ~= nil) and (ch_state ~= nil) then
+        if (ri.rmid ~= eiat.rmid) then
+            eiat.i = eiat.i + 1
+            if (eiat.i > 200) then
+                EnableTimer("execute_in_room_timer", false)
+                xcp_clear_target(true)
+                InfoNote("** execute-in-room:  abort timer - took too long to get to destination.")
+                execute_in_room_tbl = {i = 0, j = 0, rmid = "", f = "", stat = 1}
+            end
+        else
+            if (ch_state == "3") and (ch_state == eiat.stat) then
+                eiat.j = eiat.j + 1
+                if (eiat.j > 3) then
+                    EnableTimer("execute_in_room_timer", false)
+                    eiat.f()
+                end
+            else
+                eiat.stat = ch_state
+                if (ch_state == "8") then
+                    EnableTimer("execute_in_room_timer", false)
+                    DoAfterSpecial(1.5, [[ EnableTimer("execute_in_room_timer", true) ]], 12)
+                end
+            end
+        end
+    end
 end
 
 --	[[ quick where ]]

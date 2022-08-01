@@ -5215,8 +5215,8 @@ function xg_create_window()
         local height = win_height
         WindowCreate(
             win,
-            windowinfo.window_left,
-            windowinfo.window_top,
+            0,
+            0,
             width,
             height,
             windowinfo.window_mode,

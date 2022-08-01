@@ -5208,7 +5208,8 @@ local window_fonts = {
     ["noexp2"] = {f = "Consolas", s = 9, b = false, i = false, u = false}
 }
 
-function xg_create_window()
+function xg_create_window(name, line, wildcards)
+    if name then win_init = false end
     if (win_init == false) then
         win_init = true
         local width = win_width

@@ -5213,10 +5213,12 @@ function xg_create_window()
         win_init = true
         local width = win_width
         local height = win_height
+	local left = ((windowinfo.window_left+width) < GetSystemMetrics(0) and windowinfo.window_left) or 0
+	local top =  ((windowinfo.window_top+height) < GetSystemMetrics(1) and windowinfo.window_top) or 0
         WindowCreate(
             win,
-            0,
-            0,
+            left,
+            top,
             width,
             height,
             windowinfo.window_mode,

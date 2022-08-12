@@ -8577,8 +8577,8 @@ end
 
 function play_other_target_here_sound()
     DebugNote("Play other target here sound")
-    if is_sound_enabled() and GetSoundStatus(0) == 0 then
-        PlaySound(0, GetInfo(74) .. other_target_here_sound, false, 100, 0)
+    if is_sound_enabled() and GetSoundStatus(1) == 0 then
+        PlaySound(1, GetInfo(74) .. other_target_here_sound, false, 100, 0)
     end
 end
 

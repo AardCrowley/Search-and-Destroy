@@ -66,6 +66,8 @@ function mapFind(query)
     return CallPlugin("b6eae87ccedd84f510b74714", "map_find_query", query)
 end
 
+sound_not_played = true
+
 mshow = {}
 showStr = "@W%s @wis found in @Y%s @win/around @G%s @w(@Cmapper goto %s@w)"
 

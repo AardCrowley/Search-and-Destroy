@@ -401,6 +401,7 @@ function OnPluginBroadcast(msg, id, name, text)
         if (text == "char.status") then -- character status
             current_character_state = gmcp("char.status.state")
         elseif (text == "room.info") then -- current/previous room info
+            sound_not_played = true
             local ri = gmcp("room.info")
             ri.maze = (string.match(ri.details, "maze") == "maze") and 1 or 0
             previous_room = current_room or {rmid = "-2", arid = "-2"}
@@ -3817,6 +3818,7 @@ end
 -- [[ quick scan, quick kill ("kk") ]]
 function quick_scan()
     if has_target() then
+        sound_not_played = true
         Send(string.format("scan %s", current_target.keyword))
     else
         Send("scan")
@@ -8570,15 +8572,17 @@ end
 
 function play_target_nearby_sound()
     DebugNote("Play target found nearby sound")
-    if is_sound_enabled() and GetSoundStatus(0) == 0 then
+    if is_sound_enabled() and sound_not_played then
+        sound_not_played = false
         PlaySound(0, GetInfo(74) .. target_nearby_sound, false, 100, 0)
     end
 end
 
 function play_other_target_here_sound()
     DebugNote("Play other target here sound")
-    if is_sound_enabled() and GetSoundStatus(1) == 0 then
-        PlaySound(1, GetInfo(74) .. other_target_here_sound, false, 100, 0)
+    if is_sound_enabled() and sound_not_played then
+        sound_not_played = false
+        PlaySound(0, GetInfo(74) .. other_target_here_sound, false, 100, 0)
     end
 end
 

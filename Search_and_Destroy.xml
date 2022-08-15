@@ -4382,8 +4382,10 @@ end
 
 function xset_to_mark(name, line, wildcards)
     local ri = current_room
-    area_start_rooms[ri.arid] = {}
-    area_start_rooms[ri.arid].roomid = ri.rmid
+    local areaName = (type(wildcards[1]) == "string" and wildcards[1]) or ri.arid
+    local roomID   = (type(tonumber(wildcards[2])) == "number" and wildcards[2]) or ri.rmid
+    area_start_rooms[areaName] = {}
+    area_start_rooms[areaName].roomid = roomID
     if debug_mode == "on" then
         tprint(area_start_rooms)
     end
@@ -4395,7 +4397,7 @@ function xset_to_mark(name, line, wildcards)
     db:exec(operation)
     db:close_vm()
 
-    InfoNote("\nxset mark: Room ", ri.rmid, " set as start of area ", ri.arid, ".\n")
+    InfoNote("\nxset mark: Room ", roomID, " set as start of area ", areaName, ".\n")
 end
 
 function get_start_room(area_id, exact)
@@ -7177,12 +7179,12 @@ function onHelp(name, line, wildcards)
             )
         )
     elseif str == "mark" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset mark")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset mark <areaname roomid>")
         Note()
         ColourNote(
             "antiquewhite",
             "",
-            unpack({helpWrap("This command will set your current room as the designated 'start' room of the area.")})
+            unpack({helpWrap("This command will set your current room as the designated 'start' room of the area. With the optional area name and ID, you can remotely set it from afar. This also allows you to set individual keywords for areas (e.g. 'xset mark bloodlust 45933' will set a keyword of 'bloodlust' that leads to room 45933).")})
         )
     elseif str == "index areas" then
         ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset index areas")
@@ -9873,7 +9875,7 @@ end
 			script="area_index_process"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
-	<alias	match="^xset (?:mark|start)$"
+	<alias	match="^xset (?:mark|start)(?:\s(\w+))?(?:\s(\d+))?$"
 			script="xset_to_mark"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 

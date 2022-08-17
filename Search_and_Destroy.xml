@@ -4382,8 +4382,8 @@ end
 
 function xset_to_mark(name, line, wildcards)
     local ri = current_room
-    local areaName = (type(wildcards[1]) == "string" and wildcards[1]) or ri.arid
-    local roomID   = (type(tonumber(wildcards[2])) == "number" and wildcards[2]) or ri.rmid
+    local areaName = (type(wildcards[1]) == "string" and wildcards[1] ~= "" and wildcards[1]) or ri.arid
+    local roomID   = (type(tonumber(wildcards[2])) == "number" and wildcards[2] ~= "" and wildcards[2]) or ri.rmid
     area_start_rooms[areaName] = {}
     area_start_rooms[areaName].roomid = roomID
     if debug_mode == "on" then

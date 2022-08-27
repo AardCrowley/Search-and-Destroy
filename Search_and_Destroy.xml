@@ -821,6 +821,7 @@ local areaDefaultStartRooms = {
     ["arena"] = {start = "25768"},
     ["arisian"] = {start = "28144"},
     ["ascent"] = {start = "43150"},
+    ["asherodan"] = {vidblain = true, start = "37400"},
     ["astral"] = {start = "27882"},
     ["atlantis"] = {start = "10573"},
     ["autumn"] = {start = "13839"},

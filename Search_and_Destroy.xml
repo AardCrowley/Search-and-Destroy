@@ -1120,6 +1120,7 @@ local areaDefaultStartRooms = {
 }
 
 local vidblain_area_list = {
+    ["asherodan"] = {},
     ["darklight"] = {},
     ["imperial"] = {},
     ["omentor"] = {},

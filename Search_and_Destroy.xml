@@ -4151,8 +4151,12 @@ end
 
 function auto_hunt_noarg()
     EnableTriggerGroup("AutoHunt", true)
-    auto_hunt_mob = current_target.keyword
-    Send("hunt " .. auto_hunt_mob)
+    if current_target then
+    	auto_hunt_mob = current_target.keyword
+    	Send("hunt " .. auto_hunt_mob)
+    else
+	Send("ahem")
+    end
 end
 
 function auto_hunt_abort()

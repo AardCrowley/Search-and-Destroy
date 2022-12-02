@@ -4149,6 +4149,12 @@ function auto_hunt(name, line, wildcards)
     end
 end
 
+function auto_hunt_noarg()
+    EnableTriggerGroup("AutoHunt", true)
+    auto_hunt_mob = current_target.keyword
+    Send("hunt " .. auto_hunt_mob)
+end
+
 function auto_hunt_abort()
     auto_hunt_reset()
     InfoNote("Search and Destroy:  Auto-hunt cancelled.\n")
@@ -9720,6 +9726,10 @@ end
 
 	<alias	match="^(?:aha|ah0)$"
 			script="auto_hunt_abort"
+			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+	
+	<alias	match="^ah$"
+			script="auto_hunt_noarg"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 <!-- campaign data input: cp info, check -->

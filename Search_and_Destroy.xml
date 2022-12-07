@@ -79,7 +79,7 @@ UPDATE_CHECK_INTERVAL = 60 * 60 -- Check once per hour
 local last_update_check = -1
 local automatic_update_checks = GetVariable("mcvar_automatic_update_checks") or "on"
 
-local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. ".1"
+local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. ".3"
 local plugin_id_gmcp_handler = "3e7dedbe37e44942dd46d264" -- easier to remember the var names than the plugin id's
 local plugin_id_gmcp_mapper = "b6eae87ccedd84f510b74714"
 local plugin_id_z_order = "462b665ecb569efbf261422f"
@@ -402,6 +402,7 @@ function OnPluginBroadcast(msg, id, name, text)
     if (id == plugin_id_gmcp_handler) then
         if (text == "char.status") then -- character status
             current_character_state = gmcp("char.status.state")
+	    anex_check_tnl_silent()
         elseif (text == "room.info") then -- current/previous room info
             sound_not_played = true
             local ri = gmcp("room.info")

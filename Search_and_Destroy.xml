@@ -402,7 +402,9 @@ function OnPluginBroadcast(msg, id, name, text)
     if (id == plugin_id_gmcp_handler) then
         if (text == "char.status") then -- character status
             current_character_state = gmcp("char.status.state")
-	    anex_check_tnl_silent()
+	    if tonumber(gmcp("char.status.level") < 200 then
+		anex_check_tnl_silent()
+	    end
         elseif (text == "room.info") then -- current/previous room info
             sound_not_played = true
             local ri = gmcp("room.info")

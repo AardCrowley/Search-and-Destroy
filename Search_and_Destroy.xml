@@ -79,7 +79,7 @@ UPDATE_CHECK_INTERVAL = 60 * 60 -- Check once per hour
 local last_update_check = -1
 local automatic_update_checks = GetVariable("mcvar_automatic_update_checks") or "on"
 
-local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. ".3"
+local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. ".4"
 local plugin_id_gmcp_handler = "3e7dedbe37e44942dd46d264" -- easier to remember the var names than the plugin id's
 local plugin_id_gmcp_mapper = "b6eae87ccedd84f510b74714"
 local plugin_id_z_order = "462b665ecb569efbf261422f"

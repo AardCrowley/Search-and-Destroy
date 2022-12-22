@@ -18,6 +18,10 @@
             <send>	execute_in_area_tick() </send>
         </timer>
 
+		<timer name="execute_in_room_timer"	second="0.1" script="" enabled="n" send_to="12">
+			<send>	execute_in_room_tick() </send> 
+		</timer>
+	
         <timer name="vidblain_nav_timer" second="0.1" script="" enabled="n" send_to="12">
             <send>	vidblain_nav_tick() </send>
         </timer>
@@ -30,7 +34,7 @@
     </timers>
 
     <script>
-        <![CDATA[
+    <![CDATA[
 dofile(GetInfo(60) .. "aardwolf_colors.lua")
 require "movewindow"
 require "serialize"
@@ -366,6 +370,7 @@ local xset_sound_onoff =
     (IsPluginInstalled(plugin_id_soundpack) and GetPluginInfo(plugin_id_soundpack, 17) and "on") or
     "off"
 
+local xset_express_onoff = GetVariable("mcvar_xset_express_onoff") or "on"																	  
 local target_nearby_sound = "target_nearby.wav"
 local other_target_here_sound = "other_target_here.wav"
 
@@ -389,11 +394,11 @@ function OnPluginBroadcast(msg, id, name, text)
     if (id == plugin_id_gmcp_handler) then
         if (text == "char.status") then -- character status
             current_character_state = gmcp("char.status.state")
-	    if tonumber(gmcp("char.status.level")) < 200 then
-		if anex_automatic_onoff == "on" then
-			anex_check_tnl_silent()
-		end
-	    end
+			if tonumber(gmcp("char.status.level")) < 200 then
+				if anex_automatic_onoff == "on" then
+					anex_check_tnl_silent()
+				end
+			end
         elseif (text == "room.info") then -- current/previous room info
             sound_not_played = true
             local ri = gmcp("room.info")
@@ -2815,8 +2820,44 @@ function build_area_targets(cp_gq, sqla)
                 end
             end
         elseif #possibilities == 1 then
-            table.insert(t, possibilities[1])
-        else
+			local table_add = possibilities[1]
+			local query = 
+			string.format(
+                [[
+					SELECT roomid, kill_count
+					FROM mobs
+					WHERE mob = %s AND zone = %s;
+				]],
+                fixsql(v.mob), fixsql(table_add.arid))
+			local stmt = SnDdb:prepare(query)
+			local result_table = {}
+			while true do
+				local result = stmt:step()
+				-- exit loop if done
+				if result == sqlite3.DONE then
+					break
+				end
+				-- should have ROW result
+				assert(result == sqlite3.ROW, "Row not found.")
+				-- get all values into a table
+				local row = stmt:get_named_values()
+				table.insert(result_table, row)
+			end
+			-- done with this statement
+			stmt:finalize()
+			if #result_table == 1 then
+				table_add.roomid = result_table[1]["roomid"]
+				table_add.kills = result_table[1]["kill_count"]
+				table_add.results = #result_table
+				table.insert(t, table_add)
+				if tonumber(table_add.kills) > 2 then
+					DebugNote("Express target found:", v.mob)
+				end
+			else					   
+				table_add.results = #result_table or nil
+				table.insert(t, table_add)
+			end
+		else
             table.insert(
                 t,
                 {
@@ -2932,7 +2973,7 @@ function build_room_targets(cp_gq, sqlr, sqla)
             if #possibilities > 1 then
                 local mobs_by_room_query =
                     string.format(
-                    "SELECT DISTINCT(zone) FROM mobs WHERE mob = %s AND room = %s AND zone IN (%s);",
+                    "SELECT DISTINCT(zone), kill_count, roomid, COUNT(roomid) FROM mobs WHERE mob = %s AND room = %s AND zone IN (%s);",
                     fixsql(v.mob),
                     fixsql(v.loc),
                     table.concat(areas_sql, ",")
@@ -2943,7 +2984,15 @@ function build_room_targets(cp_gq, sqlr, sqla)
                         if possibility.arid == row.zone then
                             mob_found = true
                             possibility.found = true
-                            break
+							if tonumber(row["COUNT(roomid)"]) == 1 then
+								possibility.kills = row.kill_count
+								if tonumber(possibility.kills) > 2 then
+									DebugNote("Express target found:", possibility.mob)
+									possibility.results = 1
+									possibility.roomid = row.roomid
+								end
+							end
+							break
                         end
                     end
                 end
@@ -2996,8 +3045,45 @@ function build_room_targets(cp_gq, sqlr, sqla)
                     end
                 end
             elseif #possibilities == 1 then
-                table.insert(high_chance, possibilities[1])
-            end
+				local table_add = possibilities[1]
+				local query = 
+				string.format(
+					[[
+						SELECT roomid, kill_count
+						FROM mobs
+						WHERE mob = %s AND zone = %s;
+					]],
+					fixsql(v.mob), fixsql(table_add.arid))
+				local stmt = SnDdb:prepare(query)
+				local result_table = {}
+				while true do
+					local result = stmt:step()
+					-- exit loop if done
+					if result == sqlite3.DONE then
+						break
+					end
+					-- should have ROW result
+					assert(result == sqlite3.ROW, "Row not found.")
+					-- get all values into a table
+					local row = stmt:get_named_values()
+					table.insert(result_table, row)
+				end
+				-- done with this statement
+				stmt:finalize()
+			
+				if #result_table == 1 then
+					table_add.roomid = result_table[1]["roomid"]
+					table_add.kills = result_table[1]["kill_count"]
+					table_add.results = #result_table
+					table.insert(high_chance, table_add)
+					if tonumber(table_add.kills) > 2 then
+						DebugNote("Express target found:", v.mob)
+					end
+				else
+					table_add.results = #result_table or nil
+					table.insert(high_chance, table_add)
+				end
+			end
         else -- no results were returned: either the mob is dead, or the location is unknown.
             if (dead == "yes") then -- mob is dead
                 local results_found = false
@@ -3120,7 +3206,7 @@ function ellipsify(str, max_length)
     if #str <= max_length then
         return str
     else
-        return str:sub(1, max_length - 1) .. "…"
+        return str:sub(1, max_length - 1) .. "â¦"
     end
 end
 
@@ -3233,7 +3319,19 @@ function xcp_goto_target(index)
             set_target_from_main_target_list(index)
             if is_character_ready() then
                 DebugNote("Character ready")
-                if (t.link_type == "area") then -- Area cp links - "xcp" goes to target area, then runs Hunt Trick to get target room.
+				if ((tonumber(t.results) == 1) and (tonumber(t.kills) > 2) and (xset_express_onoff == "on")) then
+					local func = function()
+						set_going_to_room(t.roomid)
+						goto_room_id(tostring(t.roomid), t.arid)
+						DebugNote("Attempting to go directly to an express target.")
+					end						
+					if (ri.arid ~= t.arid) then -- if you're not in target area, xrunto target area.
+                        execute_in_room(get_start_room(t.arid, true), func)
+						xrun_to(t.arid, true)
+                    else
+						func()
+					end
+				elseif (t.link_type == "area") then -- Area cp links - "xcp" goes to target area, then runs Hunt Trick to get target room.
                     if (action == "ht" and current_activity == "cp") then -- do hunt trick or quick where after arriving in area.
                         local func = function()
                             do_hunt_trick(1, t.kw)
@@ -3537,10 +3635,58 @@ function execute_in_area_tick()
     end
 end
 
+--	[[ Execute in Room ]]
 function execute_in_room(rmid, func)
+    local ri = current_room
+    local ch_state = current_character_state
+    local fn
+    if (type(func) == "function") then
+        fn = func
+    else
+        fn = function()
+        end
+    end
+    execute_in_room_tbl = {i = 0, j = 0, rmid = rmid, f = fn, stat = ch_state}
+    if (ri.rmid == rmid) then -- in target room
+        func()
+        execute_in_room_tbl = {i = 0, j = 0, arid = "", f = "", stat = 1}
+    elseif (ri.rmid == nil) then --
+        print("execute_in_room - nil room id")
+        send_gmcp_packet("request room")
+    else
+        EnableTimer("execute_in_room_timer", true)
+    end
 end
 
 function execute_in_room_tick()
+    local ri = current_room
+    local ch_state = current_character_state
+    local eiat = execute_in_room_tbl
+    if (ri.rmid ~= nil) and (ch_state ~= nil) then
+        if (ri.rmid ~= eiat.rmid) then
+            eiat.i = eiat.i + 1
+            if (eiat.i > 200) then
+                EnableTimer("execute_in_room_timer", false)
+                xcp_clear_target(true)
+                InfoNote("** execute-in-room:  abort timer - took too long to get to destination.")
+                execute_in_room_tbl = {i = 0, j = 0, rmid = "", f = "", stat = 1}
+            end
+        else
+            if (ch_state == "3") and (ch_state == eiat.stat) then
+                eiat.j = eiat.j + 1
+                if (eiat.j > 3) then
+                    EnableTimer("execute_in_room_timer", false)
+                    eiat.f()
+                end
+            else
+                eiat.stat = ch_state
+                if (ch_state == "8") then
+                    EnableTimer("execute_in_room_timer", false)
+                    DoAfterSpecial(1.5, [[ EnableTimer("execute_in_room_timer", true) ]], 12)
+                end
+            end
+        end
+    end
 end
 
 --	[[ quick where ]]
@@ -5903,8 +6049,14 @@ function xg_show_target_links()
             hs_left = hs_left + added_width
             hs_right = math.min(hs_right + added_width, win_width - 5)
         end
-        WindowText(win, font, link, hs_left, hs_top, 0, 0, color, false)
-        if (hs_bottom > win_height - resize_tag) then -- Prevent list item's hotspot from overlapping with the resize tag
+		local right_end = WindowText(win, font, link, hs_left, hs_top, 0, 0, color, false)
+		if ((tonumber(v.results) == 1) and (tonumber(v.kills) > 2) and (xset_express_onoff == "on")) then
+			local added_width = WindowTextWidth(win, font, "   (Express)")
+			WindowText(win, font, "   (Express)", right_end, hs_top, 0, 0, ColourNameToRGB(text_colors.targeted), false)
+            hs_left = hs_left + added_width
+            hs_right = math.min(hs_right + added_width, win_width - 5)
+		end        
+		if (hs_bottom > win_height - resize_tag) then -- Prevent list item's hotspot from overlapping with the resize tag
             hs_right = math.min(hs_right, win_width - resize_tag - 5)
         end
         table.insert(win_target_hotspots, index)
@@ -7056,7 +7208,8 @@ function onHelp(name, line, wildcards)
         "snd reload",
         "snd check_update",
         "snd changelog",
-        "summary"
+        "summary",
+		"express"
     }
 
     local headers = {
@@ -7734,7 +7887,21 @@ function onHelp(name, line, wildcards)
                 }
             )
         )
-    elseif str == "changelog" then
+		elseif str == "express" then
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset express")
+        Note()
+        ColourNote(
+            "antiquewhite",
+            "",
+            unpack(
+                {
+                    helpWrap(
+                        "Toggles Express mode on or off. Express mode will look through your cp or gq targets for mobs that are always in the same room. If such mobs are found, when they are selected as the current target, you will go directly to the mob's room, thus bypassing going to the start of the area first."
+                    )
+                }
+            )
+        )
+	elseif str == "changelog" then
         ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd changelog")
         Note()
         ColourNote(
@@ -8888,6 +9055,22 @@ function is_sound_enabled()
     return xset_sound_onoff == "on"
 end
 
+function xset_express()
+    if xset_express_onoff == "on" then
+		xset_express_onoff = "off"
+		set_variable("mcvar_xset_express_onoff", xset_express_onoff)
+		InfoNote("\nSearch&Destroy Express mode is now ", string.upper(xset_express_onoff))
+		xg_draw_window()
+        Redraw()
+    else
+        xset_express_onoff = "on"
+		set_variable("mcvar_xset_express_onoff", xset_express_onoff)
+		InfoNote("\nSearch&Destroy Express mode is now ", string.upper(xset_express_onoff))
+		xg_draw_window()
+        Redraw()
+    end
+end
+
 function xset_table_notes()
     if table_notes == "on" then
         table_notes = "off"
@@ -9546,6 +9729,8 @@ end
         <alias match="^xset table notes$" script="xset_table_notes" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
 
         <alias match="^xset table width (?<width>\d{2,3})$" script="xset_table_width" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+		<alias	match="^xset express$" script="xset_express" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
         <!-- xset window commands -->
         <alias match="^xset fontsize.*$" script="deprecated_xset_font_size" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>

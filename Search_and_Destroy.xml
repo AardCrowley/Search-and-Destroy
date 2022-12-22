@@ -1,49 +1,36 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.99" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
-<description trim="n"> </description> </plugin>
+    <plugin version="5.99" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90">
+        <description trim="n"></description>
+    </plugin>
 
-<!-- Isolinear intermatrix (utility module) -->
-<include name="constants.lua"/>
-<variables><variable name="example"></variable></variables>
+    <!-- Isolinear intermatrix (utility module) -->
+    <include name="constants.lua"/>
+    <variables>
+        <variable name="example"></variable>
+    </variables>
 
-<timers>
-	<timer name="tim_init_plugin"
-		second="0.5" active_closed="y"
-		script="init_plugin"
-		enabled="y" send_to="12" > </timer>
+    <timers>
+        <timer name="tim_init_plugin" second="0.5" active_closed="y" script="init_plugin" enabled="y" send_to="12"></timer>
 
-	<timer name="execute_in_area_timer"
-		second="0.1"
-		script=""
-		enabled="n" send_to="12">
-			<send>	execute_in_area_tick() </send> </timer>
+        <timer name="execute_in_area_timer" second="0.1" script="" enabled="n" send_to="12">
+            <send>	execute_in_area_tick() </send>
+        </timer>
 
-	<timer name="vidblain_nav_timer"
-		second="0.1"
-		script=""
-		enabled="n" send_to="12">
-			<send>	vidblain_nav_tick() </send> </timer>
+        <timer name="vidblain_nav_timer" second="0.1" script="" enabled="n" send_to="12">
+            <send>	vidblain_nav_tick() </send>
+        </timer>
 
-	<timer name="update_check_tick"
-		script="check_for_updates"
-		second="10"
-		enabled="y" send_to="12"> </timer>
+        <timer name="update_check_tick" script="check_for_updates" second="10" enabled="y" send_to="12"></timer>
 
-	<timer name="quest_timer"
-		script="quest_timer_tick"
-		second="1"
-		enabled="y" send_to="12"> </timer>
+        <timer name="quest_timer" script="quest_timer_tick" second="1" enabled="y" send_to="12"></timer>
 
-	<timer name="state_change_timer"
-		script="check_state_changed"
-		second="1"
-		enabled="y" send_to="12"> </timer>
-</timers>
+        <timer name="state_change_timer" script="check_state_changed" second="1" enabled="y" send_to="12"></timer>
+    </timers>
 
-<script>
-<![CDATA[
+    <script>
+        <![CDATA[
 dofile(GetInfo(60) .. "aardwolf_colors.lua")
 require "movewindow"
 require "serialize"
@@ -79,7 +66,7 @@ UPDATE_CHECK_INTERVAL = 60 * 60 -- Check once per hour
 local last_update_check = -1
 local automatic_update_checks = GetVariable("mcvar_automatic_update_checks") or "on"
 
-local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. ".4"
+local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. ".5 beta"
 local plugin_id_gmcp_handler = "3e7dedbe37e44942dd46d264" -- easier to remember the var names than the plugin id's
 local plugin_id_gmcp_mapper = "b6eae87ccedd84f510b74714"
 local plugin_id_z_order = "462b665ecb569efbf261422f"
@@ -1942,6 +1929,10 @@ function set_target_from_main_target_list(index, keyword)
 end
 
 function set_target_from_quest(quest_target)
+    if quest_target.room == "Outer Space" and quest_target.areaName == "The School of Horror" then
+        quest_target.arid = "sohtwo"
+    end
+    
     change_target(
         {
             name = quest_target.mob,
@@ -2076,6 +2067,10 @@ function target_quest_mob(bool) -- Re-targets your quest mob if you un-target it
             InfoNote("room: ", qt.room)
         end
     else
+        if qt.areaName == "The School of Horror" and qt.room == "Outer Space" then
+            qt.arid = "sohtwo"
+        end
+        
         set_target_from_quest(qt)
         set_variable("mcvar_qt_mob", qt.mob)
         set_variable("mcvar_qt_arid", qt.arid)
@@ -7275,7 +7270,7 @@ function onHelp(name, line, wildcards)
             )
         )
     elseif str == "xmap" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xmap move <roomID> <walk|run>")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xmap move <roomID><walk|run>")
         Note()
         ColourNote(
             "antiquewhite",
@@ -7299,7 +7294,7 @@ function onHelp(name, line, wildcards)
             )
         )
     elseif str == "qw" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": qw<x> <mobname>")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": qw<x><mobname>")
         Note()
         ColourNote(
             "antiquewhite",
@@ -7327,7 +7322,7 @@ function onHelp(name, line, wildcards)
             )
         )
     elseif str == "ah" or str == "aha" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": ah<a> <mobname>")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": ah<a><mobname>")
         Note()
         ColourNote(
             "antiquewhite",
@@ -7341,7 +7336,7 @@ function onHelp(name, line, wildcards)
             )
         )
     elseif str == "ak" or str == "kk" or str == "qk" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <xset> <ak|kk|qk> <commands>")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <xset><ak|kk|qk><commands>")
         Note()
         ColourNote(
             "antiquewhite",
@@ -7526,7 +7521,7 @@ function onHelp(name, line, wildcards)
             )
         )
     elseif str == "xrt" or str == "xrun" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <xrt|xrun> <area keyword>")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <xrt|xrun><area keyword>")
         Note()
         ColourNote(
             "antiquewhite",
@@ -7554,7 +7549,7 @@ function onHelp(name, line, wildcards)
             )
         )
     elseif str == "cp" or str == "gq" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <cp|gq> <i|info|c|check>")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <cp|gq><i|info|c|check>")
         Note()
         ColourNote(
             "antiquewhite",
@@ -7624,7 +7619,7 @@ function onHelp(name, line, wildcards)
             )
         )
     elseif str == "ms" or str == "msearch" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <<x>ms|<x>msearch> <here|area> <mob name>")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <<x>ms|<x>msearch><here|area><mob name>")
         Note()
         ColourNote(
             "antiquewhite",
@@ -7638,7 +7633,7 @@ function onHelp(name, line, wildcards)
             )
         )
     elseif str == "mgo" or str == "mgoto" or str == "xmgo" or str == "xmgoto" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <x>mgo<to> <idx>")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <x>mgo<to><idx>")
         Note()
         ColourNote(
             "antiquewhite",
@@ -7820,7 +7815,7 @@ function onHelp(name, line, wildcards)
             unpack(
                 {
                     helpWrap(
-                        "xmap move <roomID> <run|walk>:  Move to the room id at default speed, or walks (without portals) or runs (with portals) based on argument."
+                        "xmap move <roomID><run|walk>:  Move to the room id at default speed, or walks (without portals) or runs (with portals) based on argument."
                     )
                 }
             )
@@ -7844,7 +7839,7 @@ function onHelp(name, line, wildcards)
             unpack(
                 {
                     helpWrap(
-                        "qw<x> <mobname>:  Where's the current stored target or argument. Use 'x' to where exact mob name."
+                        "qw<x><mobname>:  Where's the current stored target or argument. Use 'x' to where exact mob name."
                     )
                 }
             )
@@ -7865,7 +7860,7 @@ function onHelp(name, line, wildcards)
         ColourNote(
             "antiquewhite",
             "",
-            unpack({helpWrap("ah<a> <targ>:  Autohunts target. Append 'a' with no target to abort.")})
+            unpack({helpWrap("ah<a><targ>:  Autohunts target. Append 'a' with no target to abort.")})
         )
         Note()
         ColourNote(
@@ -7949,7 +7944,7 @@ function onHelp(name, line, wildcards)
         ColourNote(
             "antiquewhite",
             "",
-            unpack({helpWrap("<xrt|xrun> <area>:  Runs to the area matching the argument.")})
+            unpack({helpWrap("<xrt|xrun><area>:  Runs to the area matching the argument.")})
         )
         Note()
         ColourNote("antiquewhite", "", unpack({helpWrap("<cp|gq> i|info:  Displays campaign/gquest info.")}))
@@ -7999,13 +7994,13 @@ function onHelp(name, line, wildcards)
         ColourNote(
             "antiquewhite",
             "",
-            unpack({helpWrap("ms<earch> <area|here|all> <mob>: Searches for mobs in the mob database.")})
+            unpack({helpWrap("ms<earch><area|here|all><mob>: Searches for mobs in the mob database.")})
         )
         Note()
         ColourNote(
             "antiquewhite",
             "",
-            unpack({helpWrap("mgo<to> <idx>: After searching for mobs, goes to the index chosen.")})
+            unpack({helpWrap("mgo<to><idx>: After searching for mobs, goes to the index chosen.")})
         )
         Note()
         ColourNote("antiquewhite", "", unpack({helpWrap("snd reload: Reloads the plugin if it errors out.")}))
@@ -8195,7 +8190,7 @@ end
     if sendit then
         mobLookup(name, zone, ifc(level, level, ""))
     else
-        InfoNote("*** Syntax error! Use: ", "xmsearch <areakey|here|all> <mob>")
+        InfoNote("*** Syntax error! Use: ", "xmsearch <areakey|here|all><mob>")
     end
 end
 
@@ -9032,1079 +9027,607 @@ function setup_scan_con_triggers()
 end
 
 	]]>
-</script>
-<triggers>
-+<!-- Receive xp -->
-	<trigger match="^You (?:don't )?receive \d+(?:\+\d+)* experience points?\."
-		script="trigger_receive_xp" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+    </script>
+    <triggers>
++                                <!-- Receive xp -->
+        <trigger match="^You (?:don't )?receive \d+(?:\+\d+)* experience points?\." script="trigger_receive_xp" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-<!-- Damage triggers -->
-	<trigger match="^.+\w tickles +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <!-- Damage triggers -->
+        <trigger match="^.+\w tickles +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w bruises +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w bruises +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w scratches +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w scratches +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w grazes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w grazes +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w nicks +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w nicks +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w scars +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w scars +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w hits +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w hits +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w injures +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w injures +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w wounds +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w wounds +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w mauls +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w mauls +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w maims +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w maims +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w mangles +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w mangles +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w mars +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w mars +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w LACERATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w LACERATES +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w DECIMATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w DECIMATES +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w DEVASTATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w DEVASTATES +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w ERADICATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w ERADICATES +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w OBLITERATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w OBLITERATES +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w EXTIRPATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w EXTIRPATES +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w INCINERATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w INCINERATES +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w MUTILATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w MUTILATES +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w DISEMBOWELS +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w DISEMBOWELS +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w MASSACRES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w MASSACRES +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w DISMEMBERS +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w DISMEMBERS +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w RENDS +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w RENDS +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w - BLASTS - +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w - BLASTS - +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w -= DEMOLISHES =- +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w -= DEMOLISHES =- +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w \*\* SHREDS \*\* +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w \*\* SHREDS \*\* +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w \*\*\*\* DESTROYS \*\*\*\* +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w \*\*\*\* DESTROYS \*\*\*\* +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w \*\*\*\*\* PULVERIZES \*\*\*\*\* +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w \*\*\*\*\* PULVERIZES \*\*\*\*\* +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w -=- VAPORIZES -=- +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w -=- VAPORIZES -=- +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w <-==-> ATOMIZES <-==-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w <-==-> ATOMIZES <-==-> +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w <-:-> ASPHYXIATES <-:-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w <-:-> ASPHYXIATES <-:-> +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w <-\*-> RAVAGES <-\*-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w <-\*-> RAVAGES <-\*-> +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w <>\*<> FISSURES <>\*<> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w <>\*<> FISSURES <>\*<> +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w <\*><\*> LIQUIDATES <\*><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w <\*><\*> LIQUIDATES <\*><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w <\*><\*><\*> EVAPORATES <\*><\*><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w <\*><\*><\*> EVAPORATES <\*><\*><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w <-=-> SUNDERS <-=-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w <-=-> SUNDERS <-=-> +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w <=-=><=-=> TEARS INTO <=-=><=-=> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w <=-=><=-=> TEARS INTO <=-=><=-=> +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w <->\*<=> WASTES <=>\*<-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w <->\*<=> WASTES <=>\*<-> +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w <-\+-><-\*-> CREMATES <-\*-><-\+-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w <-\+-><-\*-> CREMATES <-\*-><-\+-> +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w <\*><\*><\*><\*> ANNIHILATES <\*><\*><\*><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w <\*><\*><\*><\*> ANNIHILATES <\*><\*><\*><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w <--\*--><--\*--> IMPLODES <--\*--><--\*--> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w <--\*--><--\*--> IMPLODES <--\*--><--\*--> +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w <-><-=-><-> EXTERMINATES <-><-=-><-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w <-><-=-><-> EXTERMINATES <-><-=-><-> +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w <-==-><-==-> SHATTERS <-==-><-==-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w <-==-><-==-> SHATTERS <-==-><-==-> +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w <\*><-:-><\*> SLAUGHTERS <\*><-:-><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w <\*><-:-><\*> SLAUGHTERS <\*><-:-><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w <-\*-><-><-\*-> RUPTURES <-\*-><-><-\*-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w <-\*-><-><-\*-> RUPTURES <-\*-><-><-\*-> +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w <-\*-><\*><-\*-> NUKES <-\*-><\*><-\*-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w <-\*-><\*><-\*-> NUKES <-\*-><\*><-\*-> +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w -<\[=-\+-=\]<:::<>:::> GLACIATES <:::<>:::>\[=-\+-=\]>- +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w -<\[=-\+-=\]<:::<>:::> GLACIATES <:::<>:::>\[=-\+-=\]>- +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w <-=-><-:-\*-:-><\*--\*> METEORITES <\*--\*><-:-\*-:-><-=-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w <-=-><-:-\*-:-><\*--\*> METEORITES <\*--\*><-:-\*-:-><-=-> +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w <-:-><-:-\*-:-><-\*-> SUPERNOVAS <-\*-><-:-\*-:-><-:-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w <-:-><-:-\*-:-><-\*-> SUPERNOVAS <-\*-><-:-\*-:-><-:-> +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w does UN\w+ things to +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w does UN\w+ things to +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w damages? +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w damages? +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +shreds +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +shreds +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +destroys +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +destroys +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +pulverizes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +pulverizes +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +vaporizes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +vaporizes +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +atomizes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +atomizes +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +asphyxiates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +asphyxiates +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +ravages +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +ravages +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +fissures +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +fissures +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +liquidates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +liquidates +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +evaporates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +evaporates +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +sunders +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +sunders +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +into +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +into +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +wastes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +wastes +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +cremates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +cremates +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +annihilates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +annihilates +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +implodes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +implodes +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +exterminates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +exterminates +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +shatters +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +shatters +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +slaughters +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +slaughters +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +ruptures +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +ruptures +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +nukes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +nukes +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +glaciates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +glaciates +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +meteorites +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +meteorites +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w +supernovas +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^.+\w +supernovas +(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^(?:You assassinate |You catch |You attempt to bury .* deep into |You lunge at)(?<mob_name>.*)(?: with cold efficiency\.| completely off-guard and inflict massive damage on .*\.|'s? back!|with a .*!)$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^(?:You assassinate |You catch |You attempt to bury .* deep into |You lunge at)(?<mob_name>.*)(?: with cold efficiency\.| completely off-guard and inflict massive damage on .*\.|'s? back!|with a .*!)$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-<!-- Gquest operations -->
-	<!-- group: trg_gq -->
-	<trigger match="^Quest Name\.\.\.\.\.\.\.\.\.: \[ Global quest # (?<gq_id>\d{1,5}) \]$"
-		script="gq_info_quest_name"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <!-- Gquest operations -->
+        <!-- group: trg_gq -->
+        <trigger match="^Quest Name\.\.\.\.\.\.\.\.\.: \[ Global quest # (?<gq_id>\d{1,5}) \]$" script="gq_info_quest_name" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^---------------------------------------------------------------------------$"
-		script="gq_info_end"
-		group="trg_gq_info"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^---------------------------------------------------------------------------$" script="gq_info_end" group="trg_gq_info" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^Quest Status\.\.\.\.\.\.\.: \[ Extended \]$"
-		script="gq_info_extended"
-		group="trg_gq_info"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^Quest Status\.\.\.\.\.\.\.: \[ Extended \]$" script="gq_info_extended" group="trg_gq_info" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^Quest Status\.\.\.\.\.\.\.: \[ Finished \]$"
-		script="gq_info_finished"
-		group="trg_gq_info"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^Quest Status\.\.\.\.\.\.\.: \[ Finished \]$" script="gq_info_finished" group="trg_gq_info" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^Level range\.\.\.\.\.\.\.\.: \[\s+(?<minlvl>\d{1,3}) \] - \[\s+(?<maxlvl>\d{1,3}) \]$"
-		script="gq_info_level_range"
-		group="trg_gq_info"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^Level range\.\.\.\.\.\.\.\.: \[\s+(?<minlvl>\d{1,3}) \] - \[\s+(?<maxlvl>\d{1,3}) \]$" script="gq_info_level_range" group="trg_gq_info" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^Kill at least (?<qty>\d) \* (?<target>.+)\.$"
-		script="gq_info_line"
-		group="trg_gq_info"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^Kill at least (?<qty>\d) \* (?<target>.+)\.$" script="gq_info_line" group="trg_gq_info" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^You still have to kill (?<qty>[1-3]) \* (?<target>.+)$"
-		script="gq_check_line"
-		name="trg_gq_check_line" group="trg_gq_check"
-		enabled="n"	regexp="y" sequence="500" keep_evaluating="y" omit_from_output="y" send_to="12" >
-			<send>	EnableTrigger("trg_gq_check_end", true) </send> </trigger>
+        <trigger match="^You still have to kill (?<qty>[1-3]) \* (?<target>.+)$" script="gq_check_line" name="trg_gq_check_line" group="trg_gq_check" enabled="n" regexp="y" sequence="500" keep_evaluating="y" omit_from_output="y" send_to="12">
+            <send>	EnableTrigger("trg_gq_check_end", true) </send>
+        </trigger>
 
-	<trigger match="^(?!You still have to kill [1-3] \* .+ \(\S.+?(?: - Dead)?\))$"
-		script="gq_check_end"
-		name="trg_gq_check_end" group="trg_gq_check"
-		enabled="n"	regexp="y" sequence="500" keep_evaluating="y" omit_from_output="n" send_to="12" > </trigger>
+        <trigger match="^(?!You still have to kill [1-3] \* .+ \(\S.+?(?: - Dead)?\))$" script="gq_check_end" name="trg_gq_check_end" group="trg_gq_check" enabled="n" regexp="y" sequence="500" keep_evaluating="y" omit_from_output="n" send_to="12"></trigger>
 
-	<!-- gq messages to always listen for -->
-	<trigger match="^You have now joined Global Quest # (?<gq_id>\d{1,5})\. See 'help gquest' for available commands\.$"
-		script="gqmsg_joined"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <!-- gq messages to always listen for -->
+        <trigger match="^You have now joined Global Quest # (?<gq_id>\d{1,5})\. See 'help gquest' for available commands\.$" script="gqmsg_joined" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,5}) for levels (?<min_lvl>\d{1,3}) to (?<max_lvl>\d{1,3})(?: - (?:200|10) or fewer wins only)? has now started\.$"
-		script="gqmsg_started"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,5}) for levels (?<min_lvl>\d{1,3}) to (?<max_lvl>\d{1,3})(?: - (?:200|10) or fewer wins only)? has now started\.$" script="gqmsg_started" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<!-- gq messages to only listen for when in a gquest -->
-	<trigger match="^You have finished this global quest\.$"
-		script="player_not_on_gq"
-		name="trg_gq_finished_extended" 	group="trg_gqmsg"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <!-- gq messages to only listen for when in a gquest -->
+        <trigger match="^You have finished this global quest\.$" script="player_not_on_gq" name="trg_gq_finished_extended" group="trg_gqmsg" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^Global Quest: Global Quest # (?<gq_id>\d{1,5}) has been won by (?<winner>[A-Z][A-Za-z]+) - \d*(?:1st|2nd|3rd|\dth) win\.$"
-		script="gqmsg_winner"
-		name="trg_gqmsg_winner" 			group="trg_gqmsg"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^Global Quest: Global Quest # (?<gq_id>\d{1,5}) has been won by (?<winner>[A-Z][A-Za-z]+) - \d*(?:1st|2nd|3rd|\dth) win\.$" script="gqmsg_winner" name="trg_gqmsg_winner" group="trg_gqmsg" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^Global Quest: Global Quest # (?<gq_id>\d{1,5}) will go into extended time for 5 more minutes\.$"
-		script="gqmsg_extended_time"
-		name="trg_gqmsg_extended_time" 		group="trg_gqmsg_ext"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^Global Quest: Global Quest # (?<gq_id>\d{1,5}) will go into extended time for 5 more minutes\.$" script="gqmsg_extended_time" name="trg_gqmsg_extended_time" group="trg_gqmsg_ext" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,5})(?: \(extended\))? is now over\.$"
-		script="gq_ended"
-		name="trg_gqmsg_extended_end" 		group="trg_gqmsg"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,5})(?: \(extended\))? is now over\.$" script="gq_ended" name="trg_gqmsg_extended_end" group="trg_gqmsg" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,5}) has been cancelled due to lack of activity\.$"
-		script="gq_ended"
-		name="trg_gqmsg_extended_end2" 		group="trg_gqmsg"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,5}) has been cancelled due to lack of activity\.$" script="gq_ended" name="trg_gqmsg_extended_end2" group="trg_gqmsg" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^You are no longer part of Global Quest # (?<gq_id>\d{1,5}) and will be unable to rejoin\.$"
-		script="player_not_on_gq"
-		name="trg_gqmsg_quit" 				group="trg_gqmsg"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^You are no longer part of Global Quest # (?<gq_id>\d{1,5}) and will be unable to rejoin\.$" script="player_not_on_gq" name="trg_gqmsg_quit" group="trg_gqmsg" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^Congratulations, that was one of the GLOBAL QUEST mobs\!$"
-		script="gq_mob_killed"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^Congratulations, that was one of the GLOBAL QUEST mobs\!$" script="gq_mob_killed" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^You are not in a global quest\.$"
-		script="player_not_on_gq"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^You are not in a global quest\.$" script="player_not_on_gq" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^There are no global quests running\.$"
-		script="player_not_on_gq"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^There are no global quests running\.$" script="player_not_on_gq" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^Global Quest # (?<gq_id>\d{1,5}) has not yet started\.$"
-		script="gq_check_not_yet_started"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^Global Quest # (?<gq_id>\d{1,5}) has not yet started\.$" script="gq_check_not_yet_started" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-<!-- CAMPAIGN OPERATIONS -->
-	<trigger match="^Level Taken\.{8}: \[\s+(?<level>[1-2]?\d{1,2}) \]$"
-		script="cp_info_level_taken"
-		name="trg_cp_info_level_taken" group="trg_campaign"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
-			<send>	EnableTrigger("trg_cp_info_level_taken", false) </send> </trigger>
+        <!-- CAMPAIGN OPERATIONS -->
+        <trigger match="^Level Taken\.{8}: \[\s+(?<level>[1-2]?\d{1,2}) \]$" script="cp_info_level_taken" name="trg_cp_info_level_taken" group="trg_campaign" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12">
+            <send>	EnableTrigger("trg_cp_info_level_taken", false) </send>
+        </trigger>
 
-	<trigger match="^The targets for this campaign are:$"
-		script=""
-		name="trg_cp_info_targets" group="trg_campaign"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
-			<send>	EnableTrigger("trg_cp_info_targets", false)
+        <trigger match="^The targets for this campaign are:$" script="" name="trg_cp_info_targets" group="trg_campaign" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12">
+            <send>	EnableTrigger("trg_cp_info_targets", false)
 					EnableTrigger("trg_cp_info_line", true)
-					EnableTrigger("trg_cp_info_end", true) </send> </trigger>
+					EnableTrigger("trg_cp_info_end", true) </send>
+        </trigger>
 
-	<trigger match="^Find and kill 1 \* (?<target>.+)$"
-		script="cp_info_line"
-		name="trg_cp_info_line" group="trg_campaign"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^Find and kill 1 \* (?<target>.+)$" script="cp_info_line" name="trg_cp_info_line" group="trg_campaign" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^(?!Find and kill 1 \* .+ \(.+\))$"
-		script="cp_info_end"
-		name="trg_cp_info_end" group="trg_campaign"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
-			<send>	EnableTrigger("trg_cp_info_line", false)
-					EnableTrigger("trg_cp_info_end", false) </send> </trigger>
+        <trigger match="^(?!Find and kill 1 \* .+ \(.+\))$" script="cp_info_end" name="trg_cp_info_end" group="trg_campaign" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12">
+            <send>	EnableTrigger("trg_cp_info_line", false)
+					EnableTrigger("trg_cp_info_end", false) </send>
+        </trigger>
 
-	<trigger match="^You still have to kill \* (?<target>.+)$"
-		script="cp_check_line"
-		name="trg_cp_check_line" group="trg_campaign"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12" >
-			<send>	EnableTrigger("trg_cp_check_end", true)</send> </trigger>
+        <trigger match="^You still have to kill \* (?<target>.+)$" script="cp_check_line" name="trg_cp_check_line" group="trg_campaign" enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12">
+            <send>	EnableTrigger("trg_cp_check_end", true)</send>
+        </trigger>
 
 
-	<trigger match="^(?!You still have to kill \* .+ \(.+?(?: - Dead)?\))$"
-		script="cp_check_end"
-		name="trg_cp_check_end" group="trg_campaign"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12" >
-			<send>	EnableTrigger("trg_cp_check_gag_dead", true)
+        <trigger match="^(?!You still have to kill \* .+ \(.+?(?: - Dead)?\))$" script="cp_check_end" name="trg_cp_check_end" group="trg_campaign" enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12">
+            <send>	EnableTrigger("trg_cp_check_gag_dead", true)
 					EnableTrigger("trg_cp_check_line", false)
-					EnableTrigger("trg_cp_check_end", false) </send> </trigger>
+					EnableTrigger("trg_cp_check_end", false) </send>
+        </trigger>
 
-	<trigger match="^Note: Dead means that the target is dead, not that you have killed it\.$"
-		name="trg_cp_check_gag_dead" group="trg_campaign"
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12" >
-			<send>	EnableTrigger("trg_cp_check_gag_dead", false) </send> </trigger>
+        <trigger match="^Note: Dead means that the target is dead, not that you have killed it\.$" name="trg_cp_check_gag_dead" group="trg_campaign" enabled="y" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12">
+            <send>	EnableTrigger("trg_cp_check_gag_dead", false) </send>
+        </trigger>
 
-<!-- CAMPAIGN STATUS TRACKING -->
-	<trigger match="^Congratulations, that was one of your CAMPAIGN mobs\!$"
-		script="cp_mob_killed"
-		name="trg_cp_mob_killed" 	group="trg_cp_2"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <!-- CAMPAIGN STATUS TRACKING -->
+        <trigger match="^Congratulations, that was one of your CAMPAIGN mobs\!$" script="cp_mob_killed" name="trg_cp_mob_killed" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^CONGRATULATIONS\! You have completed your campaign\.$"
-		script="do_cp_complete"
-		name="trg_cp_complete" 		group="trg_cp_2"
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y"> </trigger>
+        <trigger match="^CONGRATULATIONS\! You have completed your campaign\.$" script="do_cp_complete" name="trg_cp_complete" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^Campaign cleared\.$"
-		script="player_not_on_cp"
-		name="trg_cp_quit" 			group="trg_cp_2"
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <trigger match="^Campaign cleared\.$" script="player_not_on_cp" name="trg_cp_quit" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^\w.+ tells you 'Good luck in your campaign\!'$"
-		script="player_start_new_cp"
-		name="trg_cp_request" 		group="trg_cp_2"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^\w.+ tells you 'Good luck in your campaign\!'$" script="player_start_new_cp" name="trg_cp_request" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^You are not currently on a campaign\.$"
-		script="player_not_on_cp"
-		name="trg_player_not_on_cp" group="trg_cp_2"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^You are not currently on a campaign\.$" script="player_not_on_cp" name="trg_player_not_on_cp" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^(?:(?:## )?You may now take another campaign\.|You may take (?:a campaign at this level|another campaign)\.)$"
-		script="cp_check_can_get_new_cp"
-		name="trg_can_get_new_cp" group="trg_cp_2"
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <trigger match="^(?:(?:## )?You may now take another campaign\.|You may take (?:a campaign at this level|another campaign)\.)$" script="cp_check_can_get_new_cp" name="trg_can_get_new_cp" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^You (?:will have to level before you can go on another campaign|cannot take another campaign for (?:(?:\d+ hours?, )?\d+ minutes? and )?\d+ seconds?)\.$"
-		name="trg_cannot_get_new_cp" group="trg_cp_2"
-		script="cp_check_cannot_get_new_cp"
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <trigger match="^You (?:will have to level before you can go on another campaign|cannot take another campaign for (?:(?:\d+ hours?, )?\d+ minutes? and )?\d+ seconds?)\.$" name="trg_cannot_get_new_cp" group="trg_cp_2" script="cp_check_cannot_get_new_cp" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^You use a daily blessing campaign reset token to reset your campaign\.$"
-		name="trg_cp_reset_token" group="trg_cp_2"
-		script=""
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="n" send_to="12" > </trigger>
+        <trigger match="^You use a daily blessing campaign reset token to reset your campaign\.$" name="trg_cp_reset_token" group="trg_cp_2" script="" enabled="y" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="n" send_to="12"></trigger>
 
-<!-- QUICK WHERE -->
-	<trigger match="^(?<mobname>.{30}) (?<roomname>[^ (0-9].*)$"
-		script="qw_match"
-		name="trg_quick_where_match" group="QuickWhere"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <!-- QUICK WHERE -->
+        <trigger match="^(?<mobname>.{30}) (?<roomname>[^ (0-9].*)$" script="qw_match" name="trg_quick_where_match" group="QuickWhere" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^There is no \w.+ around here\.$"
-		script="qw_no_match"
-		name="trg_quick_where_no_match" group="QuickWhere"
-		enabled="n"	regexp="y" sequence="50" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^There is no \w.+ around here\.$" script="qw_no_match" name="trg_quick_where_no_match" group="QuickWhere" enabled="n" regexp="y" sequence="50" keep_evaluating="y" send_to="12"></trigger>
 
-<!-- HUNT TRICK -->
-	<trigger match="^You are (?:almost )?certain that \w.+ is (?:north|south|east|west|up|down) from here\.|You are confident that \w.+ passed through here, heading (?:north|south|east|west|up|down)\.|The trail of \w.+ is confusing, but you're reasonably sure \w.+ headed (?:north|south|east|west|up|down)\.|There are traces of \w.+ having been here. Perhaps they lead (?:north|south|east|west|up|down)\?|You have no idea what you\'re doing\, but maybe \w.+ is (?:north|south|east|west|up|down)\?|You couldn\'t find a path to \w.+ from here\.|\w.+ is here\!$"
-		script="ht_continue"
-		name="trg_hunt_trick_continue_dir" group="HuntTrick"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <!-- HUNT TRICK -->
+        <trigger match="^You are (?:almost )?certain that \w.+ is (?:north|south|east|west|up|down) from here\.|You are confident that \w.+ passed through here, heading (?:north|south|east|west|up|down)\.|The trail of \w.+ is confusing, but you're reasonably sure \w.+ headed (?:north|south|east|west|up|down)\.|There are traces of \w.+ having been here. Perhaps they lead (?:north|south|east|west|up|down)\?|You have no idea what you\'re doing\, but maybe \w.+ is (?:north|south|east|west|up|down)\?|You couldn\'t find a path to \w.+ from here\.|\w.+ is here\!$" script="ht_continue" name="trg_hunt_trick_continue_dir" group="HuntTrick" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^You are (?:almost )?certain that \w.+ is through .+\.|You are confident that \w.+ passed through here, heading through .+\.|The trail of \w.+ is confusing, but you're reasonably sure \w.+ headed through .+\.|There are traces of \w.+ having been here\. Perhaps they lead through \w.+\?|You have no idea which way \w.+ went\.$"
-		script="ht_continue"
-		name="trg_hunt_trick_continue_portal" group="HuntTrick"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^You are (?:almost )?certain that \w.+ is through .+\.|You are confident that \w.+ passed through here, heading through .+\.|The trail of \w.+ is confusing, but you're reasonably sure \w.+ headed through .+\.|There are traces of \w.+ having been here\. Perhaps they lead through \w.+\?|You have no idea which way \w.+ went\.$" script="ht_continue" name="trg_hunt_trick_continue_portal" group="HuntTrick" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^You seem unable to hunt that target for some reason\.$"
-		script="ht_complete"
-		name="trg_hunt_trick_complete" group="HuntTrick"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^You seem unable to hunt that target for some reason\.$" script="ht_complete" name="trg_hunt_trick_complete" group="HuntTrick" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^\w.+ is here\!$"
-		name="trg_hunt_trick_continue_2" group="HuntTrick"
-		script="ht_continue"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^\w.+ is here\!$" name="trg_hunt_trick_continue_2" group="HuntTrick" script="ht_continue" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^No one in this area by the name '\w.+'\.$"
-		name="trg_hunt_trick_fail" group="HuntTrick"
-		script="ht_fail"
-		enabled="n" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <trigger match="^No one in this area by the name '\w.+'\.$" name="trg_hunt_trick_fail" group="HuntTrick" script="ht_fail" enabled="n" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^Not while you are fighting\!|You can't hunt while (?:resting|sitting)\.|You dream about going on a nice hunting trip, with pony rides, and campfires too\.$"
-		name="trg_hunt_trick_abort" group="HuntTrick"
-		script="ht_abort"
-		enabled="n" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <trigger match="^Not while you are fighting\!|You can't hunt while (?:resting|sitting)\.|You dream about going on a nice hunting trip, with pony rides, and campfires too\.$" name="trg_hunt_trick_abort" group="HuntTrick" script="ht_abort" enabled="n" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-<!--  AUTO HUNT -->
-	<trigger match="^You are (?:almost )?certain that (?<mob>\w.+) is (?<dir>north|south|east|west|up|down) from here\.$"
-		script="auto_hunt_next"
-		name="trg_autohunt_next_1" group="AutoHunt"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <!--  AUTO HUNT -->
+        <trigger match="^You are (?:almost )?certain that (?<mob>\w.+) is (?<dir>north|south|east|west|up|down) from here\.$" script="auto_hunt_next" name="trg_autohunt_next_1" group="AutoHunt" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^You are confident that (?<mob>.+) passed through here\, heading (?<dir>north|south|east|west|up|down)\.$"
-		script="auto_hunt_next"
-		name="trg_autohunt_next_2" group="AutoHunt"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^You are confident that (?<mob>.+) passed through here\, heading (?<dir>north|south|east|west|up|down)\.$" script="auto_hunt_next" name="trg_autohunt_next_2" group="AutoHunt" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^The trail of \w.+ is confusing, but you\'re reasonably sure .+ headed (?:north|south|east|west|up|down)\.|There are traces of \w.+ having been here\. Perhaps they lead (?:north|south|east|west|up|down)\?|You have no idea what you\'re doing, but maybe \w.+ is (?:north|south|east|west|up|down)\?$"
-		script="auto_hunt_lowskill"
-		name="trg_autohunt_lowskill" group="AutoHunt"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^The trail of \w.+ is confusing, but you\'re reasonably sure .+ headed (?:north|south|east|west|up|down)\.|There are traces of \w.+ having been here\. Perhaps they lead (?:north|south|east|west|up|down)\?|You have no idea what you\'re doing, but maybe \w.+ is (?:north|south|east|west|up|down)\?$" script="auto_hunt_lowskill" name="trg_autohunt_lowskill" group="AutoHunt" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^You are (?:almost )?certain that \w.+ is through .+\.|You are confident that \w.+ passed through here, heading through .+\.|The trail of \w.+ is confusing, but you're reasonably sure \w.+ headed through .+\.|There are traces of \w.+ having been here\. Perhaps they lead through .+\?|You have no idea what you\'re doing\, but maybe \w.+ is through .+\?$"
-		script="auto_hunt_portal"
-		name="trg_autohunt_portal" group="AutoHunt"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^You are (?:almost )?certain that \w.+ is through .+\.|You are confident that \w.+ passed through here, heading through .+\.|The trail of \w.+ is confusing, but you're reasonably sure \w.+ headed through .+\.|There are traces of \w.+ having been here\. Perhaps they lead through .+\?|You have no idea what you\'re doing\, but maybe \w.+ is through .+\?$" script="auto_hunt_portal" name="trg_autohunt_portal" group="AutoHunt" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^No one in this area by the name '\w.+'\.|You couldn\'t find a path to \w.+ from here\.|No one in this area by that name\.|Not while you are fighting\!|You can't hunt while (?:resting|sitting)\.|You dream about going on a nice hunting trip, with pony rides, and campfires too\.$"
-		script="auto_hunt_abort"
-		name="trg_autohunt_abort" group="AutoHunt"
-		enabled="n" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <trigger match="^No one in this area by the name '\w.+'\.|You couldn\'t find a path to \w.+ from here\.|No one in this area by that name\.|Not while you are fighting\!|You can't hunt while (?:resting|sitting)\.|You dream about going on a nice hunting trip, with pony rides, and campfires too\.$" script="auto_hunt_abort" name="trg_autohunt_abort" group="AutoHunt" enabled="n" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^You seem unable to hunt that target for some reason\.$"
-		script="auto_hunt_abort"
-		name="trg_hunt_trick" group="AutoHunt"
-		enabled="n" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <trigger match="^You seem unable to hunt that target for some reason\.$" script="auto_hunt_abort" name="trg_hunt_trick" group="AutoHunt" enabled="n" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^\w.+ is here\!$"
-		script="auto_hunt_complete"
-		name="trg_autohunt_complete" group="AutoHunt"
-		enabled="n" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <trigger match="^\w.+ is here\!$" script="auto_hunt_complete" name="trg_autohunt_complete" group="AutoHunt" enabled="n" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^Magical wards around \w.+ bounce you back\.$"
-		name="trg_autohunt_nopass" group="AutoHunt"
-		script="auto_hunt_door"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^Magical wards around \w.+ bounce you back\.$" name="trg_autohunt_nopass" group="AutoHunt" script="auto_hunt_door" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^The \w.+ is closed\.$"
-		name="trg_autohunt_door" group="AutoHunt"
-		script="auto_hunt_door"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^The \w.+ is closed\.$" name="trg_autohunt_door" group="AutoHunt" script="auto_hunt_door" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^You do not have a key for \w.+\.$"
-		name="trg_autohunt_no_key" group="AutoHunt"
-		script="auto_hunt_abort"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^You do not have a key for \w.+\.$" name="trg_autohunt_no_key" group="AutoHunt" script="auto_hunt_abort" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^You open \w.+\.$"
-		name="trg_autohunt_door_open" group="AutoHunt"
-		script="auto_hunt_door_open"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^You open \w.+\.$" name="trg_autohunt_door_open" group="AutoHunt" script="auto_hunt_door_open" enabled="n" regexp="y" sequence="100"></trigger>
 
-<!-- AUTO SET NOEXP -->
-	<trigger match="^You will no longer receive experience\. Happy questing\!$"
-		script="anex_automatic_off"
-		name="trg_anex_automatic_off"
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <!-- AUTO SET NOEXP -->
+        <trigger match="^You will no longer receive experience\. Happy questing\!$" script="anex_automatic_off" name="trg_anex_automatic_off" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^You will now receive experience\. Happy leveling\!$"
-		script="anex_automatic_on"
-		name="trg_anex_automatic_on"
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <trigger match="^You will now receive experience\. Happy leveling\!$" script="anex_automatic_on" name="trg_anex_automatic_on" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^You (?:don't )?receive (\d+)(?:\+\d+)? experience points?\.$"
-		script="anex_mobdeath_xp1"
-		name="trg_anex_mobdeath_xp1"
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^You (?:don't )?receive (\d+)(?:\+\d+)? experience points?\.$" script="anex_mobdeath_xp1" name="trg_anex_mobdeath_xp1" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^You raise a level\! You are now level \d+\.$"
-		script="player_level_up"
-		name="trg_player_level_up"
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y"> </trigger>
+        <trigger match="^You raise a level\! You are now level \d+\.$" script="player_level_up" name="trg_player_level_up" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-<!-- AREA INDEX PROCESS -->
-	<trigger match="^              \[ Listing all areas in range 1 to 300 \]$"
-		script="area_index_start"
-		name="trg_area_index_start" group="AreaIndex"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" >
-			<send>	EnableTrigger("trg_area_index_gag_headers", true)
+        <!-- AREA INDEX PROCESS -->
+        <trigger match="^              \[ Listing all areas in range 1 to 300 \]$" script="area_index_start" name="trg_area_index_start" group="AreaIndex" enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12">
+            <send>	EnableTrigger("trg_area_index_gag_headers", true)
 					EnableTrigger("trg_area_index_gag_header_lines", true)
 					EnableTrigger("trg_area_index_line", true)
 					EnableTrigger("trg_area_index_gag_lock_means", true)
-					EnableTrigger("trg_area_index_end", true) </send> </trigger>
-
-	<trigger match="^From To   Lock  Keyword          Area Name                      $"
-		name="trg_area_index_gag_headers" group="AreaIndex"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" >
-			<send>	EnableTrigger("trg_area_index_gag_headers", false) </send> </trigger>
-
-	<trigger match="^---- ---- ----  ---------------  ------------------------------$"
-		name="trg_area_index_gag_header_lines" group="AreaIndex"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" >
-			<send>	EnableTrigger("trg_area_index_gag_header_lines", false) </send> </trigger>
-
-	<trigger match="^\s+(?<min>\d+)\s+(?<max>\d+)\s+(?<lock>\d+)?\s+?(?<arid>[0-9a-z]+?)\s+(?<areaName>[A-Z].+?)$"
-		script="area_index_line"
-		name="trg_area_index_line" group="AreaIndex"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^'Lock' means you cannot enter until you are that level or higher\.$"
-		name="trg_area_index_gag_lock_means" group="AreaIndex"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" >
-			<send>	EnableTrigger("trg_area_index_gag_lock_means", false) </send> </trigger>
-
-	<trigger match="^---------------------------------------------------------------$"
-		script="area_index_end"
-		name="trg_area_index_end" group="AreaIndex"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" keep_evaluating="y" send_to="12" >
-			<send>	EnableTrigger("trg_area_index_line", false)
-					EnableTrigger("trg_area_index_end", false) </send> </trigger>
-
-<!-- Consider -->
-
-	<trigger match="^(?<name>.+) has divine protection\.$"
-		script="consider_unkillable" name="consider_protected" group="consider"
-		enabled="y" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
-
-	<trigger match="^If you killed (?<name>.+), who would serve .+ customers\?$"
-		script="consider_unkillable" name="consider_shopkeeper" group="consider"
-		enabled="y" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
-
-	<trigger match="^$"
-		name="consider_end"
-		group="consider_end"
-		script="consider_end"
-		enabled="n" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
-
-	<trigger match="^(?:You see no one here but yourself!|Strange forces prevent violence here\.)$"
-		name="consider_end_empty"
-		group="consider_end"
-		script="consider_end"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-<!-- Scan -->
-	<trigger match="^Tag option scan turned ON$"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="{scan}"
-		script="scan_start"
-		enabled="y" regexp="n" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="{/scan}"
-		script="scan_end"
-		enabled="y" regexp="n" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^Right here you see:$"
-		script="scan_location_current_room"
-		group="scan"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^(\d )?(North|East|South|West|Up|Down) from here you see:$"
-		script="scan_location_nearby_room"
-		group="scan"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^You see .+\.$"
-		script="scan_door_nearby"
-		group="scan"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^Nothing to see around here, might as well move on\.$"
-		script="scan_empty"
-		group="scan"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-<!-- Roomchars -->
-	<trigger match="^Tag option roomchars turned ON$"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="{roomchars}"
-		script="roomchars_start"
-		enabled="y" regexp="n" sequence="50" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="{/roomchars}"
-		script="roomchars_end"
-		enabled="y" regexp="n" sequence="50" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^.+$"
-		script="roomchars" name="roomchars"
-		enabled="n" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
-
-<!-- PAGE SIZE -->
-	<trigger match="^You currently display ([0-9]+) lines per page\.|You do not page long messages\.$"
-		script="capture_page_size"
-		name="trg_capture_page_size"
-		enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output = "y" > </trigger>
-
-	<trigger match="^Use 'pagesize \<lines\>' to change, or 'pagesize 0' to disable paging\.$"
-		script=""
-		name="trg_pagesize_gag_1"
-		enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output = "y" send_to="12" >
-			<send>	EnableTrigger("trg_pagesize_gag_1", false) </send> </trigger>
-
-<!-- Misc. gag triggers -->
-	<trigger match="^Players found: \[\d+\], Max this reboot: \[\d+\], Connections this reboot: \[\d+\]$"
-		name="trg_gag_who_footer_1"
-		enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" > </trigger>
-
-	<trigger match="^Players invis: \[\d+\], Max on ever: \[\d+\]$"
-		name="trg_gag_who_footer_2"
-		enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" > </trigger>
-
-	<trigger match="^[\s\S]*$"
-		name="trg_gag_everything"
-		enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="y" > </trigger>
-</triggers>
-
-<aliases>
-<!-- Plugin Update automatic -->
-	<alias enabled="y" match="snd update" script="update_plugin" sequence="100">
-	</alias>
-	<alias enabled="y" match="^(?:xhelp|snd help)(?:\s(?<search>.*))?$" regexp="y" script="onHelp" sequence="100">
-	</alias>
-
-	<alias enabled="y" match="^snd force update(?: (?<branch>\S+))?$" script="force_update_plugin" regexp="y" sequence="100">
-	</alias>
-
-	<alias enabled="y" match="snd check_update" script="toggle_automatic_update_checking" sequence="100">
-	</alias>
-
-	<alias enabled="y" match="^xset silent(?: (on|off))?" regexp="y" script="xset_silentMode" sequence="100">
-	</alias>
-
-<!-- Auto-hunt commands-->
-	<alias	match="^ah (?<arg>\w.+)$"
-			script="auto_hunt"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^(?:aha|ah0)$"
-			script="auto_hunt_abort"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-	
-	<alias	match="^ah$"
-			script="auto_hunt_noarg"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- campaign data input: cp info, check -->
-	<alias	match="^cp (?:i|info)$"
-			script="do_cp_info"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^cp (?:ch|check)$"
-			script="do_cp_check"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- gquest data input: gq info, check -->
-	<alias	match="^gq i(?:n(?:fo?)?)?$"
-			script="do_gq_info"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^(?:gg|qq)$"
-			script="do_gq_check"
-			name="extra_gq_check_aliases"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^(?:gq (?:c|ch|check))$"
-			script="do_gq_check"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- xcp commands  -->
-	<alias	match="^xcp$"
-			script="xcp_noarg"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xcp (?<index>[0-9]+)$"
-			script="xcp_arg"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xcp mode(?: (?<option>ht|qw|off))?$"
-			script="xcp_set_action_mode"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xcp q(uest)?$"
-		script="xcp_toggle_quest_targeting"
-		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- movement: xrunto, go, nx, etc.  -->
-	<alias	match="^(?:xrt|xrun|xrunto) (?<destination>.+)$"
-			script="xrun_to_alias"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^(?:go|goto)( (?<index>[0-9]+))?$"
-			script="goto_number"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" keep_evaluating="y" > </alias>
-
-	<alias	match="^nx$"
-			script="goto_next"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^nx-$"
-			script="goto_previous"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- Automatic noexp -->
-	<alias	match="^xset noexp( (?<arg>off|[0-9]+))?$"
-			script="xset_noexp_tnl"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- Quest commands -->
-	<alias	match="^(?:xq|xq1)$"
-			script="xq_command"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xqt$"
-			script="retarget_quest"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- Quick scan -->
-	<alias	match="^qs$"
-			script="quick_scan"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- Quick-kill commands: qk, ak, kk, xset attack -->
-	<alias	match="^(?:quick kill|ak|kk|qk)$"
-			script="quick_kill"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset (?:kk|ak|qk|qkill)(?: (?<arg>.+))?$"
-			script="xset_quick_kill_command"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- Hunt trick -->
-	<alias	match="^ht$"
-			script="ht_noarg"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^ht (?:(?<index>\d+)\.)?(?<mob>.+)?$"
-			script="ht_arg"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^ht(?:a|0| abort| stop)$"
-			script="ht_abort"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- Quick where -->
-	<alias	match="^qw$"
-			script="qw_noarg"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^qw (?:(?<index>\d+)\.)?(?<mob>.+)?$"
-			script="qw_arg_alias"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^qwx$"
-			script="qw_exact"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- roomnotes -->
-	<alias	match="^(?:roomnote|rn)$"
-			script="room_note"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^(?:roomnote|rn) a(?:rea)?(?: (?<arid>.+))?$"
-			script="room_note_area"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^(?:roomnote|rn) (?<roomid>\d+)$"
-			script="room_note_room"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- Sql Execution -->
-	<alias	match="^runsql (?<sql>.+)$"
-			script="RunSql"
-			enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^execsql (?<sql>.+)$"
-			script="ExecSql"
-			enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12" > </alias>
-
-<!-- xmapper  -->
-	<alias	match="^(?:xmap|xmapper) move (?<roomid>\d+|-1)(?: (?<speed>run|walk))?$"
-			script="xmapper_move"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xm(?:\ {(?<mob>[^\}]+)\})? (?<loc>.+)$"
-			script="map_area"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xmall(?:\ {(?<mob>[^\}]+)\})? (?<loc>.+)$"
-			script="map_area_all"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^(?:xm|xmap|xmapper) rlh(?: (?<room_id>\d+))?$"
-			script="xmap_rooms_linking_here"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- xset commands -->
-	<alias  match="^xset (?:index areas|area index)$"
-			script="area_index_process"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset (?:mark|start)(?:\s(\w+))?(?:\s(\d+))?$"
-			script="xset_to_mark"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias  match="^xset gqalias$"
-			script="xset_gqalias"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias  match="^xset vidblain$"
-			script="xset_vidblain"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias  match="^xset vidblain level(?: (?<level>\d{1,3}))?$"
-			script="xset_vidblain_setlevel"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias  match="^xset speed ?(?<speed>run|walk)?$"
-			script="set_speed"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset sendecho$"
-			script=""
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset kw$"
-		script="set_mob_keyword"
-		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset kw (?<keyword>.+)$"
-		script="set_current_mob_keyword"
-		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset nx$"
-		script="xset_nx_check"
-		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset nx (?<action>smartscan|con|scan|scanhere|qs|none)$"
-		script="xset_nx"
-		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias  match="^xset con_overwrite"
-		script="xset_con_overwrite"
-		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset sound$"
-		script="xset_sound"
-		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset table notes$"
-		script="xset_table_notes"
-		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset table width (?<width>\d{2,3})$"
-		script="xset_table_width"
-		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- xset window commands -->
-	<alias	match="^xset fontsize.*$"
-			script="deprecated_xset_font_size"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset linespace.*$"
-			script="deprecated_xset_line_space"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset winreset$"
-			script="xg_create_window"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" >
-				<send>	win_init = false	</send> </alias>
-
-	<alias	match="^xset (?:window|win) (?<onoff>on|off|show|hide|0|1|true|false|max(?:imize)?|expand|min(?:imize)?|collapse)$"
-			script="xset_ToggleWindowDisplay"
-			enabled="y" regexp="y" sequence="100" > </alias>
-
-	<alias	match="^(?:xw|xwh|xwhere)( (?<n1>\d+))?( (?<n2>\d+))?( (?<mob>.+))?$"
-			script="do_xwhere"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^(?:xg|xgui) (?:ref|refresh)$"
-			script="xgui_RefreshLinks"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" > </alias>
-
-	<alias	match="^(?:xg|xgui) (?:rel|reload)$"
-			script="xgui_ReloadLinks"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" > </alias>
-
-<!-- xset page size (area index process) -->
-	<alias	match="^xset suspend page size$"
-			script="suspend_page_size"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset resume page size$"
-			script="resume_page_size"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- xtest commands -->
-	<alias  match="^xtest areadata$"
-			script="xtest_areadata"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest mcvars$"
-			script="xtest_mcvars"
-			enabled="y" regexp="y" sequence="100" > </alias>
-
-	<alias	match="^xtest roomhist$"
-			script="xtest_roomhist"
-			enabled="y" regexp="y" sequence="100" > </alias>
-
-	<alias	match="^xtest simulate cp(?: (?<type>area|room))?$"
-			script="simulate_cp"
-			enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate level (?<level>\d{1,3})$"
-			script="spoof_level"
-			enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate q(?:uest)?(?: (?<status>start|status|killed|comp|fail|reset|ready|timeout|statkilled|wait|ready))?$"
-			script="simulate_quest"
-			enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest debug gq(uest)?$"
-			script="xtest_debug_gquest"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate gq wait(?: (?<num>\d{1,5}))?$"
-			script="xtest_gq_waiting"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate gq start(?: (?<type>area|room))?(?: (?<num>\d{1,5}))?$"
-			script="xtest_gq_start"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate gq join (?<num>\d{1,5})(?: (?<silent>s))?$"
-			script="xtest_gq_join"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate gq end(?: (?<num>\d{1,5}))?$"
-			script="xtest_gq_end"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate gq win(?: (?<num>\d{1,5}))?$"
-			script="xtest_gq_win"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate gq lose(?: (?<num>\d{1,5}))?(?<noextend> noextended)$"
-			script="xtest_gq_lose"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate gq kill(?: (?<num>\d+))?$"
-			script="xtest_gq_kill"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate gq quit(?: (?<num>\d{1,5}))?$"
-			script="xtest_gq_quit"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate xcp(?: (?<num>\d+))?$"
-			script="xtest_xcp"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias  match="^xtest gqid$"
-			script="echo_gqid_joined"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest loadroom(?: (?<roomid>\d+))?$"
-			script="xtest_loadroom"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest popmsg$"
-			script="xtest_popmsg"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest debug$"
-			script="xtest_debug"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest qt (?<qt>\d{1,2})$"
-			script="xtest_set_qt"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest target$"
-			script="xtest_print_target"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias  match="^snd reload$"
-			script="sndReload"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- New commands -->
-	<alias	match="^x?m(?:ob)?s(?:earch)? ([\p{P}\w]+)(?:\s([^0-9]+))?(?:\s+(\d+))?$"
-			script="onSearch"
-			group="Mob_Database"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias 	match="^x?mgo(?:to)? (\d+)$"
-			script="mobGo"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias 	match="^(snd migrate|mergePwar)$"
-			script="copyPwarWarn"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias 	match="^(snd migrate|mergePwar) confirm$"
-			script="copyPwarDB"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-
-	<alias	match="snd changelog"
-			enabled="y" sequence="100" ignore_case="y" send_to="12" >
-			<send>get_changelog(true)</send> </alias>
-</aliases>
+					EnableTrigger("trg_area_index_end", true) </send>
+        </trigger>
+
+        <trigger match="^From To   Lock  Keyword          Area Name                      $" name="trg_area_index_gag_headers" group="AreaIndex" enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12">
+            <send>	EnableTrigger("trg_area_index_gag_headers", false) </send>
+        </trigger>
+
+        <trigger match="^---- ---- ----  ---------------  ------------------------------$" name="trg_area_index_gag_header_lines" group="AreaIndex" enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12">
+            <send>	EnableTrigger("trg_area_index_gag_header_lines", false) </send>
+        </trigger>
+
+        <trigger match="^\s+(?<min>\d+)\s+(?<max>\d+)\s+(?<lock>\d+)?\s+?(?<arid>[0-9a-z]+?)\s+(?<areaName>[A-Z].+?)$" script="area_index_line" name="trg_area_index_line" group="AreaIndex" enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="^'Lock' means you cannot enter until you are that level or higher\.$" name="trg_area_index_gag_lock_means" group="AreaIndex" enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12">
+            <send>	EnableTrigger("trg_area_index_gag_lock_means", false) </send>
+        </trigger>
+
+        <trigger match="^---------------------------------------------------------------$" script="area_index_end" name="trg_area_index_end" group="AreaIndex" enabled="n" regexp="y" sequence="100" omit_from_output="y" keep_evaluating="y" send_to="12">
+            <send>	EnableTrigger("trg_area_index_line", false)
+					EnableTrigger("trg_area_index_end", false) </send>
+        </trigger>
+
+        <!-- Consider -->
+
+        <trigger match="^(?<name>.+) has divine protection\.$" script="consider_unkillable" name="consider_protected" group="consider" enabled="y" regexp="y" sequence="100" omit_from_output="n" send_to="12"></trigger>
+
+        <trigger match="^If you killed (?<name>.+), who would serve .+ customers\?$" script="consider_unkillable" name="consider_shopkeeper" group="consider" enabled="y" regexp="y" sequence="100" omit_from_output="n" send_to="12"></trigger>
+
+        <trigger match="^$" name="consider_end" group="consider_end" script="consider_end" enabled="n" regexp="y" sequence="100" omit_from_output="n" send_to="12"></trigger>
+
+        <trigger match="^(?:You see no one here but yourself!|Strange forces prevent violence here\.)$" name="consider_end_empty" group="consider_end" script="consider_end" enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <!-- Scan -->
+        <trigger match="^Tag option scan turned ON$" enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="{scan}" script="scan_start" enabled="y" regexp="n" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="{/scan}" script="scan_end" enabled="y" regexp="n" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="^Right here you see:$" script="scan_location_current_room" group="scan" enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="^(\d )?(North|East|South|West|Up|Down) from here you see:$" script="scan_location_nearby_room" group="scan" enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="^You see .+\.$" script="scan_door_nearby" group="scan" enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="^Nothing to see around here, might as well move on\.$" script="scan_empty" group="scan" enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <!-- Roomchars -->
+        <trigger match="^Tag option roomchars turned ON$" enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="{roomchars}" script="roomchars_start" enabled="y" regexp="n" sequence="50" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="{/roomchars}" script="roomchars_end" enabled="y" regexp="n" sequence="50" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="^.+$" script="roomchars" name="roomchars" enabled="n" regexp="y" sequence="100" omit_from_output="n" send_to="12"></trigger>
+
+        <!-- PAGE SIZE -->
+        <trigger match="^You currently display ([0-9]+) lines per page\.|You do not page long messages\.$" script="capture_page_size" name="trg_capture_page_size" enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output = "y"></trigger>
+
+        <trigger match="^Use 'pagesize \<lines\>' to change, or 'pagesize 0' to disable paging\.$" script="" name="trg_pagesize_gag_1" enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output = "y" send_to="12">
+            <send>	EnableTrigger("trg_pagesize_gag_1", false) </send>
+        </trigger>
+
+        <!-- Misc. gag triggers -->
+        <trigger match="^Players found: \[\d+\], Max this reboot: \[\d+\], Connections this reboot: \[\d+\]$" name="trg_gag_who_footer_1" enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y"></trigger>
+
+        <trigger match="^Players invis: \[\d+\], Max on ever: \[\d+\]$" name="trg_gag_who_footer_2" enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y"></trigger>
+
+        <trigger match="^[\s\S]*$" name="trg_gag_everything" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="y"></trigger>
+    </triggers>
+
+    <aliases>
+        <!-- Plugin Update automatic -->
+        <alias enabled="y" match="snd update" script="update_plugin" sequence="100">
+        </alias>
+        <alias enabled="y" match="^(?:xhelp|snd help)(?:\s(?<search>.*))?$" regexp="y" script="onHelp" sequence="100">
+        </alias>
+
+        <alias enabled="y" match="^snd force update(?: (?<branch>\S+))?$" script="force_update_plugin" regexp="y" sequence="100">
+        </alias>
+
+        <alias enabled="y" match="snd check_update" script="toggle_automatic_update_checking" sequence="100">
+        </alias>
+
+        <alias enabled="y" match="^xset silent(?: (on|off))?" regexp="y" script="xset_silentMode" sequence="100">
+        </alias>
+
+        <!-- Auto-hunt commands-->
+        <alias match="^ah (?<arg>\w.+)$" script="auto_hunt" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(?:aha|ah0)$" script="auto_hunt_abort" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^ah$" script="auto_hunt_noarg" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- campaign data input: cp info, check -->
+        <alias match="^cp (?:i|info)$" script="do_cp_info" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^cp (?:ch|check)$" script="do_cp_check" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- gquest data input: gq info, check -->
+        <alias match="^gq i(?:n(?:fo?)?)?$" script="do_gq_info" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(?:gg|qq)$" script="do_gq_check" name="extra_gq_check_aliases" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(?:gq (?:c|ch|check))$" script="do_gq_check" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- xcp commands  -->
+        <alias match="^xcp$" script="xcp_noarg" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xcp (?<index>[0-9]+)$" script="xcp_arg" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xcp mode(?: (?<option>ht|qw|off))?$" script="xcp_set_action_mode" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xcp q(uest)?$" script="xcp_toggle_quest_targeting" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- movement: xrunto, go, nx, etc.  -->
+        <alias match="^(?:xrt|xrun|xrunto) (?<destination>.+)$" script="xrun_to_alias" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(?:go|goto)( (?<index>[0-9]+))?$" script="goto_number" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" keep_evaluating="y"></alias>
+
+        <alias match="^nx$" script="goto_next" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^nx-$" script="goto_previous" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- Automatic noexp -->
+        <alias match="^xset noexp( (?<arg>off|[0-9]+))?$" script="xset_noexp_tnl" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- Quest commands -->
+        <alias match="^(?:xq|xq1)$" script="xq_command" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xqt$" script="retarget_quest" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- Quick scan -->
+        <alias match="^qs$" script="quick_scan" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- Quick-kill commands: qk, ak, kk, xset attack -->
+        <alias match="^(?:quick kill|ak|kk|qk)$" script="quick_kill" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset (?:kk|ak|qk|qkill)(?: (?<arg>.+))?$" script="xset_quick_kill_command" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- Hunt trick -->
+        <alias match="^ht$" script="ht_noarg" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^ht (?:(?<index>\d+)\.)?(?<mob>.+)?$" script="ht_arg" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^ht(?:a|0| abort| stop)$" script="ht_abort" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- Quick where -->
+        <alias match="^qw$" script="qw_noarg" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^qw (?:(?<index>\d+)\.)?(?<mob>.+)?$" script="qw_arg_alias" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^qwx$" script="qw_exact" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- roomnotes -->
+        <alias match="^(?:roomnote|rn)$" script="room_note" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(?:roomnote|rn) a(?:rea)?(?: (?<arid>.+))?$" script="room_note_area" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(?:roomnote|rn) (?<roomid>\d+)$" script="room_note_room" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- Sql Execution -->
+        <alias match="^runsql (?<sql>.+)$" script="RunSql" enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^execsql (?<sql>.+)$" script="ExecSql" enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12"></alias>
+
+        <!-- xmapper  -->
+        <alias match="^(?:xmap|xmapper) move (?<roomid>\d+|-1)(?: (?<speed>run|walk))?$" script="xmapper_move" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xm(?:\ {(?<mob>[^\}]+)\})? (?<loc>.+)$" script="map_area" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xmall(?:\ {(?<mob>[^\}]+)\})? (?<loc>.+)$" script="map_area_all" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(?:xm|xmap|xmapper) rlh(?: (?<room_id>\d+))?$" script="xmap_rooms_linking_here" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- xset commands -->
+        <alias match="^xset (?:index areas|area index)$" script="area_index_process" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset (?:mark|start)(?:\s(\w+))?(?:\s(\d+))?$" script="xset_to_mark" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset gqalias$" script="xset_gqalias" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset vidblain$" script="xset_vidblain" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset vidblain level(?: (?<level>\d{1,3}))?$" script="xset_vidblain_setlevel" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset speed ?(?<speed>run|walk)?$" script="set_speed" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset sendecho$" script="" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset kw$" script="set_mob_keyword" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset kw (?<keyword>.+)$" script="set_current_mob_keyword" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset nx$" script="xset_nx_check" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset nx (?<action>smartscan|con|scan|scanhere|qs|none)$" script="xset_nx" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset con_overwrite" script="xset_con_overwrite" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset sound$" script="xset_sound" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset table notes$" script="xset_table_notes" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset table width (?<width>\d{2,3})$" script="xset_table_width" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- xset window commands -->
+        <alias match="^xset fontsize.*$" script="deprecated_xset_font_size" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset linespace.*$" script="deprecated_xset_line_space" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset winreset$" script="xg_create_window" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12">
+            <send>	win_init = false	</send>
+        </alias>
+
+        <alias match="^xset (?:window|win) (?<onoff>on|off|show|hide|0|1|true|false|max(?:imize)?|expand|min(?:imize)?|collapse)$" script="xset_ToggleWindowDisplay" enabled="y" regexp="y" sequence="100"></alias>
+
+        <alias match="^(?:xw|xwh|xwhere)( (?<n1>\d+))?( (?<n2>\d+))?( (?<mob>.+))?$" script="do_xwhere" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(?:xg|xgui) (?:ref|refresh)$" script="xgui_RefreshLinks" enabled="y" regexp="y" sequence="100" ignore_case="y"></alias>
+
+        <alias match="^(?:xg|xgui) (?:rel|reload)$" script="xgui_ReloadLinks" enabled="y" regexp="y" sequence="100" ignore_case="y"></alias>
+
+        <!-- xset page size (area index process) -->
+        <alias match="^xset suspend page size$" script="suspend_page_size" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset resume page size$" script="resume_page_size" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- xtest commands -->
+        <alias match="^xtest areadata$" script="xtest_areadata" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest mcvars$" script="xtest_mcvars" enabled="y" regexp="y" sequence="100"></alias>
+
+        <alias match="^xtest roomhist$" script="xtest_roomhist" enabled="y" regexp="y" sequence="100"></alias>
+
+        <alias match="^xtest simulate cp(?: (?<type>area|room))?$" script="simulate_cp" enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate level (?<level>\d{1,3})$" script="spoof_level" enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate q(?:uest)?(?: (?<status>start|status|killed|comp|fail|reset|ready|timeout|statkilled|wait|ready))?$" script="simulate_quest" enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest debug gq(uest)?$" script="xtest_debug_gquest" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate gq wait(?: (?<num>\d{1,5}))?$" script="xtest_gq_waiting" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate gq start(?: (?<type>area|room))?(?: (?<num>\d{1,5}))?$" script="xtest_gq_start" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate gq join (?<num>\d{1,5})(?: (?<silent>s))?$" script="xtest_gq_join" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate gq end(?: (?<num>\d{1,5}))?$" script="xtest_gq_end" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate gq win(?: (?<num>\d{1,5}))?$" script="xtest_gq_win" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate gq lose(?: (?<num>\d{1,5}))?(?<noextend> noextended)$" script="xtest_gq_lose" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate gq kill(?: (?<num>\d+))?$" script="xtest_gq_kill" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate gq quit(?: (?<num>\d{1,5}))?$" script="xtest_gq_quit" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate xcp(?: (?<num>\d+))?$" script="xtest_xcp" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest gqid$" script="echo_gqid_joined" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest loadroom(?: (?<roomid>\d+))?$" script="xtest_loadroom" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest popmsg$" script="xtest_popmsg" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest debug$" script="xtest_debug" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest qt (?<qt>\d{1,2})$" script="xtest_set_qt" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest target$" script="xtest_print_target" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^snd reload$" script="sndReload" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- New commands -->
+        <alias match="^x?m(?:ob)?s(?:earch)? ([\p{P}\w]+)(?:\s([^0-9]+))?(?:\s+(\d+))?$" script="onSearch" group="Mob_Database" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^x?mgo(?:to)? (\d+)$" script="mobGo" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(snd migrate|mergePwar)$" script="copyPwarWarn" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(snd migrate|mergePwar) confirm$" script="copyPwarDB" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+
+        <alias match="snd changelog" enabled="y" sequence="100" ignore_case="y" send_to="12">
+            <send>get_changelog(true)</send>
+        </alias>
+    </aliases>
 </muclient>

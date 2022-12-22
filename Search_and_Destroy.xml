@@ -22,7 +22,6 @@
 			<send>	execute_in_room_tick() </send> 
 		</timer>
 	
-
         <timer name="vidblain_nav_timer" second="0.1" script="" enabled="n" send_to="12">
             <send>	vidblain_nav_tick() </send>
         </timer>
@@ -35,7 +34,7 @@
     </timers>
 
     <script>
-        <![CDATA[
+    <![CDATA[
 dofile(GetInfo(60) .. "aardwolf_colors.lua")
 require "movewindow"
 require "serialize"
@@ -395,11 +394,11 @@ function OnPluginBroadcast(msg, id, name, text)
     if (id == plugin_id_gmcp_handler) then
         if (text == "char.status") then -- character status
             current_character_state = gmcp("char.status.state")
-	    if tonumber(gmcp("char.status.level")) < 200 then
-		if anex_automatic_onoff == "on" then
-			anex_check_tnl_silent()
-		end
-	    end
+			if tonumber(gmcp("char.status.level")) < 200 then
+				if anex_automatic_onoff == "on" then
+					anex_check_tnl_silent()
+				end
+			end
         elseif (text == "room.info") then -- current/previous room info
             sound_not_played = true
             local ri = gmcp("room.info")

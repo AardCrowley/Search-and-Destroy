@@ -45,6 +45,10 @@ json = require "json"
 
 async_ok, async = pcall(require, "async")
 
+PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
+PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
+SCHEMA_VERSION = 4
+
 local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. ".5.2 beta"
 
 function ifc(condition, ctrue, cfalse)

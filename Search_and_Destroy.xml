@@ -3321,6 +3321,9 @@ function xcp_goto_target(index)
                 DebugNote("Character ready")
 				if ((tonumber(t.results) == 1) and (tonumber(t.kills) > 2) and (xset_express_onoff == "on")) then
 					local func = function()
+						next_room = t.roomid
+						table.insert(gotoList, 0, t.arid)
+						table.insert(gotoList, 1, t.roomid)						
 						set_going_to_room(t.roomid)
 						goto_room_id(tostring(t.roomid), t.arid)
 						DebugNote("Attempting to go directly to an express target.")

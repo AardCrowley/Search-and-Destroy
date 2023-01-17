@@ -1942,11 +1942,11 @@ function set_target_from_quest(quest_target)
     if quest_target.room == "Outer Space" and quest_target.areaName == "The School of Horror" then
         quest_target.arid = "sohtwo"
     end
-    
+    quest_target.keyword = gmkw(quest_target.mob, quest_target.arid)
     change_target(
         {
             name = quest_target.mob,
-            keyword = gmkw(quest_target.mob, quest_target.arid),
+            keyword = quest_target.keyword,
             room_name = quest_target.room,
             area = quest_target.arid,
             activity = "quest"

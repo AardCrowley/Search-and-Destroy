@@ -9800,7 +9800,9 @@ end
 
         <alias match="^xset table width (?<width>\d{2,3})$" script="xset_table_width" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
 
-		<alias	match="^xset express$" script="xset_express" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+	<alias	match="^xset express$" script="xset_express" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+	    
+	<alias match="^xset maze$" enabled="y" sequence="100" script="xset_maze" regexp="y"></alias>
 
         <!-- xset window commands -->
         <alias match="^xset fontsize.*$" script="deprecated_xset_font_size" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
@@ -9879,7 +9881,6 @@ end
         <alias match="^(snd migrate|mergePwar)$" script="copyPwarWarn" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
 
         <alias match="^(snd migrate|mergePwar) confirm$" script="copyPwarDB" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
-
 
         <alias match="snd changelog" enabled="y" sequence="100" ignore_case="y" send_to="12">
             <send>get_changelog(true)</send>

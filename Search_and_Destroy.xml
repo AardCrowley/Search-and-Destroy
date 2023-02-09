@@ -49,7 +49,9 @@ PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
 PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
 SCHEMA_VERSION = 4
 
-local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. ".5.3 beta"
+betaVersion = "5.3"
+
+local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. " Beta " .. betaVersion
 
 function ifc(condition, ctrue, cfalse)
     if condition then

@@ -51,7 +51,7 @@ SCHEMA_VERSION = 4
 
 betaVersion = "5.3"
 
-local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. " Beta " .. betaVersion
+local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. " (Beta " .. betaVersion .. ")"
 
 function ifc(condition, ctrue, cfalse)
     if condition then

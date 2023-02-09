@@ -375,7 +375,13 @@ local xset_sound_onoff =
     (IsPluginInstalled(plugin_id_soundpack) and GetPluginInfo(plugin_id_soundpack, 17) and "on") or
     "off"
 
-local xset_express_onoff = GetVariable("mcvar_xset_express_onoff") or "on"																	  
+local xset_express_onoff = GetVariable("mcvar_xset_express_onoff") or "on"
+local mazeStartRooms = {}
+if (GetVariable("mazeStartRooms") ~= nil) then			
+	luastmt = "obj = " .. GetVariable("mazeStartRooms")
+	assert(loadstring (luastmt or "")) ()		
+	mazeStartRooms = obj
+end																  
 local target_nearby_sound = "target_nearby.wav"
 local other_target_here_sound = "other_target_here.wav"
 
@@ -4139,8 +4145,14 @@ function search_rooms(query, mob_name)
         end
 
         table.sort(results, sort_rooms_by_seen_count)
+		for k, v in ipairs(results) do
+			if mazeStartRooms[v.rmid] ~= nil then
+				local entry = table.remove(results, k)
+				entry.mz = "yes"
+				table.insert(results, 1, entry)
+			end
+		end
     end
-
     search_rooms_results(results)
 end
 
@@ -4193,9 +4205,20 @@ function search_rooms_results(results) -- Display list of 'go' links from hunt-t
             last_area = v.arid
         end
         background = (line_num % 2) == 0 and text_colors.alternating_row or ""
-        local name = ellipsify(string.gsub(v.name, "@[a-zA-Z]", ""), 38)
-        local text = string.format("%3d  %-38s  %-7s ", mapper_area_index, name, string.format("(%s)", v.rmid))
-        Hyperlink("go " .. mapper_area_index, text, "go to item " .. mapper_area_index, "lightblue", background, 0, 1)
+		local name, text = "", ""
+		if v.mz ~= "yes" then
+			name = ellipsify(string.gsub(v.name, "@[a-zA-Z]", ""), 38)
+			text = string.format("%3d  %-38s  %-7s ", mapper_area_index, name, string.format("(%s)", v.rmid))
+			Hyperlink("go " .. mapper_area_index, text, "go to item " .. mapper_area_index, "lightblue", background, 0, 1)
+		else
+			name = ellipsify(string.gsub(v.name, "@[a-zA-Z]", ""), 34)
+			text = string.format("%3d  %-34s  %-7s ", mapper_area_index, name, string.format("(%s)", v.rmid))
+			Hyperlink("go " .. mapper_area_index, string.sub(text, 1, 4), "go to item " .. mapper_area_index, "lightblue", background, 0, 1)
+			ColourTell("ghostwhite", background, "[")
+			ColourTell("magenta", background, "MZ")
+			ColourTell("ghostwhite", background, "]")
+			Hyperlink("go " .. mapper_area_index, string.sub(text, 5), "go to item " .. mapper_area_index, "lightblue", background, 0, 1)
+		end
 
         local instruction = "mapper where " .. v.rmid
         local tooltip = "click for speedwalk to this room"
@@ -7198,9 +7221,11 @@ function onHelp(name, line, wildcards)
         "kw|keyword",
         "nx",
         "go",
+		"express",
         "xset nx",
         "xset con_overwrite",
         "xset gqalias",
+		"xset maze",
         "xset table notes",
         "xset table width",
         "sound",
@@ -7216,8 +7241,7 @@ function onHelp(name, line, wildcards)
         "snd reload",
         "snd check_update",
         "snd changelog",
-        "summary",
-		"express"
+        "summary"
     }
 
     local headers = {
@@ -7895,7 +7919,7 @@ function onHelp(name, line, wildcards)
                 }
             )
         )
-		elseif str == "express" then
+	elseif str == "express" then
         ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset express")
         Note()
         ColourNote(
@@ -7909,6 +7933,20 @@ function onHelp(name, line, wildcards)
                 }
             )
         )
+	elseif str == "maze" then
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset maze")
+        Note()
+        ColourNote(
+            "antiquewhite",
+            "",
+            unpack(
+                {
+                    helpWrap(
+                        "Toggles current room as entrance to a maze. If mobs are found in a room with the same name as a toggled maze room, the maze room(s) will appear first in your room search results."
+                    )
+                }
+            )
+        )	
 	elseif str == "changelog" then
         ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd changelog")
         Note()
@@ -7946,6 +7984,18 @@ function onHelp(name, line, wildcards)
             "antiquewhite",
             "",
             unpack({helpWrap("xset mark:  Sets current room as 'start' for the current area.")})
+        )
+        Note()
+		ColourNote(
+            "antiquewhite",
+            "",
+            unpack({helpWrap("xset express:  Try and go directly to mobs that are always found in the same room.")})
+        )
+        Note()
+		ColourNote(
+            "antiquewhite",
+            "",
+            unpack({helpWrap("xset maze:  Sets current room as the start of a maze.")})
         )
         Note()
         ColourNote(
@@ -9077,6 +9127,18 @@ function xset_express()
 		xg_draw_window()
         Redraw()
     end
+end
+
+function xset_maze()
+	local roomId = tonumber(current_room.rmid)
+	if (mazeStartRooms[roomId] == nil) then
+		mazeStartRooms[roomId] = { areaname = current_room.arid }		
+		InfoNote("Maze start flag ", "ADDED", " to: ", current_room.rmid)
+	else
+		mazeStartRooms[roomId] = nil
+		InfoNote("Maze start flag ", "REMOVED", " from: ", current_room.rmid)			
+	end	
+	SetVariable("mazeStartRooms", serialize.save_simple(mazeStartRooms))		
 end
 
 function xset_table_notes()

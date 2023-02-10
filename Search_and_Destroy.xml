@@ -9133,14 +9133,18 @@ end
 
 function xset_maze()
 	local roomId = tonumber(current_room.rmid)
-	if (mazeStartRooms[roomId] == nil) then
-		mazeStartRooms[roomId] = { areaname = current_room.arid }		
-		InfoNote("Maze start flag ", "ADDED", " to: ", current_room.rmid)
+        if roomId > 0 then
+		if (mazeStartRooms[roomId] == nil) then
+			mazeStartRooms[roomId] = { areaname = current_room.arid }		
+			InfoNote("Maze start flag ", "ADDED", " to: ", current_room.rmid)
+		else
+			mazeStartRooms[roomId] = nil
+			InfoNote("Maze start flag ", "REMOVED", " from: ", current_room.rmid)			
+		end
+		SetVariable("mazeStartRooms", serialize.save_simple(mazeStartRooms))		
 	else
-		mazeStartRooms[roomId] = nil
-		InfoNote("Maze start flag ", "REMOVED", " from: ", current_room.rmid)			
+		InfoNote("Current room: ", tostring(roomId), " is invalid.")
 	end	
-	SetVariable("mazeStartRooms", serialize.save_simple(mazeStartRooms))		
 end
 
 function xset_table_notes()

@@ -4042,18 +4042,34 @@ end
 
 -- [[ Room search processes ]]
 function search_rooms_exact(room, arid, mob_name)
-    local select =
-        string.format(
-        [[
-			SELECT uid, name, area
-			FROM rooms
-			WHERE name = %s AND area = %s
-			ORDER BY area
-		]],
-        fixsql(room),
-        fixsql(arid)
-    )
-    search_rooms(select, mob_name)
+	local select = ""
+	if ((arid == "soh") or (arid == "sohtwo")) then
+		select =
+			string.format(
+			[[
+				SELECT uid, name, area
+				FROM rooms
+				WHERE name = %s AND (area = %s OR area = %s)
+				ORDER BY area
+			]],
+			fixsql(room),
+			fixsql("soh"),
+			fixsql("sohtwo")
+		)
+	else
+		select =
+			string.format(
+			[[
+				SELECT uid, name, area
+				FROM rooms
+				WHERE name = %s AND area = %s
+				ORDER BY area
+			]],
+			fixsql(room),
+			fixsql(arid)
+		)
+	end
+	search_rooms(select, mob_name)
 end
 
 function search_rooms_fuzzy(room, arid)

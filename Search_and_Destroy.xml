@@ -5434,8 +5434,6 @@ function xg_create_window(name, line, wildcards)
         local width = win_width
         local height = win_height
 	local left = ((windowinfo.window_left+width) < GetSystemMetrics(0) and windowinfo.window_left) or 0
-	print((windowinfo.window_left+width))
-	print(GetSystemMetrics(0))
 	local top =  ((windowinfo.window_top+height) < GetSystemMetrics(1) and windowinfo.window_top) or 0
         WindowCreate(
             win,

@@ -5428,14 +5428,14 @@ local window_fonts = {
 }
 
 function xg_create_window(name, line, wildcards)
-    if name then win_init = false end
+    if name then WindowPosition(win, 0, 0, 12, 16) end
     if (win_init == false) then
         win_init = true
         local width = win_width
         local height = win_height
 	local left = ((windowinfo.window_left+width) < GetSystemMetrics(0) and windowinfo.window_left) or 0
 	local top =  ((windowinfo.window_top+height) < GetSystemMetrics(1) and windowinfo.window_top) or 0
-        WindowCreate(
+	WindowCreate(
             win,
             left,
             top,
@@ -9686,7 +9686,7 @@ end
         <alias match="^xset linespace.*$" script="deprecated_xset_line_space" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
 
         <alias match="^xset winreset$" script="xg_create_window" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12">
-            <send>	win_init = false	</send>
+            <send>	--win_init = false	</send>
         </alias>
 
         <alias match="^xset (?:window|win) (?<onoff>on|off|show|hide|0|1|true|false|max(?:imize)?|expand|min(?:imize)?|collapse)$" script="xset_ToggleWindowDisplay" enabled="y" regexp="y" sequence="100"></alias>

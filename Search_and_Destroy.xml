@@ -49,7 +49,7 @@ PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
 PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
 SCHEMA_VERSION = 4
 
-betaVersion = "5.7"
+betaVersion = "5.8"
 
 local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. " (Beta " .. betaVersion .. ")"
 
@@ -5433,8 +5433,8 @@ function xg_create_window(name, line, wildcards)
         win_init = true
         local width = win_width
         local height = win_height
-	local left = ((windowinfo.window_left+width) < GetSystemMetrics(0) and windowinfo.window_left) or 0
-	local top =  ((windowinfo.window_top+height) < GetSystemMetrics(1) and windowinfo.window_top) or 0
+	local left = 0 -- ((windowinfo.window_left+width) < GetSystemMetrics(0) and windowinfo.window_left) or 0
+	local top =  0 -- ((windowinfo.window_top+height) < GetSystemMetrics(1) and windowinfo.window_top) or 0
         WindowCreate(
             win,
             left,

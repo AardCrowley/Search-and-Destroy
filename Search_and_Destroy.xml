@@ -5428,7 +5428,7 @@ local window_fonts = {
 }
 
 function xg_create_window(name, line, wildcards)
-    if name then WindowPosition(win, 0, 0, 12, 16) end
+    if name then WindowPosition(win, 0, 0, 12, 16) xset_ToggleWindowDisplay("", "", {onoff = max}) end
     if (win_init == false) then
         win_init = true
         local width = win_width

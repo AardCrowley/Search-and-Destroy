@@ -1,6 +1,15 @@
 # Search-and-Destroy
  Safe, Legal Search and Destroy
 
+ # How to Install
+
+ Multiple options, but two of the easier ways are:
+
+ 1. Click the green Code button in the top right and 'Download Zip'. Extract the XML file to wherever you store your plugins.
+ 2. Click on the Search and Destroy XML plugin file, then click on 'Raw' in the top right. Right-click the Raw page and 'Save As'. Save it to your plugin directory.
+
+After having done this, Ctrl+Shift+P (or Command+Shift+P if on Mac, I believe) to open up Plugins, click 'Add', and then select the newly created XML file.
+
 # Background
 
 Years ago, WinkleWinkle ventured into what some may have considered dangerous territory and wrote the very first Search & Destroy plugin. Some people hated it, others loved it. Some people consider(ed) it botting, but it does not break any rules as-is. Some time after the initial creation, Fiendish made a change to the mapper database, and it broke WinkleWinkle's Search & Destroy plugin for many. Nokfah created a fix for it, however, and people were happy once more.

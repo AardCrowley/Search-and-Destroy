@@ -49,7 +49,7 @@ PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
 PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
 SCHEMA_VERSION = 4
 
-betaVersion = "5.9"
+betaVersion = "5.9a"
 
 local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. " (Beta " .. betaVersion .. ")"
 
@@ -2119,7 +2119,7 @@ function quest_status_gmcp(q) -- sets quest status when you take a new quest, ki
             qstat = "2",
             mob = q.targ,
             areaName = q.area,
-            arid = areaNameXref[q.area] or q.area,
+            arid = areaName[q.area] or q.area,
             room = (string.gsub(q.room, "@[bcgmrwyBCDGMRWY]", ""))
         }
         target_quest_mob(true)
@@ -7294,6 +7294,7 @@ function onHelp(name, line, wildcards)
         ColourNote("darkcyan", "", "Maintained by  ", "antiquewhite", "", " : Crowley")
         ColourNote("darkcyan", "", "Original Author", "antiquewhite", "", " : WinkleWinkle")
         ColourNote("darkcyan", "", "Credit to      ", "antiquewhite", "", " : Nokfah and Starling")
+	ColourNote("darkcyan", "", "Plugin Link    ", "antiquewhite", "", " : http://github.com/AardCrowley/Search-and-Destroy")
         Note()
         ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xhelp <command> (to view helpfiles below)")
         Note()

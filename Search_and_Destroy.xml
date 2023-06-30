@@ -2119,7 +2119,7 @@ function quest_status_gmcp(q) -- sets quest status when you take a new quest, ki
             qstat = "2",
             mob = q.targ,
             areaName = q.area,
-            arid = areaName[q.area] or q.area,
+            arid = areaNameXref[q.area] or q.area,
             room = (string.gsub(q.room, "@[bcgmrwyBCDGMRWY]", ""))
         }
         target_quest_mob(true)

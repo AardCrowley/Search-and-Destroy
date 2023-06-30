@@ -7827,7 +7827,7 @@ function onHelp(name, line, wildcards)
             unpack(
                 {
                     helpWrap(
-                        "Whenever Crowley announces a new version, this command will make it easy to update the Search & Destroy plugin."
+                        "Whenever Crowley announces a new version, this command will make it easy to update the Search & Destroy plugin. There is a hidden update command for beta versions: snd force update beta"
                     )
                 }
             )

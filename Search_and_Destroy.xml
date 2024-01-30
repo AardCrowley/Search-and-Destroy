@@ -49,7 +49,7 @@ PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
 PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
 SCHEMA_VERSION = 4
 
-betaVersion = "5.9b"
+betaVersion = "5.9c"
 
 local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. " (Beta " .. betaVersion .. ")"
 
@@ -883,6 +883,7 @@ local areaDefaultStartRooms = {
     ["dread"] = {start = "26075"},
     ["dsr"] = {start = "30030"},
     ["dundoom"] = {start = "25661"},
+    ["dunes"] = {start = "42170"},
     ["dunoir"] = {start = "14222"},
     ["duskvalley"] = {start = "37301"},
     ["dynasty"] = {start = "30799"},
@@ -1187,6 +1188,7 @@ local areaNameXref = {
     ["Diamond Soul Revelation"] = "dsr",
     ["Dortmund"] = "dortmund",
     ["Dread Tower"] = "dread",
+    ["Dunes in Gold"] = "dunes",
     ["Dusk Valley"] = "duskvalley",
     ["Earth Plane 4"] = "earthplane",
     ["Elemental Chaos"] = "elemental",

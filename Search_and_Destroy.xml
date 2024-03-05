@@ -49,7 +49,7 @@ PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
 PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
 SCHEMA_VERSION = 4
 
-betaVersion = "5.9c"
+betaVersion = "5.9d"
 
 local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. " (Beta " .. betaVersion .. ")"
 
@@ -1061,6 +1061,7 @@ local areaDefaultStartRooms = {
     ["ygg"] = {start = "24186"}, -- Y --
     ["yurgach"] = {start = "29450"},
     ["zangar"] = {start = "6164"}, -- Z --
+    ["zenith"] = {start = "23681"},
     ["zodiac"] = {start = "15857"},
     ["zoo"] = {start = "5920"},
     ["zyian"] = {start = "729"},
@@ -1153,6 +1154,7 @@ local areaNameXref = {
     ["Afterglow"] = "afterglow",
     ["Alagh, the Blood Lands"] = "alagh",
     ["All in a Fayke Day"] = "fayke",
+    ["An Auspicious Star's Zenith"] = "zenith",
     ["Ancient Greece"] = "greece",
     ["Andolor's Ocean Adventure Park"] = "oceanpark",
     ["Annwn"] = "annwn",

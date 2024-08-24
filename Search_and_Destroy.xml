@@ -3449,6 +3449,9 @@ function xrun_to(arid, exact)
     if (arid == "ft2") then
         arid = "ftii"
     end
+    if (arid == "start") then
+        arid = current_room.arid
+    end
     local rmid = get_start_room(arid, exact)
     if (rmid == "-1") then -- area has no start room defined.
         InfoNote("X-runto: No default start room is defined for area: " .. arid .. ".\n")

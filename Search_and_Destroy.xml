@@ -47,7 +47,7 @@ async_ok, async = pcall(require, "async")
 
 PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
 PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 betaVersion = "5.9f"
 
@@ -72,7 +72,7 @@ showStr = "@W%s @wis found in @Y%s @win/around @G%s @w(@Cmapper goto %s@w)"
 
 PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
 PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 UPDATE_CHECK_INTERVAL = 60 * 60 -- Check once per hour
 local last_update_check = -1
@@ -525,6 +525,10 @@ function migrate_database()
         remove_bad_mobs(db)
     end
 
+    if current_version < 5 then
+        add_mob_area_index(db)
+    end
+
     InfoNote("Migration complete!")
     db:execute(string.format("PRAGMA user_version = %i;", SCHEMA_VERSION))
 
@@ -645,6 +649,14 @@ function remove_bad_mobs(db)
     db:execute([[
 			DELETE FROM mobs WHERE mob LIKE "%(wounded)%" OR mob LIKE "%(aimed)%";
 		]])
+end
+
+function add_mob_area_index(db)
+    DebugNote("Adding indexes to mob and area tables")
+    db:execute([[
+        CREATE INDEX IF NOT EXISTS mobs_zone_mob_room ON mobs (zone, mob, room);
+        CREATE INDEX IF NOT EXISTS area_key ON area (key);
+    ]])
 end
 
 function write_marks_to_db(db)

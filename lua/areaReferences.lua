@@ -142,6 +142,7 @@ local areaDefaultStartRooms = {
     ["lemdagor"] = {start = "1966"},
     ["lidnesh"] = {start = "27995"},
     ["livingmine"] = {start = "37008"},
+    ["logging"] = {start = "31254"},
     ["longnight"] = {start = "26367"},
     ["losttime"] = {start = "28584"},
     ["lowlands"] = {start = "28044"},
@@ -595,5 +596,6 @@ local areaNameXref = {
     ["Zangar's Demonic Grotto"] = "zangar",
     -- New areas
     ["The Keep of the Asherodan"] = "asherodan",
-    ["Bloodlust Dungeon"] = "dungeon"
+    ["Bloodlust Dungeon"] = "dungeon",
+    ["Svrogan's Logging Camp"] = "logging"
 }

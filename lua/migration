@@ -1,0 +1,171 @@
+-- Migration Lua (A work in progress, not the full file)
+
+local SND_DB = GetInfo(66) .. "/SnDdb.db"
+local SCHEMA_VERSION = 5
+
+local sqlStrings = {
+    mobs = [[
+        CREATE TABLE mobs (
+            mob TEXT NOT NULL,
+            room TEXT NOT NULL,
+            roomid INTEGER NOT NULL,
+            zone TEXT NOT NULL,
+            kills INTEGER NOT NULL DEFAULT 0,
+            keyword TEXT NOT NULL,
+            flags TEXT NOT NULL,
+            UNIQUE(mob, roomid)
+        );
+
+    ]],
+
+    area = [[
+        CREATE TABLE area (
+            name TEXT NOT NULL,
+            key TEXT NOT NULL,
+            minlvl INTEGER NOT NULL,
+            maxlvl INTEGER NOT NULL,
+            lock INTEGER NOT NULL,
+            startRoom INTEGER NOT NULL,
+            noquest TEXT NOT NULL DEFAULT 'false',
+            vidblain TEXT NOT NULL DEFAULT 'false',
+            userKey TEXT,
+            UNIQUE(name)
+        );
+
+    ]],
+
+    mob_keyword_exceptions = [[
+        CREATE TABLE mob_keyword_exceptions (
+            area_name TEXT NOT NULL,
+            mob_name TEXT NOT NULL,
+            keyword TEXT NOT NULL,
+            UNIQUE(area_name, mob_name)
+        );
+
+    ]],
+
+    quest_data = [[
+        CREATE TABLE quest_data (
+            targ TEXT NOT NULL,
+            room TEXT NOT NULL,
+            area TEXT NOT NULL,
+            qp INTEGER NOT NULL DEFAULT 0,
+            tierqp INTEGER NOT NULL DEFAULT 0,
+            pracs INTEGER NOT NULL DEFAULT 0,
+            trains INTEGER NOT NULL DEFAULT 0,
+            tp INTEGER NOT NULL DEFAULT 0,
+            lucky INTEGER NOT NULL DEFAULT 0,
+            double BOOLEAN NOT NULL DEFAULT 0,
+            totqp INTEGER NOT NULL DEFAULT 0,
+            gold INTEGER NOT NULL DEFAULT 0,
+            start_time INTEGER NOT NULL DEFAULT 0,
+            end_time INTEGER NOT NULL DEFAULT 0
+        );
+    ]]
+}
+
+local migrationConditions = {
+    [0] = function()
+        Note("Indexing areas...")
+        area_index_process()
+    end,
+    range = {
+        {
+            condition = function(version) return version < 2 end,
+            action = function()
+                create_mob_keywords_table()
+                strip_mobs_table()
+            end
+        },
+        {
+            condition = function(version) return version < 3 end,
+            action = function()
+               add_kills_column()
+            end
+        },
+        {
+            condition = function(version) return version < 4 end,
+            action = function()
+                remove_bad_mobs()
+            end
+        },
+        {
+            condition = function(version) return version < 5 end,
+            action = function()
+                update_area_table()
+                add_data_tables()
+                add_settings_table()
+        }
+    }
+}
+
+function table_exists(table_name)
+    for row in db:nrows("SELECT name FROM sqlite_master WHERE type='table' AND name='" .. table_name .. "';") do
+        return true
+    end
+    return false
+end
+
+function column_exists(table_name, column_name)
+    for row in db:nrows("PRAGMA table_info(" .. table_name .. ");") do
+        if row.name == column_name then
+            return true
+        end
+    end
+    return false
+end
+
+function migrate_database()
+    local db = sqlite3.open(SND_DB)
+    local current_version
+
+    create_initial_tables(db)
+    write_marks_to_db(db)
+
+    for row in db:nrows("PRAGMA user_version") do
+        current_version = row.user_version
+    end
+
+    if current_version >= SCHEMA_VERSION then
+        db:close()
+        return
+    end
+
+    InfoNote("Migrating database...")
+
+    switchCase(current_version, migrationConditions)
+
+    InfoNote("Migration complete!")
+    db:execute(string.format("PRAGMA user_version = %i;", SCHEMA_VERSION))
+
+    db:close_vm()
+end
+
+function create_initial_tables(db)
+
+    local create_tables = {}
+
+    if not table_exists("mobs") then
+        DebugNote("Creating table 'mobs'")
+        table.insert(create_tables, sqlStrings.mobs)
+    end
+
+    if not table_exists("area") then
+        DebugNote("Creating table 'area'")
+        table.insert(create_tables, sqlStrings.area)
+    end
+
+    if not table_exists("mob_keyword_exceptions") then
+        DebugNote("Creating table 'mob_keyword_exceptions'")
+        table.insert(create_tables, sqlStrings.mob_keyword_exceptions)
+    end
+
+    if not table_exists("quest_data") then
+        DebugNote("Creating table 'quest_data'")
+        table.insert(create_tables, sqlStrings.quest_data)
+    end
+
+    if #create_tables > 0 then
+        db:execute(table.concat(create_tables))
+    end
+end

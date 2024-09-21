@@ -3459,12 +3459,14 @@ function xrun_to_alias(name, line, wildcards)
 end
 
 function xrun_to(arid, exact)
+    local s = nil
     local ri = current_room
     if (arid == "ft2") then
         arid = "ftii"
     end
     if (arid == "start") then
         arid = current_room.arid
+        s = "walk"
     end
     local rmid = get_start_room(arid, exact)
     if (rmid == "-1") then -- area has no start room defined.
@@ -3472,11 +3474,15 @@ function xrun_to(arid, exact)
         SendNoEcho("areas 1 299 keywords " .. arid)
     else
         InfoNote("X-runto: " .. arid .. ", room ID: " .. rmid .. " (" .. start_room_type .. ")\n")
-        goto_room_id(rmid, arid)
+        goto_room_id(rmid, arid, s)
     end
 end
 
-function goto_room_id(rmid, arid) -- go to specific room id (do not confuse with goto_number, see below)
+function goto_room_id(rmid, arid, s) -- go to specific room id (do not confuse with goto_number, see below)
+    if (s == nil or s == "") then
+        s = speed
+    end
+
     local ri = current_room
     local rmid = rmid
     local arid = arid or getAreaFromRoomId(rmid)
@@ -3487,7 +3493,7 @@ function goto_room_id(rmid, arid) -- go to specific room id (do not confuse with
             do_mapper_goto(rmid, "walk")
         end
     else
-        do_mapper_goto(rmid)
+        do_mapper_goto(rmid, s)
     end
 end
 

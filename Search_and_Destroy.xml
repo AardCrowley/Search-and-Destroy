@@ -36,6 +36,7 @@
     <script>
     <![CDATA[
 dofile(GetInfo(60) .. "aardwolf_colors.lua")
+
 require "movewindow"
 require "serialize"
 require "tprint"
@@ -47,7 +48,7 @@ async_ok, async = pcall(require, "async")
 
 PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
 PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 betaVersion = "5.9g"
 
@@ -72,7 +73,7 @@ showStr = "@W%s @wis found in @Y%s @win/around @G%s @w(@Cmapper goto %s@w)"
 
 PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
 PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 UPDATE_CHECK_INTERVAL = 60 * 60 -- Check once per hour
 local last_update_check = -1
@@ -527,6 +528,10 @@ function migrate_database()
 
     if current_version < 5 then
         add_mob_area_index(db)
+    end
+
+    if current_version < 6 then
+        add_history_table(db)
     end
 
     InfoNote("Migration complete!")
@@ -2133,6 +2138,7 @@ function quest_status_gmcp(q) -- sets quest status when you take a new quest, ki
         DebugNote("Quest time: ", quest_time)
     end
     if (q.action == "start") then -- you've just taken a new quest
+        history_start(history_type_quest)
         quest_target = {
             qstat = "2",
             mob = q.targ,
@@ -2157,6 +2163,14 @@ function quest_status_gmcp(q) -- sets quest status when you take a new quest, ki
             --	target_quest_mob(true)
             quest_target.qstat = "3"
         elseif (q.action == "comp") or (q.action == "fail") or (q.action == "reset") then -- quest has ended (completed, failed, or reset)
+            local history_status = history_status_complete
+            if q.action == "fail" then
+                history_status = history_status_failed
+            elseif q.action == "reset" then
+                history_status = hostory_status_reset
+            end
+            history_end(history_type_quest, history_status)
+
             quest_target = {qstat = "1"}
             xcp_clear_target(false)
             qw_reset(false)
@@ -2249,6 +2263,8 @@ end
 
 --	[[ general cp status functions ]]
 function player_start_new_cp() -- called by line "good luck on your campaign" when starting new cp
+    history_start(history_type_campaign)
+
     player_on_cp = "yes"
     can_get_new_cp = "no"
     local x = tonumber(gmcp("char.status.level"))
@@ -2336,6 +2352,13 @@ end
 
 function do_cp_complete(name, line, wildcards)
     DebugNote("Campaign complete")
+    history_end(history_type_campaign, history_status_complete)
+    player_not_on_cp()
+end
+
+function do_cp_quit()
+    DebugNote("Campaign quit")
+    history_end(history_type_campaign, history_status_failed)
     player_not_on_cp()
 end
 
@@ -6681,18 +6704,18 @@ end
 --	return new_t
 --end
 
-function dbcheck(code, query)
-    if
-        (code ~= sqlite3.OK) and -- no error
-            (code ~= sqlite3.ROW) and -- completed OK with another row of data
-            (code ~= sqlite3.DONE)
-     then -- completed OK, no more rows
-        local err = db:errmsg() -- the rollback will change the error message
-        err = err .. "\n\nCODE: " .. code .. "\nQUERY: " .. query .. "\n"
-        db:exec("ROLLBACK") -- rollback any transaction to unlock the database
-        error(err, 2) -- show error in caller's context
-    end
-end
+function dbcheck(db, code, query)
+    if code ~= sqlite3.OK and       -- no error
+        code ~= sqlite3.ROW and     -- completed OK with another row of data
+        code ~= sqlite3.DONE        -- completed OK, no more rows
+    then
+        local msg = db:errmsg()
+        local err = msg.."\n\nCODE: "..code.."\nQUERY: "..query.."\n"
+        db:exec("ROLLBACK")      -- rollback any transaction to unlock the database
+        db:close_vm()            -- close the database
+        error(err, 3)            -- show error in caller's context
+    end -- if
+end -- dbcheck
 
 function fixsql(s)
     if s then
@@ -9339,6 +9362,278 @@ function setup_scan_con_triggers()
     end
 end
 
+--
+-- History Methods
+--
+
+history_type_quest = 1
+history_type_global_quest = 2
+history_type_campaign = 3
+
+history_status_in_progress = 1
+history_status_complete = 2
+history_status_timeout = 3
+history_status_failed = 4
+hostory_status_reset = 5
+
+function add_history_table(db)
+    DebugNote("Adding history table and indexes")
+    db:execute([[
+        CREATE TABLE history (
+            id              INTEGER PRIMARY KEY,
+            type            INTEGER NOT NULL,
+            level_taken     INTEGER NOT NULL,
+            start_time      INTEGER NOT NULL,
+            end_time        INTEGER,
+            status          INTEGER DEFAULT 1,
+            qp_rewards      INTEGER DEFAULT 0,
+            tp_rewards      INTEGER DEFAULT 0,
+            train_rewards   INTEGER DEFAULT 0,
+            prac_rewards    INTEGER DEFAULT 0,
+            gold_rewards    INTEGER DEFAULT 0
+        );
+        CREATE INDEX history_start_time_type ON history (start_time, type);
+        CREATE INDEX history_level_taken_type ON history (level_taken, type);
+    ]])
+end
+
+function history_start(history_type)
+    history_type = tonumber(history_type)
+    if history_type < history_type_quest or history_type > history_type_campaign then
+        ErrorNote("Invalid history type: " .. history_type)
+        return
+    end
+
+    local level_taken = tonumber(gmcp("char.status.level"))
+    local start_time = os.time()
+
+    -- Build the query
+    local sqlQuery = 'INSERT INTO history (type, level_taken, start_time) VALUES ("%d", "%d", "%d")'
+    sqlQuery = sqlQuery:format(history_type, level_taken, start_time)
+
+    -- Execute the query
+    local snd_db = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
+    local code = snd_db:exec(sqlQuery)
+    dbcheck(snd_db, code, sqlQuery)
+    snd_db:close_vm()
+end
+
+-- TODO: Add support for recording rewards
+function history_end(history_type, status)
+    history_type = tonumber(history_type)
+    if history_type < history_type_quest or history_type > history_type_campaign then
+        ErrorNote("Invalid history type: " .. history_type)
+        return
+    end
+    status = tonumber(status)
+    if status < history_status_in_progress or status > hostory_status_reset then
+        ErrorNote("Invalid history status: " .. status)
+        return
+    end
+
+    local end_time = os.time()
+
+    local snd_db = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
+
+    -- Find a valid history record to update
+    local sqlQuery = 'SELECT id, start_time, status FROM history WHERE type = "%d" ORDER BY start_time DESC LIMIT 1;'
+    sqlQuery = sqlQuery:format(history_type)
+
+    local id = -1
+
+    for r in snd_db:nrows(sqlQuery) do
+        -- TODO check start_time to throw out invalid values (i.e. quests older than 60m)
+        if r.status == history_status_in_progress then
+            id = r.id
+        end
+    end
+
+    if id ~= -1 then
+        -- Update the history record
+        sqlQuery = 'UPDATE history SET end_time = "%d", status = "%d" WHERE id = "%d";'
+        sqlQuery = sqlQuery:format(end_time, status, id)
+        local code = snd_db:exec(sqlQuery)
+        dbcheck(snd_db, code, sqlQuery)
+    end
+
+    snd_db:close_vm()
+end
+
+function history_type_to_string(history_type)
+    if history_type == history_type_quest then
+        return "quest"
+    elseif history_type == history_type_global_quest then
+        return "gquest"
+    elseif history_type == history_type_campaign then
+        return "campaign"
+    end
+    return "unknown"
+end
+
+function history_status_to_string(history_status)
+    if history_status == history_status_in_progress then
+        return "in progress"
+    elseif history_status == history_status_complete then
+        return "complete"
+    elseif history_status == history_status_timeout then
+        return "timeout"
+    elseif history_status == history_status_failed then
+        return "failed"
+    elseif history_status == hostory_status_reset then
+        return "reset"
+    end
+    return "unknown"
+end
+
+function alias_print_history(name, line, wildcards)
+    history_print()
+end
+
+function history_print()
+    local sqlQuery = 'SELECT type, level_taken, start_time, end_time, status FROM history ORDER BY start_time DESC LIMIT 20;'
+
+    local snd_db = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
+
+    local rows = {}
+
+    for r in snd_db:nrows(sqlQuery) do
+        local duration = 0
+        if r.end_time ~= nil then
+            duration = r.end_time - r.start_time
+        end
+
+        row = {
+            type=history_type_to_string(r.type),
+            level_taken=r.level_taken,
+            started=os.date('%Y-%m-%d %H:%M:%S', r.start_time),
+            duration=duration,
+            status=history_status_to_string(r.status)
+        }
+        table.insert(rows, row)
+    end
+
+    snd_db:close_vm()
+
+    if (#rows > 0) then
+        local header = "| Type     | Level Taken | Started              |    Duration | Status       |"
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+        ColourNote("#E0E0E0", "", header)
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+
+        for i, v in ipairs(
+            rows
+        ) do
+            local duration = format_duration(v.duration)
+            local background = (i % 2) == 0 and "#000040" or ""
+            local text = string.format("| %-8s | %11d | %-20s | %11s | %-12s |", v.type, v.level_taken, v.started, duration, v.status)
+            ColourNote("#E0E0E0", background, text)
+        end
+
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+    else
+        InfoNote("   No history to show.")
+    end
+end
+
+function alias_print_stats(name, line, wildcards)
+    local history_type = -1
+    if wildcards.type == "quest" then
+        history_type = history_type_quest
+    elseif wildcards.type == "campaign" then
+        history_type = history_type_campaign
+    elseif wildcards.type == "gquest" then
+        history_type = history_type_global_quest
+    else
+        ErrorNote("Invalid stats type: " .. wildcards.type)
+    end
+    history_stats(history_type)
+end
+
+function format_duration(duration)
+    if duration ~= nil then
+        local days = math.floor(duration/86400)
+        local hours = math.floor(math.fmod(duration, 86400)/3600)
+        local minutes = math.floor(math.fmod(duration,3600)/60)
+        local seconds = math.floor(math.fmod(duration,60))
+        if days > 0 then
+            return string.format("%dd%dh%dm%ds", days, hours, minutes, seconds)
+        elseif hours > 0 then
+            return string.format("%dh%dm%ds", hours, minutes, seconds)
+        elseif minutes > 0 then
+            return string.format("%dm%ds", minutes, seconds)
+        elseif seconds > 0 then
+            return string.format("%ds", seconds)
+        end
+    end
+    return "N/A"
+end
+
+function history_stats(history_type)
+    history_type = tonumber(history_type)
+    if history_type < history_type_quest or history_type > history_type_campaign then
+        ErrorNote("Invalid history type: " .. history_type)
+        return
+    end
+
+    local sqlQuery = [[
+        SELECT
+            level_taken,
+            min(end_time - start_time) as min_duration,
+            round(avg(end_time - start_time)) as avg_duration,
+            max(end_time - start_time) as max_duration,
+            count(*) as total
+        FROM history WHERE type = "%d" AND status = 2
+        GROUP BY level_taken
+        ORDER BY level_taken;
+    ]]
+    sqlQuery = sqlQuery:format(history_type)
+
+    local snd_db = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
+
+    local rows = {}
+
+    for r in snd_db:nrows(sqlQuery) do
+        local duration = 0
+        if r.end_time ~= nil then
+            duration = r.end_time - r.start_time
+        end
+
+        row = {
+            level_taken=r.level_taken,
+            min_duration=r.min_duration,
+            avg_duration=r.avg_duration,
+            max_duration=r.max_duration,
+            total=r.total
+        }
+        table.insert(rows, row)
+    end
+
+    snd_db:close_vm()
+
+    if (#rows > 0) then
+        local header = "| Level Taken | Min Duration | Avg Duration | Max Duration | Total |"
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+        ColourNote("#E0E0E0", "", header)
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+
+        for i, v in ipairs(
+            rows
+        ) do
+            local min_duration = format_duration(v.min_duration)
+            local avg_duration = format_duration(v.avg_duration)
+            local max_duration = format_duration(v.max_duration)
+
+            local background = (i % 2) == 0 and "#000040" or ""
+            local text = string.format("| %11d | %12s | %12s | %12s | %5d |", v.level_taken, min_duration, avg_duration, max_duration, v.total)
+            ColourNote("#E0E0E0", background, text)
+        end
+
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+    else
+        InfoNote("   No stats to show.")
+    end
+end
+
 	]]>
     </script>
     <triggers>
@@ -9434,7 +9729,7 @@ end
 
         <trigger match="^CONGRATULATIONS\! You have completed your campaign\.$" script="do_cp_complete" name="trg_cp_complete" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-        <trigger match="^Campaign cleared\.$" script="player_not_on_cp" name="trg_cp_quit" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
+        <trigger match="^Campaign cleared\.$" script="do_cp_quit" name="trg_cp_quit" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
         <trigger match="^\w.+ tells you 'Good luck in your campaign\!'$" script="player_start_new_cp" name="trg_cp_request" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
@@ -9793,5 +10088,9 @@ end
         <alias match="snd changelog" enabled="y" sequence="100" ignore_case="y" send_to="12">
             <send>get_changelog(true)</send>
         </alias>
+
+        <!-- History commands -->
+        <alias match="^snd history$" script="alias_print_history" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+        <alias match="^snd stats (?<type>\w+)$" script="alias_print_stats" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
     </aliases>
 </muclient>

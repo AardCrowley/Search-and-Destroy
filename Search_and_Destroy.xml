@@ -2139,6 +2139,7 @@ function quest_status_gmcp(q) -- sets quest status when you take a new quest, ki
     end
     if (q.action == "start") then -- you've just taken a new quest
         history_start(history_type_quest)
+        EnableTriggerGroup("trigger_group_quest_rewards", true)
         quest_target = {
             qstat = "2",
             mob = q.targ,
@@ -2170,6 +2171,7 @@ function quest_status_gmcp(q) -- sets quest status when you take a new quest, ki
                 history_status = hostory_status_reset
             end
             history_end(history_type_quest, history_status)
+            EnableTriggerGroup("trigger_group_quest_rewards", false)
 
             quest_target = {qstat = "1"}
             xcp_clear_target(false)
@@ -9366,6 +9368,7 @@ end
 -- History Methods
 --
 
+
 history_type_quest = 1
 history_type_global_quest = 2
 history_type_campaign = 3
@@ -9375,6 +9378,14 @@ history_status_complete = 2
 history_status_timeout = 3
 history_status_failed = 4
 hostory_status_reset = 5
+
+local cp_info_qp_reward = tonumber(GetVariable("mcvar_cp_info_qp_reward")) or 0
+local cp_info_gold_reward = tonumber(GetVariable("mcvar_cp_info_gold_reward")) or 0
+local cp_info_train_reward = tonumber(GetVariable("mcvar_cp_info_train_reward")) or 0
+
+local quest_qp_reward = 0
+local quest_gold_reward = 0
+local quest_practices_reward = 0
 
 function add_history_table(db)
     DebugNote("Adding history table and indexes")
@@ -9431,6 +9442,35 @@ function history_end(history_type, status)
         return
     end
 
+    local qp_rewards = 0
+    local tp_rewards = 0
+    local train_rewards = 0
+    local prac_rewards = 0
+    local gold_rewards = 0
+
+    if history_type == history_type_campaign then
+        qp_rewards = cp_info_qp_reward
+        gold_rewards = cp_info_gold_reward
+        train_rewards = cp_info_train_reward
+
+        -- reset variables
+        cp_info_qp_reward = 0
+        set_variable("mcvar_cp_info_qp_reward", "0")
+        cp_info_gold_reward = 0
+        set_variable("mcvar_cp_info_gold_reward", "0")
+        cp_info_train_reward = 0
+        set_variable("mcvar_cp_info_train_reward", "0")
+    elseif history_type == history_type_quest then
+        qp_rewards = quest_qp_reward
+        gold_rewards = quest_gold_reward
+        prac_rewards = quest_practices_reward
+
+        -- reset variables
+        quest_qp_reward = 0
+        quest_gold_reward = 0
+        quest_practices_reward = 0
+    end
+
     local end_time = os.time()
 
     local snd_db = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
@@ -9450,8 +9490,14 @@ function history_end(history_type, status)
 
     if id ~= -1 then
         -- Update the history record
-        sqlQuery = 'UPDATE history SET end_time = "%d", status = "%d" WHERE id = "%d";'
-        sqlQuery = sqlQuery:format(end_time, status, id)
+        local sqlQuery = [[
+            UPDATE history
+            SET
+                end_time = "%d", status = "%d", qp_rewards = "%d", tp_rewards = "%d",
+                train_rewards = "%d", prac_rewards = "%d", gold_rewards = "%d"
+            WHERE id = "%d";
+        ]]
+        sqlQuery = sqlQuery:format(end_time, status, qp_rewards, tp_rewards, train_rewards, prac_rewards, gold_rewards, id)
         local code = snd_db:exec(sqlQuery)
         dbcheck(snd_db, code, sqlQuery)
     end
@@ -9490,7 +9536,14 @@ function alias_print_history(name, line, wildcards)
 end
 
 function history_print()
-    local sqlQuery = 'SELECT type, level_taken, start_time, end_time, status FROM history ORDER BY start_time DESC LIMIT 20;'
+    local sqlQuery = [[
+        SELECT
+            type, level_taken, start_time, end_time, status,
+            qp_rewards, tp_rewards, train_rewards, prac_rewards, gold_rewards
+        FROM history
+        ORDER BY start_time DESC
+        LIMIT 20;
+    ]]
 
     local snd_db = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
 
@@ -9502,12 +9555,27 @@ function history_print()
             duration = r.end_time - r.start_time
         end
 
+        local rewards = ""
+        if r.qp_rewards > 0 then
+            rewards = rewards .. r.qp_rewards .. "qp "
+        end
+        if r.tp_rewards > 0 then
+            rewards = rewards .. r.tp_rewards .. "tp "
+        end
+        if r.train_rewards > 0 then
+            rewards = rewards .. r.train_rewards .. "tr "
+        end
+        if r.prac_rewards > 0 then
+            rewards = rewards .. r.prac_rewards .. "pr"
+        end
+
         row = {
             type=history_type_to_string(r.type),
             level_taken=r.level_taken,
-            started=os.date('%Y-%m-%d %H:%M:%S', r.start_time),
+            started=os.date('%Y-%m-%d %H:%M', r.start_time),
             duration=duration,
-            status=history_status_to_string(r.status)
+            status=history_status_to_string(r.status),
+            rewards=rewards
         }
         table.insert(rows, row)
     end
@@ -9515,7 +9583,7 @@ function history_print()
     snd_db:close_vm()
 
     if (#rows > 0) then
-        local header = "| Type     | Level Taken | Started              |    Duration | Status       |"
+        local header = "| Type     | Level Taken | Started          |    Duration | Status      | Rewards          |"
         ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
         ColourNote("#E0E0E0", "", header)
         ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
@@ -9525,7 +9593,7 @@ function history_print()
         ) do
             local duration = format_duration(v.duration)
             local background = (i % 2) == 0 and "#000040" or ""
-            local text = string.format("| %-8s | %11d | %-20s | %11s | %-12s |", v.type, v.level_taken, v.started, duration, v.status)
+            local text = string.format("| %-8s | %11d | %-16s | %11s | %-11s | %-16s |", v.type, v.level_taken, v.started, duration, v.status, v.rewards)
             ColourNote("#E0E0E0", background, text)
         end
 
@@ -9632,6 +9700,51 @@ function history_stats(history_type)
     else
         InfoNote("   No stats to show.")
     end
+end
+
+function trigger_quest_rewards_1(name, line, wildcards, style)
+    local qp = tonumber(wildcards.qp)
+    local gold = tonumber(wildcards.gold)
+    quest_qp_reward = quest_qp_reward + qp
+    quest_gold_reward = quest_gold_reward + gold
+end
+
+function trigger_quest_rewards_2(name, line, wildcards, style)
+    local qp = tonumber(wildcards.qp)
+    quest_qp_reward = quest_qp_reward + qp
+end
+
+function trigger_quest_rewards_3(name, line, wildcards, style)
+    local qp = tonumber(wildcards.qp)
+    quest_qp_reward = quest_qp_reward + qp
+end
+
+function trigger_quest_rewards_4(name, line, wildcards, style)
+    local qp = tonumber(wildcards.qp)
+    quest_qp_reward = quest_qp_reward + qp
+end
+
+function trigger_quest_rewards_5(name, line, wildcards, style)
+    local practices = tonumber(wildcards.practices)
+    quest_practices_reward = quest_practices_reward + practices
+end
+
+function trigger_campaign_rewards_1(name, line, wildcards, style)
+    local qp = tonumber(wildcards.qp)
+    cp_info_qp_reward = qp
+    set_variable("mcvar_cp_info_qp_reward", qp)
+end
+
+function trigger_campaign_rewards_2(name, line, wildcards, style)
+    local gold = tonumber(wildcards.gold)
+    cp_info_gold_reward = gold
+    set_variable("mcvar_cp_info_gold_reward", gold)
+end
+
+function trigger_campaign_rewards_3(name, line, wildcards, style)
+    local train = tonumber(wildcards.train)
+    cp_info_train_reward = train
+    set_variable("mcvar_cp_info_train_reward", train)
 end
 
 	]]>
@@ -9866,6 +9979,17 @@ end
         <trigger match="^Players invis: \[\d+\], Max on ever: \[\d+\]$" name="trg_gag_who_footer_2" enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y"></trigger>
 
         <trigger match="^[\s\S]*$" name="trg_gag_everything" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="y"></trigger>
+
+        <!-- History triggers -->
+        <trigger name="trigger_quest_rewards_1" match="^.* tells you 'As a reward, I am giving you (?<qp>\d+) quest points and (?<gold>\w+) gold\.'$" script="trigger_quest_rewards_1" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
+        <trigger name="trigger_quest_rewards_2" match="^.* tells you 'I am also giving you a (?<qp>\d+) quest points tier bonus\.'$" script="trigger_quest_rewards_2" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
+        <trigger name="trigger_quest_rewards_3" match="^You get lucky and gain an extra (?<qp>\d+) quest points\.$" script="trigger_quest_rewards_3" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
+        <trigger name="trigger_quest_rewards_4" match="^You receive (?<qp>\d+) bonus quest points from your daily blessing\.$" script="trigger_quest_rewards_4" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
+        <trigger name="trigger_quest_rewards_5" match="^\*\* You gain a bonus (?<practices>\d+) practices \*\*$" script="trigger_quest_rewards_5" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
+
+        <trigger name="trigger_campaign_rewards_1" match="^Quest Points\.{7}: \[\s+(?<qp>\d+) \]$" script="trigger_campaign_rewards_1" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
+        <trigger name="trigger_campaign_rewards_2" match="^Gold Coins\.{9}: \[\s+(?<gold>\d+) \]$" script="trigger_campaign_rewards_2" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
+        <trigger name="trigger_campaign_rewards_3" match="^Training Sessions\.{2}: \[\s+(?<train>\d+) \]$" script="trigger_campaign_rewards_3" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
     </triggers>
 
     <aliases>

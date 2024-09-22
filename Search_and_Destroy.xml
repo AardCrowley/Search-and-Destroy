@@ -9382,6 +9382,7 @@ local cp_info_qp_reward = tonumber(GetVariable("mcvar_cp_info_qp_reward")) or 0
 local cp_info_gold_reward = tonumber(GetVariable("mcvar_cp_info_gold_reward")) or 0
 local cp_info_train_reward = tonumber(GetVariable("mcvar_cp_info_train_reward")) or 0
 local cp_info_practices_reward = tonumber(GetVariable("mcvar_cp_info_practices_reward")) or 0
+local cp_info_tp_reward = tonumber(GetVariable("mcvar_cp_info_tp_reward")) or 0
 
 local quest_qp_reward = 0
 local quest_gold_reward = 0
@@ -9456,6 +9457,7 @@ function history_end(history_type, status)
         gold_rewards = cp_info_gold_reward
         train_rewards = cp_info_train_reward
         prac_rewards = cp_info_practices_reward
+        tp_rewards = cp_info_tp_reward
 
         -- reset variables
         cp_info_qp_reward = 0
@@ -9466,6 +9468,8 @@ function history_end(history_type, status)
         set_variable("mcvar_cp_info_train_reward", "0")
         cp_info_practices_reward = 0
         set_variable("mcvar_cp_info_practices_reward", "0")
+        cp_info_tp_reward = 0
+        set_variable("mcvar_cp_info_tp_reward", "0")
     elseif history_type == history_type_quest then
         qp_rewards = quest_qp_reward
         gold_rewards = quest_gold_reward
@@ -9842,6 +9846,12 @@ function trigger_campaign_rewards_4(name, line, wildcards, style)
     set_variable("mcvar_cp_info_practices_reward", prac)
 end
 
+function trigger_campaign_rewards_5(name, line, wildcards, style)
+    local tp = tonumber(wildcards.tp)
+    cp_info_tp_reward = tp
+    set_variable("mcvar_cp_info_tp_reward", tp)
+end
+
 	]]>
     </script>
     <triggers>
@@ -10088,7 +10098,7 @@ end
         <trigger name="trigger_campaign_rewards_2" match="^Gold Coins\.{9}: \[\s+(?<gold>\d+) \]$" script="trigger_campaign_rewards_2" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
         <trigger name="trigger_campaign_rewards_3" match="^Training Sessions\.{2}: \[\s+(?<train>\d+) \]$" script="trigger_campaign_rewards_3" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
         <trigger name="trigger_campaign_rewards_4" match="^Practice Sessions\.{2}: \[\s+(?<prac>\d+) \]$" script="trigger_campaign_rewards_4" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
-        <!-- need trivia points for campaigns -->
+        <trigger name="trigger_campaign_rewards_5" match="^Trivia Points\.{6}: \[\s+(?<tp>\d+) \]$" script="trigger_campaign_rewards_5" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
     </triggers>
 
     <aliases>

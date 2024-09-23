@@ -7321,7 +7321,9 @@ function onHelp(name, line, wildcards)
         "snd reload",
         "snd check_update",
         "snd changelog",
-        "summary"
+        "summary",
+        "history",
+        "stats"
     }
 
     local headers = {
@@ -8027,7 +8029,7 @@ function onHelp(name, line, wildcards)
                     )
                 }
             )
-        )	
+        )
 	elseif str == "changelog" then
         ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd changelog")
         Note()
@@ -8318,6 +8320,61 @@ function onHelp(name, line, wildcards)
                 {
                     helpWrap(
                         "snd migrate: If you used Pwar's plugin and have a database, this will migrate it over to this version so you do not lose your hard earned data."
+                    )
+                }
+            )
+        )
+    elseif str == "history" then
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd history")
+        Note()
+        ColourNote(
+            "antiquewhite",
+            "",
+            unpack(
+                {
+                    helpWrap(
+                        "Prints a table with the last 20 quests and campaigns taken along with their rewards."
+                    )
+                }
+            )
+        )
+    elseif str == "stats" then
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd stats <quests|campaigns|overtime>")
+        Note()
+        ColourNote("limegreen", "", "snd stats overtime:")
+        ColourNote(
+            "antiquewhite",
+            "",
+            unpack(
+                {
+                    helpWrap(
+                        "Prints a table of quest and campaign stats over the past two weeks."
+                    )
+                }
+            )
+        )
+        Note()
+        ColourNote("limegreen", "", "snd stats quests:")
+        ColourNote(
+            "antiquewhite",
+            "",
+            unpack(
+                {
+                    helpWrap(
+                        "Prints a table of quest stats by level."
+                    )
+                }
+            )
+        )
+        Note()
+        ColourNote("limegreen", "", "snd stats quests:")
+        ColourNote(
+            "antiquewhite",
+            "",
+            unpack(
+                {
+                    helpWrap(
+                        "Prints a table of campaign stats by level."
                     )
                 }
             )
@@ -9377,6 +9434,7 @@ history_status_complete = 2
 history_status_timeout = 3
 history_status_failed = 4
 hostory_status_reset = 5
+hostory_status_skipped = 6
 
 local cp_info_qp_reward = tonumber(GetVariable("mcvar_cp_info_qp_reward")) or 0
 local cp_info_gold_reward = tonumber(GetVariable("mcvar_cp_info_gold_reward")) or 0
@@ -9541,6 +9599,8 @@ function history_status_to_string(history_status)
         return "failed"
     elseif history_status == hostory_status_reset then
         return "reset"
+    elseif history_status == hostory_status_skipped then
+        return "skipped"
     end
     return "unknown"
 end
@@ -9776,29 +9836,29 @@ function history_stats_over_time()
     end
 end
 
-function trigger_quest_rewards_1(name, line, wildcards, style)
+function trigger_quest_rewards_qp(name, line, wildcards, style)
     local qp = tonumber(wildcards.qp)
     local gold = tonumber(wildcards.gold)
     quest_qp_reward = quest_qp_reward + qp
     quest_gold_reward = quest_gold_reward + gold
 end
 
-function trigger_quest_rewards_2(name, line, wildcards, style)
+function trigger_quest_rewards_tier_qp(name, line, wildcards, style)
     local qp = tonumber(wildcards.qp)
     quest_qp_reward = quest_qp_reward + qp
 end
 
-function trigger_quest_rewards_3(name, line, wildcards, style)
+function trigger_quest_rewards_lucky_qp(name, line, wildcards, style)
     local qp = tonumber(wildcards.qp)
     quest_qp_reward = quest_qp_reward + qp
 end
 
-function trigger_quest_rewards_4(name, line, wildcards, style)
+function trigger_quest_rewards_blessing_qp(name, line, wildcards, style)
     local qp = tonumber(wildcards.qp)
     quest_qp_reward = quest_qp_reward + qp
 end
 
-function trigger_quest_rewards_5(name, line, wildcards, style)
+function trigger_quest_rewards_practices(name, line, wildcards, style)
     local practices = 1
     if wildcards.practices ~= nil then
         practices = tonumber(wildcards.practices)
@@ -9806,7 +9866,7 @@ function trigger_quest_rewards_5(name, line, wildcards, style)
     quest_practices_reward = quest_practices_reward + practices
 end
 
-function trigger_quest_rewards_6(name, line, wildcards, style)
+function trigger_quest_rewards_trains(name, line, wildcards, style)
     local train = 1
     if wildcards.train ~= nil then
         train = tonumber(wildcards.train)
@@ -9814,7 +9874,7 @@ function trigger_quest_rewards_6(name, line, wildcards, style)
     quest_trains_reward = quest_trains_reward + train
 end
 
-function trigger_quest_rewards_7(name, line, wildcards, style)
+function trigger_quest_rewards_tps(name, line, wildcards, style)
     local tp = 1
     if wildcards.tp ~= nil then
         tp = tonumber(wildcards.tp)
@@ -9822,31 +9882,35 @@ function trigger_quest_rewards_7(name, line, wildcards, style)
     quest_tp_reward = quest_tp_reward + tp
 end
 
-function trigger_campaign_rewards_1(name, line, wildcards, style)
+function trigger_quest_premonition(name, line, wildcards, style)
+    history_end(history_type_quest, hostory_status_skipped)
+end
+
+function trigger_campaign_rewards_qp(name, line, wildcards, style)
     local qp = tonumber(wildcards.qp)
     cp_info_qp_reward = qp
     set_variable("mcvar_cp_info_qp_reward", qp)
 end
 
-function trigger_campaign_rewards_2(name, line, wildcards, style)
+function trigger_campaign_rewards_gold(name, line, wildcards, style)
     local gold = tonumber(wildcards.gold)
     cp_info_gold_reward = gold
     set_variable("mcvar_cp_info_gold_reward", gold)
 end
 
-function trigger_campaign_rewards_3(name, line, wildcards, style)
+function trigger_campaign_rewards_trains(name, line, wildcards, style)
     local train = tonumber(wildcards.train)
     cp_info_train_reward = train
     set_variable("mcvar_cp_info_train_reward", train)
 end
 
-function trigger_campaign_rewards_4(name, line, wildcards, style)
+function trigger_campaign_rewards_practices(name, line, wildcards, style)
     local prac = tonumber(wildcards.prac)
     cp_info_practices_reward = prac
     set_variable("mcvar_cp_info_practices_reward", prac)
 end
 
-function trigger_campaign_rewards_5(name, line, wildcards, style)
+function trigger_campaign_rewards_tps(name, line, wildcards, style)
     local tp = tonumber(wildcards.tp)
     cp_info_tp_reward = tp
     set_variable("mcvar_cp_info_tp_reward", tp)
@@ -10086,19 +10150,20 @@ end
         <trigger match="^[\s\S]*$" name="trg_gag_everything" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="y"></trigger>
 
         <!-- History triggers -->
-        <trigger name="trigger_quest_rewards_1" match="^.* tells you 'As a reward, I am giving you (?<qp>\d+) quest points and (?<gold>\w+) gold\.'$" script="trigger_quest_rewards_1" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
-        <trigger name="trigger_quest_rewards_2" match="^.* tells you 'I am also giving you a (?<qp>\d+) quest points tier bonus\.'$" script="trigger_quest_rewards_2" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
-        <trigger name="trigger_quest_rewards_3" match="^You get lucky and gain an extra (?<qp>\d+) quest points\.$" script="trigger_quest_rewards_3" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
-        <trigger name="trigger_quest_rewards_4" match="^You receive (?<qp>\d+) bonus quest points from your daily blessing\.$" script="trigger_quest_rewards_4" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
-        <trigger name="trigger_quest_rewards_5" match="^\*\* You gain a bonus (?<practices>\d+ )?practices? \*\*$" script="trigger_quest_rewards_5" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
-        <trigger name="trigger_quest_rewards_6" match="^\*\* You gain a bonus (?<train>\d+ )?training sessions? \*\*$" script="trigger_quest_rewards_6" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
-        <trigger name="trigger_quest_rewards_7" match="^\*\* You gain a bonus (?<tp>\d+ )?trivia points? \*\*$" script="trigger_quest_rewards_7" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
+        <trigger name="trigger_quest_rewards_qp" match="^.* tells you 'As a reward, I am giving you (?<qp>\d+) quest points and (?<gold>\w+) gold\.'$" script="trigger_quest_rewards_qp" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
+        <trigger name="trigger_quest_rewards_tier_qp" match="^.* tells you 'I am also giving you a (?<qp>\d+) quest points tier bonus\.'$" script="trigger_quest_rewards_tier_qp" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
+        <trigger name="trigger_quest_rewards_lucky_qp" match="^You get lucky and gain an extra (?<qp>\d+) quest points\.$" script="trigger_quest_rewards_lucky_qp" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
+        <trigger name="trigger_quest_rewards_blessing_qp" match="^You receive (?<qp>\d+) bonus quest points from your daily blessing\.$" script="trigger_quest_rewards_blessing_qp" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
+        <trigger name="trigger_quest_rewards_practices" match="^\*\* You gain a bonus (?<practices>\d+ )?practices? \*\*$" script="trigger_quest_rewards_practices" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
+        <trigger name="trigger_quest_rewards_trains" match="^\*\* You gain a bonus (?<train>\d+ )?training sessions? \*\*$" script="trigger_quest_rewards_trains" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
+        <trigger name="trigger_quest_rewards_tps" match="^\*\* You gain a bonus (?<tp>\d+ )?trivia points? \*\*$" script="trigger_quest_rewards_tps" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
+        <trigger name="trigger_quest_premonition" match="^You ignore your premonition and request another quest.*$" script="trigger_quest_premonition" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
 
-        <trigger name="trigger_campaign_rewards_1" match="^Quest Points\.{7}: \[\s+(?<qp>\d+) \]$" script="trigger_campaign_rewards_1" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
-        <trigger name="trigger_campaign_rewards_2" match="^Gold Coins\.{9}: \[\s+(?<gold>\d+) \]$" script="trigger_campaign_rewards_2" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
-        <trigger name="trigger_campaign_rewards_3" match="^Training Sessions\.{2}: \[\s+(?<train>\d+) \]$" script="trigger_campaign_rewards_3" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
-        <trigger name="trigger_campaign_rewards_4" match="^Practice Sessions\.{2}: \[\s+(?<prac>\d+) \]$" script="trigger_campaign_rewards_4" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
-        <trigger name="trigger_campaign_rewards_5" match="^Trivia Points\.{6}: \[\s+(?<tp>\d+) \]$" script="trigger_campaign_rewards_5" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
+        <trigger name="trigger_campaign_rewards_qp" match="^Quest Points\.{7}: \[\s+(?<qp>\d+) \]$" script="trigger_campaign_rewards_qp" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
+        <trigger name="trigger_campaign_rewards_gold" match="^Gold Coins\.{9}: \[\s+(?<gold>\d+) \]$" script="trigger_campaign_rewards_gold" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
+        <trigger name="trigger_campaign_rewards_trains" match="^Training Sessions\.{2}: \[\s+(?<train>\d+) \]$" script="trigger_campaign_rewards_trains" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
+        <trigger name="trigger_campaign_rewards_practices" match="^Practice Sessions\.{2}: \[\s+(?<prac>\d+) \]$" script="trigger_campaign_rewards_practices" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
+        <trigger name="trigger_campaign_rewards_tps" match="^Trivia Points\.{6}: \[\s+(?<tp>\d+) \]$" script="trigger_campaign_rewards_tps" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
     </triggers>
 
     <aliases>

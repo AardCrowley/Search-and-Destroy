@@ -2167,7 +2167,7 @@ function quest_status_gmcp(q) -- sets quest status when you take a new quest, ki
             if q.action == "fail" then
                 history_status = history_status_failed
             elseif q.action == "reset" then
-                history_status = hostory_status_reset
+                history_status = history_status_reset
             end
             history_quest_end(history_status, q.totqp, q.gold, q.pracs, q.trains, q.tp)
 
@@ -9431,8 +9431,8 @@ history_status_in_progress = 1
 history_status_complete = 2
 history_status_timeout = 3
 history_status_failed = 4
-hostory_status_reset = 5
-hostory_status_skipped = 6
+history_status_reset = 5
+history_status_skipped = 6
 
 local cp_info_qp_reward = tonumber(GetVariable("mcvar_cp_info_qp_reward")) or 0
 local cp_info_gold_reward = tonumber(GetVariable("mcvar_cp_info_gold_reward")) or 0
@@ -9498,7 +9498,7 @@ function history_end(history_type, status)
         return
     end
     status = tonumber(status)
-    if status < history_status_in_progress or status > hostory_status_reset then
+    if status < history_status_in_progress or status > history_status_reset then
         ErrorNote("Invalid history status: " .. status)
         return
     end
@@ -9597,9 +9597,9 @@ function history_status_to_string(history_status)
         return "timeout"
     elseif history_status == history_status_failed then
         return "failed"
-    elseif history_status == hostory_status_reset then
+    elseif history_status == history_status_reset then
         return "reset"
-    elseif history_status == hostory_status_skipped then
+    elseif history_status == history_status_skipped then
         return "skipped"
     end
     return "unknown"
@@ -9849,7 +9849,7 @@ function history_quest_end(status, qp, gold, practices, trains, tp)
 end
 
 function trigger_quest_premonition(name, line, wildcards, style)
-    history_end(history_type_quest, hostory_status_skipped)
+    history_end(history_type_quest, history_status_skipped)
 end
 
 function trigger_campaign_rewards_qp(name, line, wildcards, style)
@@ -10116,7 +10116,7 @@ end
         <trigger match="^[\s\S]*$" name="trg_gag_everything" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="y"></trigger>
 
         <!-- History triggers -->
-         <trigger name="trigger_quest_premonition" match="^You ignore your premonition and request another quest.*$" script="trigger_quest_premonition" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
+         <trigger name="trigger_quest_premonition" match="^You ignore your premonition and request another quest.*$" script="trigger_quest_premonition" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
         <trigger name="trigger_campaign_rewards_qp" match="^Quest Points\.{7}: \[\s+(?<qp>\d+) \]$" script="trigger_campaign_rewards_qp" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
         <trigger name="trigger_campaign_rewards_gold" match="^Gold Coins\.{9}: \[\s+(?<gold>\d+) \]$" script="trigger_campaign_rewards_gold" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>

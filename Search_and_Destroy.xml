@@ -2139,7 +2139,6 @@ function quest_status_gmcp(q) -- sets quest status when you take a new quest, ki
     end
     if (q.action == "start") then -- you've just taken a new quest
         history_start(history_type_quest)
-        EnableTriggerGroup("trigger_group_quest_rewards", true)
         quest_target = {
             qstat = "2",
             mob = q.targ,
@@ -2149,7 +2148,6 @@ function quest_status_gmcp(q) -- sets quest status when you take a new quest, ki
         }
         target_quest_mob(true)
     elseif (q.action == "status" and q.targ and q.timer) then -- on quest, qmob not yet killed
-        EnableTriggerGroup("trigger_group_quest_rewards", true)
         quest_target = {
             qstat = "2",
             mob = q.targ,
@@ -2171,7 +2169,7 @@ function quest_status_gmcp(q) -- sets quest status when you take a new quest, ki
             elseif q.action == "reset" then
                 history_status = hostory_status_reset
             end
-            history_quest_end(history_status)
+            history_quest_end(history_status, q.totqp, q.gold, q.pracs, q.trains, q.tp)
 
             quest_target = {qstat = "1"}
             xcp_clear_target(false)
@@ -2185,7 +2183,6 @@ function quest_status_gmcp(q) -- sets quest status when you take a new quest, ki
             --	quest_target = { qstat="2", mob = q.targ, areaName = q.area, arid = areaNameXref[q.area], room = (string.gsub(q.room, "@[bcgmrwyBCDGMRWY]", "")) }
             --	target_quest_mob(true)
             quest_target.qstat = "3"
-            EnableTriggerGroup("trigger_group_quest_rewards", true)
             InfoNote("\nSearch and Destroy: You have already killed your quest target!\n")
         elseif (q.action == "status" and (q.wait)) then -- off quest, must wait before requesting new
             quest_target = {qstat = "1"}
@@ -9839,67 +9836,16 @@ function history_stats_over_time()
     end
 end
 
-function history_quest_end(status)
-    -- Wait half a second to record the quest status to make sure all quest rewards have been captured
-    quest_status = status
-    DoAfterSpecial(0.5, "history_quest_end_delay()", sendto.script)
-end
-
-function history_quest_end_delay()
-    EnableTriggerGroup("trigger_group_quest_rewards", false)
-    history_end(history_type_quest, quest_status)
-end
-
-function trigger_quest_rewards_qp(name, line, wildcards, style)
-    local qp = tonumber(wildcards.qp)
-    local gold = tonumber(wildcards.gold)
-    quest_qp_reward = quest_qp_reward + qp
-    quest_gold_reward = quest_gold_reward + gold
-end
-
-function trigger_quest_rewards_tier_qp(name, line, wildcards, style)
-    local qp = tonumber(wildcards.qp)
-    quest_qp_reward = quest_qp_reward + qp
-end
-
-function trigger_quest_rewards_opk_qp(name, line, wildcards, style)
-    local qp1 = tonumber(wildcards.qp1)
-    local qp2 = tonumber(wildcards.qp2)
-    quest_qp_reward = quest_qp_reward + qp1 + qp2
-end
-
-function trigger_quest_rewards_lucky_qp(name, line, wildcards, style)
-    local qp = tonumber(wildcards.qp)
-    quest_qp_reward = quest_qp_reward + qp
-end
-
-function trigger_quest_rewards_blessing_qp(name, line, wildcards, style)
-    local qp = tonumber(wildcards.qp)
-    quest_qp_reward = quest_qp_reward + qp
-end
-
-function trigger_quest_rewards_practices(name, line, wildcards, style)
-    local practices = 1
-    if wildcards.practices ~= nil then
-        practices = tonumber(wildcards.practices)
+function history_quest_end(status, qp, gold, practices, trains, tp)
+    if status == history_status_complete then
+        quest_qp_reward = tonumber(qp)
+        quest_gold_reward = tonumber(gold)
+        quest_practices_reward = tonumber(practices)
+        quest_trains_reward = tonumber(trains)
+        quest_tp_reward = tonumber(tp)
     end
-    quest_practices_reward = quest_practices_reward + practices
-end
 
-function trigger_quest_rewards_trains(name, line, wildcards, style)
-    local train = 1
-    if wildcards.train ~= nil then
-        train = tonumber(wildcards.train)
-    end
-    quest_trains_reward = quest_trains_reward + train
-end
-
-function trigger_quest_rewards_tps(name, line, wildcards, style)
-    local tp = 1
-    if wildcards.tp ~= nil then
-        tp = tonumber(wildcards.tp)
-    end
-    quest_tp_reward = quest_tp_reward + tp
+    history_end(history_type_quest, status)
 end
 
 function trigger_quest_premonition(name, line, wildcards, style)
@@ -10170,15 +10116,7 @@ end
         <trigger match="^[\s\S]*$" name="trg_gag_everything" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="y"></trigger>
 
         <!-- History triggers -->
-        <trigger name="trigger_quest_rewards_qp" match="^.* tells you 'As a reward, I am giving you (?<qp>\d+) quest points and (?<gold>\w+) gold\.'$" script="trigger_quest_rewards_qp" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
-        <trigger name="trigger_quest_rewards_tier_qp" match="^.* tells you 'I am also giving you a (?<qp>\d+) quest points tier bonus\.'$" script="trigger_quest_rewards_tier_qp" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
-        <trigger name="trigger_quest_rewards_opk_qp" match="^.* tells you 'I am also giving you a (?<qp1>\d+) quest points tier bonus and (?<qp2>\d+) quest points? OPK bonus\.'$" script="trigger_quest_rewards_opk_qp" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
-        <trigger name="trigger_quest_rewards_lucky_qp" match="^You get lucky and gain an extra (?<qp>\d+) quest points\.$" script="trigger_quest_rewards_lucky_qp" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
-        <trigger name="trigger_quest_rewards_blessing_qp" match="^You receive (?<qp>\d+) bonus quest points from your daily blessing\.$" script="trigger_quest_rewards_blessing_qp" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
-        <trigger name="trigger_quest_rewards_practices" match="^\*\* You gain a bonus (?<practices>\d+ )?practices? \*\*$" script="trigger_quest_rewards_practices" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
-        <trigger name="trigger_quest_rewards_trains" match="^\*\* You gain a bonus (?<train>\d+ )?training sessions? \*\*$" script="trigger_quest_rewards_trains" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
-        <trigger name="trigger_quest_rewards_tps" match="^\*\* You gain a bonus (?<tp>\d+ )?trivia points? \*\*$" script="trigger_quest_rewards_tps" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
-        <trigger name="trigger_quest_premonition" match="^You ignore your premonition and request another quest.*$" script="trigger_quest_premonition" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_quest_rewards"></trigger>
+         <trigger name="trigger_quest_premonition" match="^You ignore your premonition and request another quest.*$" script="trigger_quest_premonition" ignore_case="y" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
         <trigger name="trigger_campaign_rewards_qp" match="^Quest Points\.{7}: \[\s+(?<qp>\d+) \]$" script="trigger_campaign_rewards_qp" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
         <trigger name="trigger_campaign_rewards_gold" match="^Gold Coins\.{9}: \[\s+(?<gold>\d+) \]$" script="trigger_campaign_rewards_gold" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>

@@ -9498,7 +9498,7 @@ function history_end(history_type, status)
         return
     end
     status = tonumber(status)
-    if status < history_status_in_progress or status > history_status_reset then
+    if status < history_status_in_progress or status > history_status_skipped then
         ErrorNote("Invalid history status: " .. status)
         return
     end

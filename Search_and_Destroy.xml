@@ -19,9 +19,9 @@
         </timer>
 
 		<timer name="execute_in_room_timer"	second="0.1" script="" enabled="n" send_to="12">
-			<send>	execute_in_room_tick() </send> 
+			<send>	execute_in_room_tick() </send>
 		</timer>
-	
+
         <timer name="vidblain_nav_timer" second="0.1" script="" enabled="n" send_to="12">
             <send>	vidblain_nav_tick() </send>
         </timer>
@@ -380,11 +380,11 @@ local xset_sound_onoff =
 
 local xset_express_onoff = GetVariable("mcvar_xset_express_onoff") or "on"
 local mazeStartRooms = {}
-if (GetVariable("mazeStartRooms") ~= nil) then			
+if (GetVariable("mazeStartRooms") ~= nil) then
 	luastmt = "obj = " .. GetVariable("mazeStartRooms")
-	assert(loadstring (luastmt or "")) ()		
+	assert(loadstring (luastmt or "")) ()
 	mazeStartRooms = obj
-end																  
+end
 local target_nearby_sound = "target_nearby.wav"
 local other_target_here_sound = "other_target_here.wav"
 
@@ -2115,7 +2115,7 @@ function target_quest_mob(bool) -- Re-targets your quest mob if you un-target it
         if qt.areaName == "The School of Horror" and qt.room == "Outer Space" then
             qt.arid = "sohtwo"
         end
-        
+
         set_target_from_quest(qt)
         set_variable("mcvar_qt_mob", qt.mob)
         set_variable("mcvar_qt_arid", qt.arid)
@@ -2881,7 +2881,7 @@ function build_area_targets(cp_gq, sqla)
             end
         elseif #possibilities == 1 then
 			local table_add = possibilities[1]
-			local query = 
+			local query =
 			string.format(
                 [[
 					SELECT roomid, kill_count
@@ -2913,7 +2913,7 @@ function build_area_targets(cp_gq, sqla)
 				if tonumber(table_add.kills) > 2 then
 					DebugNote("Express target found:", v.mob)
 				end
-			else					   
+			else
 				table_add.results = #result_table or nil
 				table.insert(t, table_add)
 			end
@@ -3106,7 +3106,7 @@ function build_room_targets(cp_gq, sqlr, sqla)
                 end
             elseif #possibilities == 1 then
 				local table_add = possibilities[1]
-				local query = 
+				local query =
 				string.format(
 					[[
 						SELECT roomid, kill_count
@@ -3130,7 +3130,7 @@ function build_room_targets(cp_gq, sqlr, sqla)
 				end
 				-- done with this statement
 				stmt:finalize()
-			
+
 				if #result_table == 1 then
 					table_add.roomid = result_table[1]["roomid"]
 					table_add.kills = result_table[1]["kill_count"]
@@ -3383,11 +3383,11 @@ function xcp_goto_target(index)
 					local func = function()
 						next_room = t.roomid
 						table.insert(gotoList, 0, t.arid)
-						table.insert(gotoList, 1, t.roomid)						
+						table.insert(gotoList, 1, t.roomid)
 						set_going_to_room(t.roomid)
 						goto_room_id(tostring(t.roomid), t.arid)
 						DebugNote("Attempting to go directly to an express target.")
-					end						
+					end
 					if (ri.arid ~= t.arid) then -- if you're not in target area, xrunto target area.
                         execute_in_room(get_start_room(t.arid, true), func)
 						xrun_to(t.arid, true)
@@ -5478,7 +5478,7 @@ local window_fonts = {
 }
 
 function xg_create_window(name, line, wildcards)
-    if name then 
+    if name then
        WindowPosition(win, 0, 0, 12, 16)
        xset_ToggleWindowDisplay("", "", {onoff = "max"})
        CallPlugin(plugin_id_z_order, "boostMe", win)
@@ -6164,7 +6164,7 @@ function xg_show_target_links()
 			WindowText(win, font, "   (Express)", right_end, hs_top, 0, 0, ColourNameToRGB(text_colors.targeted), false)
             hs_left = hs_left + added_width
             hs_right = math.min(hs_right + added_width, win_width - 5)
-		end        
+		end
 		if (hs_bottom > win_height - resize_tag) then -- Prevent list item's hotspot from overlapping with the resize tag
             hs_right = math.min(hs_right, win_width - resize_tag - 5)
         end
@@ -9269,16 +9269,16 @@ function xset_maze()
 	local roomId = tonumber(current_room.rmid)
         if roomId > 0 then
 		if (mazeStartRooms[roomId] == nil) then
-			mazeStartRooms[roomId] = { areaname = current_room.arid }		
+			mazeStartRooms[roomId] = { areaname = current_room.arid }
 			InfoNote("Maze start flag ", "ADDED", " to: ", current_room.rmid)
 		else
 			mazeStartRooms[roomId] = nil
-			InfoNote("Maze start flag ", "REMOVED", " from: ", current_room.rmid)			
+			InfoNote("Maze start flag ", "REMOVED", " from: ", current_room.rmid)
 		end
-		SetVariable("mazeStartRooms", serialize.save_simple(mazeStartRooms))		
+		SetVariable("mazeStartRooms", serialize.save_simple(mazeStartRooms))
 	else
 		InfoNote("Current room: ", tostring(roomId), " is invalid.")
-	end	
+	end
 end
 
 function xset_table_notes()
@@ -9606,15 +9606,30 @@ function history_status_to_string(history_status)
 end
 
 function alias_print_history(name, line, wildcards)
-    history_print()
+    local history_map = {
+        q = 1, quest = 1,
+        gq = 2, gquest = 2,
+        cp = 3, campaign = 3
+    }
+
+    local hist_type = (wildcards.hist_type ~= "" and wildcards.hist_type:gsub(" ", "")) or nil
+
+    history_print(history_map[hist_type] or hist_type)
 end
 
-function history_print()
+function history_print(history_type)
+    local addSql = ""
+
+    if history_type ~= nil then
+        addSql = "WHERE type = " .. history_type
+    end
+
     local sqlQuery = [[
         SELECT
             type, level_taken, start_time, end_time, status,
             qp_rewards, tp_rewards, train_rewards, prac_rewards, gold_rewards
         FROM history
+        ]] .. addSql .. [[
         ORDER BY start_time DESC
         LIMIT 20;
     ]]
@@ -10264,7 +10279,7 @@ end
         <alias match="^xset table width (?<width>\d{2,3})$" script="xset_table_width" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
 
 	<alias	match="^xset express$" script="xset_express" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-	    
+
 	<alias match="^xset maze$" enabled="y" sequence="100" script="xset_maze" regexp="y"></alias>
 
         <!-- xset window commands -->
@@ -10350,7 +10365,7 @@ end
         </alias>
 
         <!-- History commands -->
-        <alias match="^snd history$" script="alias_print_history" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+        <alias match="^snd history(?<hist_type> (campaign|cp|quest|q|gq|gquest))?$" script="alias_print_history" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
         <alias match="^snd stats(?<arg1> \w+)?(?<arg2> \w+)?$" script="alias_print_stats" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
     </aliases>
 </muclient>

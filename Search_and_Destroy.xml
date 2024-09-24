@@ -9666,6 +9666,9 @@ function history_print()
             rows
         ) do
             local duration = format_duration(v.duration)
+            if v.status == "reset" or v.status == "skipped" then
+                duration = "N/A"
+            end
             local background = (i % 2) == 0 and "#000040" or ""
             local text = string.format("| %-8s | %11d | %-16s | %11s | %-11s | %-16s |", v.type, v.level_taken, v.started, duration, v.status, v.rewards)
             ColourNote("#E0E0E0", background, text)

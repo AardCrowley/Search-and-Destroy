@@ -9647,7 +9647,7 @@ function history_print()
             type=history_type_to_string(r.type),
             level_taken=r.level_taken,
             started=os.date('%Y-%m-%d %H:%M', r.start_time),
-            duration=duration,
+            duration=(history_status_to_string(r.status) ~= "skipped" and duration) or "N/A",
             status=history_status_to_string(r.status),
             rewards=rewards
         }

@@ -9565,11 +9565,10 @@ function history_end(history_type, status)
         local sqlQuery = [[
             UPDATE history
             SET
-                end_time = %s, status = "%d", qp_rewards = "%d", tp_rewards = "%d",
+                end_time = "%d", status = "%d", qp_rewards = "%d", tp_rewards = "%d",
                 train_rewards = "%d", prac_rewards = "%d", gold_rewards = "%d"
             WHERE id = "%d";
         ]]
-	local formattedEndTime = (type(end_time) == "number") and tostring(end_time) or "NULL" 
         sqlQuery = sqlQuery:format(end_time, status, qp_rewards, tp_rewards, train_rewards, prac_rewards, gold_rewards, id)
         local code = snd_db:exec(sqlQuery)
         dbcheck(snd_db, code, sqlQuery)

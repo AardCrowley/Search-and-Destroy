@@ -8323,7 +8323,7 @@ function onHelp(name, line, wildcards)
             )
         )
     elseif str == "history" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd history")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd history <q|quest|cp|campaign|gq|gquest>")
         Note()
         ColourNote(
             "antiquewhite",
@@ -8331,7 +8331,7 @@ function onHelp(name, line, wildcards)
             unpack(
                 {
                     helpWrap(
-                        "Prints a table with the last 20 quests and campaigns taken along with their rewards."
+                        "Prints a table with the last 20 quests and campaigns or optional type taken along with their rewards."
                     )
                 }
             )

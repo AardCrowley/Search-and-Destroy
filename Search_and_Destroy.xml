@@ -19,9 +19,9 @@
         </timer>
 
 		<timer name="execute_in_room_timer"	second="0.1" script="" enabled="n" send_to="12">
-			<send>	execute_in_room_tick() </send> 
+			<send>	execute_in_room_tick() </send>
 		</timer>
-	
+
         <timer name="vidblain_nav_timer" second="0.1" script="" enabled="n" send_to="12">
             <send>	vidblain_nav_tick() </send>
         </timer>
@@ -36,6 +36,7 @@
     <script>
     <![CDATA[
 dofile(GetInfo(60) .. "aardwolf_colors.lua")
+
 require "movewindow"
 require "serialize"
 require "tprint"
@@ -47,9 +48,9 @@ async_ok, async = pcall(require, "async")
 
 PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
 PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
-betaVersion = "5.9g"
+betaVersion = "5.9h"
 
 local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. " (Beta " .. betaVersion .. ")"
 
@@ -72,7 +73,7 @@ showStr = "@W%s @wis found in @Y%s @win/around @G%s @w(@Cmapper goto %s@w)"
 
 PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
 PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 UPDATE_CHECK_INTERVAL = 60 * 60 -- Check once per hour
 local last_update_check = -1
@@ -379,11 +380,11 @@ local xset_sound_onoff =
 
 local xset_express_onoff = GetVariable("mcvar_xset_express_onoff") or "on"
 local mazeStartRooms = {}
-if (GetVariable("mazeStartRooms") ~= nil) then			
+if (GetVariable("mazeStartRooms") ~= nil) then
 	luastmt = "obj = " .. GetVariable("mazeStartRooms")
-	assert(loadstring (luastmt or "")) ()		
+	assert(loadstring (luastmt or "")) ()
 	mazeStartRooms = obj
-end																  
+end
 local target_nearby_sound = "target_nearby.wav"
 local other_target_here_sound = "other_target_here.wav"
 
@@ -527,6 +528,10 @@ function migrate_database()
 
     if current_version < 5 then
         add_mob_area_index(db)
+    end
+
+    if current_version < 6 then
+        add_history_table(db)
     end
 
     InfoNote("Migration complete!")
@@ -2110,7 +2115,7 @@ function target_quest_mob(bool) -- Re-targets your quest mob if you un-target it
         if qt.areaName == "The School of Horror" and qt.room == "Outer Space" then
             qt.arid = "sohtwo"
         end
-        
+
         set_target_from_quest(qt)
         set_variable("mcvar_qt_mob", qt.mob)
         set_variable("mcvar_qt_arid", qt.arid)
@@ -2133,6 +2138,7 @@ function quest_status_gmcp(q) -- sets quest status when you take a new quest, ki
         DebugNote("Quest time: ", quest_time)
     end
     if (q.action == "start") then -- you've just taken a new quest
+        history_start(history_type_quest)
         quest_target = {
             qstat = "2",
             mob = q.targ,
@@ -2157,6 +2163,14 @@ function quest_status_gmcp(q) -- sets quest status when you take a new quest, ki
             --	target_quest_mob(true)
             quest_target.qstat = "3"
         elseif (q.action == "comp") or (q.action == "fail") or (q.action == "reset") then -- quest has ended (completed, failed, or reset)
+            local history_status = history_status_complete
+            if q.action == "fail" then
+                history_status = history_status_failed
+            elseif q.action == "reset" then
+                history_status = history_status_reset
+            end
+            history_quest_end(history_status, q.totqp, q.gold, q.pracs, q.trains, q.tp)
+
             quest_target = {qstat = "1"}
             xcp_clear_target(false)
             qw_reset(false)
@@ -2249,6 +2263,8 @@ end
 
 --	[[ general cp status functions ]]
 function player_start_new_cp() -- called by line "good luck on your campaign" when starting new cp
+    history_start(history_type_campaign)
+
     player_on_cp = "yes"
     can_get_new_cp = "no"
     local x = tonumber(gmcp("char.status.level"))
@@ -2336,6 +2352,13 @@ end
 
 function do_cp_complete(name, line, wildcards)
     DebugNote("Campaign complete")
+    history_end(history_type_campaign, history_status_complete)
+    player_not_on_cp()
+end
+
+function do_cp_quit()
+    DebugNote("Campaign quit")
+    history_end(history_type_campaign, history_status_failed)
     player_not_on_cp()
 end
 
@@ -2858,7 +2881,7 @@ function build_area_targets(cp_gq, sqla)
             end
         elseif #possibilities == 1 then
 			local table_add = possibilities[1]
-			local query = 
+			local query =
 			string.format(
                 [[
 					SELECT roomid, kill_count
@@ -2890,7 +2913,7 @@ function build_area_targets(cp_gq, sqla)
 				if tonumber(table_add.kills) > 2 then
 					DebugNote("Express target found:", v.mob)
 				end
-			else					   
+			else
 				table_add.results = #result_table or nil
 				table.insert(t, table_add)
 			end
@@ -3083,7 +3106,7 @@ function build_room_targets(cp_gq, sqlr, sqla)
                 end
             elseif #possibilities == 1 then
 				local table_add = possibilities[1]
-				local query = 
+				local query =
 				string.format(
 					[[
 						SELECT roomid, kill_count
@@ -3107,7 +3130,7 @@ function build_room_targets(cp_gq, sqlr, sqla)
 				end
 				-- done with this statement
 				stmt:finalize()
-			
+
 				if #result_table == 1 then
 					table_add.roomid = result_table[1]["roomid"]
 					table_add.kills = result_table[1]["kill_count"]
@@ -3360,11 +3383,11 @@ function xcp_goto_target(index)
 					local func = function()
 						next_room = t.roomid
 						table.insert(gotoList, 0, t.arid)
-						table.insert(gotoList, 1, t.roomid)						
+						table.insert(gotoList, 1, t.roomid)
 						set_going_to_room(t.roomid)
 						goto_room_id(tostring(t.roomid), t.arid)
 						DebugNote("Attempting to go directly to an express target.")
-					end						
+					end
 					if (ri.arid ~= t.arid) then -- if you're not in target area, xrunto target area.
                         execute_in_room(get_start_room(t.arid, true), func)
 						xrun_to(t.arid, true)
@@ -3459,12 +3482,14 @@ function xrun_to_alias(name, line, wildcards)
 end
 
 function xrun_to(arid, exact)
+    local s = nil
     local ri = current_room
     if (arid == "ft2") then
         arid = "ftii"
     end
     if (arid == "start") then
         arid = current_room.arid
+        s = "walk"
     end
     local rmid = get_start_room(arid, exact)
     if (rmid == "-1") then -- area has no start room defined.
@@ -3472,11 +3497,15 @@ function xrun_to(arid, exact)
         SendNoEcho("areas 1 299 keywords " .. arid)
     else
         InfoNote("X-runto: " .. arid .. ", room ID: " .. rmid .. " (" .. start_room_type .. ")\n")
-        goto_room_id(rmid, arid)
+        goto_room_id(rmid, arid, s)
     end
 end
 
-function goto_room_id(rmid, arid) -- go to specific room id (do not confuse with goto_number, see below)
+function goto_room_id(rmid, arid, s) -- go to specific room id (do not confuse with goto_number, see below)
+    if (s == nil or s == "") then
+        s = speed
+    end
+
     local ri = current_room
     local rmid = rmid
     local arid = arid or getAreaFromRoomId(rmid)
@@ -3487,7 +3516,7 @@ function goto_room_id(rmid, arid) -- go to specific room id (do not confuse with
             do_mapper_goto(rmid, "walk")
         end
     else
-        do_mapper_goto(rmid)
+        do_mapper_goto(rmid, s)
     end
 end
 
@@ -5449,7 +5478,7 @@ local window_fonts = {
 }
 
 function xg_create_window(name, line, wildcards)
-    if name then 
+    if name then
        WindowPosition(win, 0, 0, 12, 16)
        xset_ToggleWindowDisplay("", "", {onoff = "max"})
        CallPlugin(plugin_id_z_order, "boostMe", win)
@@ -6135,7 +6164,7 @@ function xg_show_target_links()
 			WindowText(win, font, "   (Express)", right_end, hs_top, 0, 0, ColourNameToRGB(text_colors.targeted), false)
             hs_left = hs_left + added_width
             hs_right = math.min(hs_right + added_width, win_width - 5)
-		end        
+		end
 		if (hs_bottom > win_height - resize_tag) then -- Prevent list item's hotspot from overlapping with the resize tag
             hs_right = math.min(hs_right, win_width - resize_tag - 5)
         end
@@ -6675,18 +6704,18 @@ end
 --	return new_t
 --end
 
-function dbcheck(code, query)
-    if
-        (code ~= sqlite3.OK) and -- no error
-            (code ~= sqlite3.ROW) and -- completed OK with another row of data
-            (code ~= sqlite3.DONE)
-     then -- completed OK, no more rows
-        local err = db:errmsg() -- the rollback will change the error message
-        err = err .. "\n\nCODE: " .. code .. "\nQUERY: " .. query .. "\n"
-        db:exec("ROLLBACK") -- rollback any transaction to unlock the database
-        error(err, 2) -- show error in caller's context
-    end
-end
+function dbcheck(db, code, query)
+    if code ~= sqlite3.OK and       -- no error
+        code ~= sqlite3.ROW and     -- completed OK with another row of data
+        code ~= sqlite3.DONE        -- completed OK, no more rows
+    then
+        local msg = db:errmsg()
+        local err = msg.."\n\nCODE: "..code.."\nQUERY: "..query.."\n"
+        db:exec("ROLLBACK")      -- rollback any transaction to unlock the database
+        db:close_vm()            -- close the database
+        error(err, 3)            -- show error in caller's context
+    end -- if
+end -- dbcheck
 
 function fixsql(s)
     if s then
@@ -7290,7 +7319,9 @@ function onHelp(name, line, wildcards)
         "snd reload",
         "snd check_update",
         "snd changelog",
-        "summary"
+        "summary",
+        "history",
+        "stats"
     }
 
     local headers = {
@@ -7996,7 +8027,7 @@ function onHelp(name, line, wildcards)
                     )
                 }
             )
-        )	
+        )
 	elseif str == "changelog" then
         ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd changelog")
         Note()
@@ -8287,6 +8318,61 @@ function onHelp(name, line, wildcards)
                 {
                     helpWrap(
                         "snd migrate: If you used Pwar's plugin and have a database, this will migrate it over to this version so you do not lose your hard earned data."
+                    )
+                }
+            )
+        )
+    elseif str == "history" then
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd history <q|quest|cp|campaign>")
+        Note()
+        ColourNote(
+            "antiquewhite",
+            "",
+            unpack(
+                {
+                    helpWrap(
+                        "Prints a table with the last 20 quests and campaigns or optional type taken along with their rewards."
+                    )
+                }
+            )
+        )
+    elseif str == "stats" then
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd stats <quests|campaigns|overtime>")
+        Note()
+        ColourNote("limegreen", "", "snd stats overtime:")
+        ColourNote(
+            "antiquewhite",
+            "",
+            unpack(
+                {
+                    helpWrap(
+                        "Prints a table of quest and campaign stats over the past two weeks."
+                    )
+                }
+            )
+        )
+        Note()
+        ColourNote("limegreen", "", "snd stats quests:")
+        ColourNote(
+            "antiquewhite",
+            "",
+            unpack(
+                {
+                    helpWrap(
+                        "Prints a table of quest stats by level."
+                    )
+                }
+            )
+        )
+        Note()
+        ColourNote("limegreen", "", "snd stats quests:")
+        ColourNote(
+            "antiquewhite",
+            "",
+            unpack(
+                {
+                    helpWrap(
+                        "Prints a table of campaign stats by level."
                     )
                 }
             )
@@ -9183,16 +9269,16 @@ function xset_maze()
 	local roomId = tonumber(current_room.rmid)
         if roomId > 0 then
 		if (mazeStartRooms[roomId] == nil) then
-			mazeStartRooms[roomId] = { areaname = current_room.arid }		
+			mazeStartRooms[roomId] = { areaname = current_room.arid }
 			InfoNote("Maze start flag ", "ADDED", " to: ", current_room.rmid)
 		else
 			mazeStartRooms[roomId] = nil
-			InfoNote("Maze start flag ", "REMOVED", " from: ", current_room.rmid)			
+			InfoNote("Maze start flag ", "REMOVED", " from: ", current_room.rmid)
 		end
-		SetVariable("mazeStartRooms", serialize.save_simple(mazeStartRooms))		
+		SetVariable("mazeStartRooms", serialize.save_simple(mazeStartRooms))
 	else
 		InfoNote("Current room: ", tostring(roomId), " is invalid.")
-	end	
+	end
 end
 
 function xset_table_notes()
@@ -9333,6 +9419,486 @@ function setup_scan_con_triggers()
     end
 end
 
+--
+-- History Methods
+--
+
+history_type_quest = 1
+history_type_global_quest = 2
+history_type_campaign = 3
+
+history_status_in_progress = 1
+history_status_complete = 2
+history_status_timeout = 3
+history_status_failed = 4
+history_status_reset = 5
+history_status_skipped = 6
+
+local cp_info_qp_reward = tonumber(GetVariable("mcvar_cp_info_qp_reward")) or 0
+local cp_info_gold_reward = tonumber(GetVariable("mcvar_cp_info_gold_reward")) or 0
+local cp_info_train_reward = tonumber(GetVariable("mcvar_cp_info_train_reward")) or 0
+local cp_info_practices_reward = tonumber(GetVariable("mcvar_cp_info_practices_reward")) or 0
+local cp_info_tp_reward = tonumber(GetVariable("mcvar_cp_info_tp_reward")) or 0
+
+local quest_status = 0
+local quest_qp_reward = 0
+local quest_gold_reward = 0
+local quest_practices_reward = 0
+local quest_trains_reward = 0
+local quest_tp_reward = 0
+
+function add_history_table(db)
+    DebugNote("Adding history table and indexes")
+    db:execute([[
+        CREATE TABLE history (
+            id              INTEGER PRIMARY KEY,
+            type            INTEGER NOT NULL,
+            level_taken     INTEGER NOT NULL,
+            start_time      INTEGER NOT NULL,
+            end_time        INTEGER,
+            status          INTEGER DEFAULT 1,
+            qp_rewards      INTEGER DEFAULT 0,
+            tp_rewards      INTEGER DEFAULT 0,
+            train_rewards   INTEGER DEFAULT 0,
+            prac_rewards    INTEGER DEFAULT 0,
+            gold_rewards    INTEGER DEFAULT 0
+        );
+        CREATE INDEX history_start_time_type ON history (start_time, type);
+        CREATE INDEX history_type_status ON history (type, status);
+        CREATE INDEX history_end_time_status_type ON history (end_time, status, type);
+    ]])
+end
+
+function history_start(history_type)
+    history_type = tonumber(history_type)
+    if history_type < history_type_quest or history_type > history_type_campaign then
+        ErrorNote("Invalid history type: " .. history_type)
+        return
+    end
+
+    local level_taken = tonumber(gmcp("char.status.level"))
+    local start_time = os.time()
+
+    -- Build the query
+    local sqlQuery = 'INSERT INTO history (type, level_taken, start_time) VALUES ("%d", "%d", "%d")'
+    sqlQuery = sqlQuery:format(history_type, level_taken, start_time)
+
+    -- Execute the query
+    local snd_db = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
+    local code = snd_db:exec(sqlQuery)
+    dbcheck(snd_db, code, sqlQuery)
+    snd_db:close_vm()
+end
+
+function history_end(history_type, status)
+    history_type = tonumber(history_type)
+    if history_type < history_type_quest or history_type > history_type_campaign then
+        ErrorNote("Invalid history type: " .. history_type)
+        return
+    end
+    status = tonumber(status)
+    if status < history_status_in_progress or status > history_status_skipped then
+        ErrorNote("Invalid history status: " .. status)
+        return
+    end
+
+    local qp_rewards = 0
+    local tp_rewards = 0
+    local train_rewards = 0
+    local prac_rewards = 0
+    local gold_rewards = 0
+
+    if history_type == history_type_campaign then
+        qp_rewards = cp_info_qp_reward
+        gold_rewards = cp_info_gold_reward
+        train_rewards = cp_info_train_reward
+        prac_rewards = cp_info_practices_reward
+        tp_rewards = cp_info_tp_reward
+
+        -- reset variables
+        cp_info_qp_reward = 0
+        set_variable("mcvar_cp_info_qp_reward", "0")
+        cp_info_gold_reward = 0
+        set_variable("mcvar_cp_info_gold_reward", "0")
+        cp_info_train_reward = 0
+        set_variable("mcvar_cp_info_train_reward", "0")
+        cp_info_practices_reward = 0
+        set_variable("mcvar_cp_info_practices_reward", "0")
+        cp_info_tp_reward = 0
+        set_variable("mcvar_cp_info_tp_reward", "0")
+    elseif history_type == history_type_quest then
+        qp_rewards = quest_qp_reward
+        gold_rewards = quest_gold_reward
+        prac_rewards = quest_practices_reward
+        train_rewards = quest_trains_reward
+        tp_rewards = quest_tp_reward
+
+        -- reset variables
+        quest_status = 0
+        quest_qp_reward = 0
+        quest_gold_reward = 0
+        quest_practices_reward = 0
+        quest_trains_reward = 0
+        quest_tp_reward = 0
+    end
+
+    local end_time = os.time()
+
+    local snd_db = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
+
+    -- Find a valid history record to update
+    local sqlQuery = 'SELECT id, start_time, status FROM history WHERE type = "%d" ORDER BY start_time DESC LIMIT 1;'
+    sqlQuery = sqlQuery:format(history_type)
+
+    local id = -1
+
+    for r in snd_db:nrows(sqlQuery) do
+        -- TODO check start_time to throw out invalid values (i.e. quests older than 60m)
+        if r.status == history_status_in_progress then
+            id = r.id
+        end
+    end
+
+    if id ~= -1 then
+        -- Update the history record
+        local sqlQuery = [[
+            UPDATE history
+            SET
+                end_time = "%d", status = "%d", qp_rewards = "%d", tp_rewards = "%d",
+                train_rewards = "%d", prac_rewards = "%d", gold_rewards = "%d"
+            WHERE id = "%d";
+        ]]
+        sqlQuery = sqlQuery:format(end_time, status, qp_rewards, tp_rewards, train_rewards, prac_rewards, gold_rewards, id)
+        local code = snd_db:exec(sqlQuery)
+        dbcheck(snd_db, code, sqlQuery)
+    end
+
+    snd_db:close_vm()
+end
+
+function history_type_to_string(history_type)
+    if history_type == history_type_quest then
+        return "quest"
+    elseif history_type == history_type_global_quest then
+        return "gquest"
+    elseif history_type == history_type_campaign then
+        return "campaign"
+    end
+    return "unknown"
+end
+
+function history_status_to_string(history_status)
+    if history_status == history_status_in_progress then
+        return "in progress"
+    elseif history_status == history_status_complete then
+        return "complete"
+    elseif history_status == history_status_timeout then
+        return "timeout"
+    elseif history_status == history_status_failed then
+        return "failed"
+    elseif history_status == history_status_reset then
+        return "reset"
+    elseif history_status == history_status_skipped then
+        return "skipped"
+    end
+    return "unknown"
+end
+
+function alias_print_history(name, line, wildcards)
+    local history_map = {
+        q = 1, quest = 1,
+        gq = 2, gquest = 2,
+        cp = 3, campaign = 3
+    }
+
+    local hist_type = (wildcards.hist_type ~= "" and wildcards.hist_type:gsub(" ", "")) or nil
+
+    history_print(history_map[hist_type] or hist_type)
+end
+
+function history_print(history_type)
+    local addSql = ""
+
+    if history_type ~= nil then
+        addSql = "WHERE type = " .. history_type
+    end
+
+    local sqlQuery = [[
+        SELECT
+            type, level_taken, start_time, end_time, status,
+            qp_rewards, tp_rewards, train_rewards, prac_rewards, gold_rewards
+        FROM history
+        ]] .. addSql .. [[
+        ORDER BY start_time DESC
+        LIMIT 20;
+    ]]
+
+    local snd_db = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
+
+    local rows = {}
+
+    for r in snd_db:nrows(sqlQuery) do
+        local duration = 0
+        if r.end_time ~= nil then
+            duration = r.end_time - r.start_time
+        end
+
+        local rewards = ""
+        if r.qp_rewards > 0 then
+            rewards = rewards .. r.qp_rewards .. "qp "
+        end
+        if r.tp_rewards > 0 then
+            rewards = rewards .. r.tp_rewards .. "tp "
+        end
+        if r.train_rewards > 0 then
+            rewards = rewards .. r.train_rewards .. "tr "
+        end
+        if r.prac_rewards > 0 then
+            rewards = rewards .. r.prac_rewards .. "pr"
+        end
+
+        row = {
+            type=history_type_to_string(r.type),
+            level_taken=r.level_taken,
+            started=os.date('%Y-%m-%d %H:%M', r.start_time),
+            duration=duration,
+            status=history_status_to_string(r.status),
+            rewards=rewards
+        }
+        table.insert(rows, row)
+    end
+
+    snd_db:close_vm()
+
+    if (#rows > 0) then
+        local header = "| Type     | Level Taken | Started          |    Duration | Status      | Rewards          |"
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+        ColourNote("#E0E0E0", "", header)
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+
+        for i, v in ipairs(
+            rows
+        ) do
+            local duration = format_duration(v.duration)
+            if v.status == "reset" or v.status == "skipped" then
+                duration = "N/A"
+            end
+            local background = (i % 2) == 0 and "#000040" or ""
+            local text = string.format("| %-8s | %11d | %-16s | %11s | %-11s | %-16s |", v.type, v.level_taken, v.started, duration, v.status, v.rewards)
+            ColourNote("#E0E0E0", background, text)
+        end
+
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+    else
+        InfoNote("   No history to show.")
+    end
+end
+
+function alias_print_stats(name, line, wildcards)
+    local arg1 = ""
+    if wildcards.arg1 ~= nil then
+        arg1 = Trim(wildcards.arg1)
+    end
+    local arg2 = ""
+    if wildcards.arg2 ~= nil then
+        arg2 = Trim(wildcards.arg2)
+    end
+
+    if arg1 == "quest" then
+        history_stats(history_type_quest)
+    elseif arg1 == "campaign" then
+        history_stats(history_type_campaign)
+    elseif arg1 == "gquest" then
+        history_stats(history_type_global_quest)
+    elseif arg1 == "overtime" then
+        history_stats_over_time()
+    else
+        ErrorNote("Invalid argument " .. arg1 .. ".  Supported values are quest, campaign, gquest, and overtime.")
+    end
+end
+
+function format_duration(duration)
+    if duration ~= nil then
+        local days = math.floor(duration/86400)
+        local hours = math.floor(math.fmod(duration, 86400)/3600)
+        local minutes = math.floor(math.fmod(duration,3600)/60)
+        local seconds = math.floor(math.fmod(duration,60))
+        if days > 0 then
+            return string.format("%dd%dh%dm%ds", days, hours, minutes, seconds)
+        elseif hours > 0 then
+            return string.format("%dh%dm%ds", hours, minutes, seconds)
+        elseif minutes > 0 then
+            return string.format("%dm%ds", minutes, seconds)
+        elseif seconds > 0 then
+            return string.format("%ds", seconds)
+        end
+    end
+    return "N/A"
+end
+
+function history_stats(history_type)
+    history_type = tonumber(history_type)
+    if history_type < history_type_quest or history_type > history_type_campaign then
+        ErrorNote("Invalid history type: " .. history_type)
+        return
+    end
+
+    local sqlQuery = [[
+        SELECT
+            level_taken,
+            min(end_time - start_time) as min_duration,
+            round(avg(end_time - start_time)) as avg_duration,
+            max(end_time - start_time) as max_duration,
+            count(*) as total
+        FROM history WHERE type = "%d" AND status = 2
+        GROUP BY level_taken
+        ORDER BY level_taken;
+    ]]
+    sqlQuery = sqlQuery:format(history_type)
+
+    local snd_db = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
+
+    local rows = {}
+
+    for r in snd_db:nrows(sqlQuery) do
+        local duration = 0
+        if r.end_time ~= nil then
+            duration = r.end_time - r.start_time
+        end
+
+        row = {
+            level_taken=r.level_taken,
+            min_duration=r.min_duration,
+            avg_duration=r.avg_duration,
+            max_duration=r.max_duration,
+            total=r.total
+        }
+        table.insert(rows, row)
+    end
+
+    snd_db:close_vm()
+
+    if (#rows > 0) then
+        local header = "| Level Taken | Min Duration | Avg Duration | Max Duration | Total |"
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+        ColourNote("#E0E0E0", "", header)
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+
+        for i, v in ipairs(
+            rows
+        ) do
+            local min_duration = format_duration(v.min_duration)
+            local avg_duration = format_duration(v.avg_duration)
+            local max_duration = format_duration(v.max_duration)
+
+            local background = (i % 2) == 0 and "#000040" or ""
+            local text = string.format("| %11d | %12s | %12s | %12s | %5d |", v.level_taken, min_duration, avg_duration, max_duration, v.total)
+            ColourNote("#E0E0E0", background, text)
+        end
+
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+    else
+        InfoNote("   No stats to show.")
+    end
+end
+
+function history_stats_over_time()
+    local sqlQuery = [[
+        SELECT
+            date(end_time, 'unixepoch', 'localtime') AS day,
+            count(case when type = 1 then 1 end) AS total_quests,
+            count(case when type = 3 then 1 end) AS total_campaigns,
+            sum(qp_rewards) as total_qp_rewards,
+            sum(tp_rewards) as total_tp_rewards,
+            sum(train_rewards) as total_train_rewards,
+            sum(prac_rewards) as total_prac_rewards,
+            sum(gold_rewards) as total_gold_rewards
+        FROM history
+        WHERE status = 2
+        AND end_time >= unixepoch(DATE('now', '-14 day'))
+        GROUP BY day
+        ORDER BY day DESC
+    ]]
+    sqlQuery = sqlQuery:format(history_type)
+
+    local snd_db = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
+
+    local rows = {}
+
+    for r in snd_db:nrows(sqlQuery) do
+        table.insert(rows, r)
+    end
+
+    snd_db:close_vm()
+
+    if (#rows > 0) then
+        local header = "| Day        | Quests | Campaigns |  QPs | TPs | TRs | PRs |    Gold |"
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+        ColourNote("#E0E0E0", "", header)
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+
+        for i, v in ipairs(
+            rows
+        ) do
+            local background = (i % 2) == 0 and "#000040" or ""
+            local text = string.format("| %10s | %6d | %9d | %4d | %3d | %3d | %3d | %7d |",
+                v.day, v.total_quests, v.total_campaigns, v.total_qp_rewards, v.total_tp_rewards,
+                v.total_train_rewards, v.total_prac_rewards, v.total_gold_rewards)
+            ColourNote("#E0E0E0", background, text)
+        end
+
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+    else
+        InfoNote("   No stats to show.")
+    end
+end
+
+function history_quest_end(status, qp, gold, practices, trains, tp)
+    if status == history_status_complete then
+        quest_qp_reward = tonumber(qp)
+        quest_gold_reward = tonumber(gold)
+        quest_practices_reward = tonumber(practices)
+        quest_trains_reward = tonumber(trains)
+        quest_tp_reward = tonumber(tp)
+    end
+
+    history_end(history_type_quest, status)
+end
+
+function trigger_quest_premonition(name, line, wildcards, style)
+    history_end(history_type_quest, history_status_skipped)
+end
+
+function trigger_campaign_rewards_qp(name, line, wildcards, style)
+    local qp = tonumber(wildcards.qp)
+    cp_info_qp_reward = qp
+    set_variable("mcvar_cp_info_qp_reward", qp)
+end
+
+function trigger_campaign_rewards_gold(name, line, wildcards, style)
+    local gold = tonumber(wildcards.gold)
+    cp_info_gold_reward = gold
+    set_variable("mcvar_cp_info_gold_reward", gold)
+end
+
+function trigger_campaign_rewards_trains(name, line, wildcards, style)
+    local train = tonumber(wildcards.train)
+    cp_info_train_reward = train
+    set_variable("mcvar_cp_info_train_reward", train)
+end
+
+function trigger_campaign_rewards_practices(name, line, wildcards, style)
+    local prac = tonumber(wildcards.prac)
+    cp_info_practices_reward = prac
+    set_variable("mcvar_cp_info_practices_reward", prac)
+end
+
+function trigger_campaign_rewards_tps(name, line, wildcards, style)
+    local tp = tonumber(wildcards.tp)
+    cp_info_tp_reward = tp
+    set_variable("mcvar_cp_info_tp_reward", tp)
+end
+
 	]]>
     </script>
     <triggers>
@@ -9428,7 +9994,7 @@ end
 
         <trigger match="^CONGRATULATIONS\! You have completed your campaign\.$" script="do_cp_complete" name="trg_cp_complete" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-        <trigger match="^Campaign cleared\.$" script="player_not_on_cp" name="trg_cp_quit" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
+        <trigger match="^Campaign cleared\.$" script="do_cp_quit" name="trg_cp_quit" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
         <trigger match="^\w.+ tells you 'Good luck in your campaign\!'$" script="player_start_new_cp" name="trg_cp_request" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
@@ -9565,6 +10131,15 @@ end
         <trigger match="^Players invis: \[\d+\], Max on ever: \[\d+\]$" name="trg_gag_who_footer_2" enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y"></trigger>
 
         <trigger match="^[\s\S]*$" name="trg_gag_everything" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="y"></trigger>
+
+        <!-- History triggers -->
+         <trigger name="trigger_quest_premonition" match="^You ignore your premonition and request another quest.*$" script="trigger_quest_premonition" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
+
+        <trigger name="trigger_campaign_rewards_qp" match="^Quest Points\.{7}: \[\s+(?<qp>\d+) \]$" script="trigger_campaign_rewards_qp" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
+        <trigger name="trigger_campaign_rewards_gold" match="^Gold Coins\.{9}: \[\s+(?<gold>\d+) \]$" script="trigger_campaign_rewards_gold" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
+        <trigger name="trigger_campaign_rewards_trains" match="^Training Sessions\.{2}: \[\s+(?<train>\d+) \]$" script="trigger_campaign_rewards_trains" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
+        <trigger name="trigger_campaign_rewards_practices" match="^Practice Sessions\.{2}: \[\s+(?<prac>\d+) \]$" script="trigger_campaign_rewards_practices" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
+        <trigger name="trigger_campaign_rewards_tps" match="^Trivia Points\.{6}: \[\s+(?<tp>\d+) \]$" script="trigger_campaign_rewards_tps" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
     </triggers>
 
     <aliases>
@@ -9703,7 +10278,7 @@ end
         <alias match="^xset table width (?<width>\d{2,3})$" script="xset_table_width" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
 
 	<alias	match="^xset express$" script="xset_express" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-	    
+
 	<alias match="^xset maze$" enabled="y" sequence="100" script="xset_maze" regexp="y"></alias>
 
         <!-- xset window commands -->
@@ -9787,5 +10362,9 @@ end
         <alias match="snd changelog" enabled="y" sequence="100" ignore_case="y" send_to="12">
             <send>get_changelog(true)</send>
         </alias>
+
+        <!-- History commands -->
+        <alias match="^snd history(?<hist_type> (campaign|cp|quest|q|gq|gquest))?$" script="alias_print_history" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+        <alias match="^snd stats(?<arg1> \w+)?(?<arg2> \w+)?$" script="alias_print_stats" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
     </aliases>
 </muclient>

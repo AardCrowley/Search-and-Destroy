@@ -2352,7 +2352,8 @@ end
 
 function do_cp_complete(name, line, wildcards)
     DebugNote("Campaign complete")
-    history_end(history_type_campaign, history_status_complete)
+    -- Delay by 0.5s to get daily bonus
+    DoAfterSpecial(0.5, [[ history_end(history_type_campaign, history_status_complete) ]], 12)
     player_not_on_cp()
 end
 
@@ -9875,6 +9876,12 @@ function trigger_campaign_rewards_qp(name, line, wildcards, style)
     set_variable("mcvar_cp_info_qp_reward", qp)
 end
 
+function trigger_campaign_rewards_bonus_qp(name, line, wildcards, style)
+    local qp = tonumber(wildcards.qp)
+    cp_info_qp_reward = cp_info_qp_reward + qp
+    set_variable("mcvar_cp_info_qp_reward", cp_info_qp_reward)
+end
+
 function trigger_campaign_rewards_gold(name, line, wildcards, style)
     local gold = tonumber(wildcards.gold)
     cp_info_gold_reward = gold
@@ -10140,6 +10147,7 @@ end
         <trigger name="trigger_campaign_rewards_trains" match="^Training Sessions\.{2}: \[\s+(?<train>\d+) \]$" script="trigger_campaign_rewards_trains" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
         <trigger name="trigger_campaign_rewards_practices" match="^Practice Sessions\.{2}: \[\s+(?<prac>\d+) \]$" script="trigger_campaign_rewards_practices" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
         <trigger name="trigger_campaign_rewards_tps" match="^Trivia Points\.{6}: \[\s+(?<tp>\d+) \]$" script="trigger_campaign_rewards_tps" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
+        <trigger name="trigger_campaign_rewards_bonus_qp" match="^You receive (?<qp>\d+) quest points bonus for your first campaign completed today.$" script="trigger_campaign_rewards_bonus_qp" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
     </triggers>
 
     <aliases>

@@ -9254,7 +9254,7 @@ end
 function xset_express(name, line, wildcards)
 	local state = wildcards.state
 
-	if state == nil then
+	if state == nil or state == "" then
 		if xset_express_onoff == "on" then
 			state = "off"
 		else

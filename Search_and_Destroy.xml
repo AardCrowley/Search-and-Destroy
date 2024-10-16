@@ -50,6 +50,7 @@ PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
 PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
 SCHEMA_VERSION = 6
 
+prevBeta = "5.9i"
 betaVersion = "5.9j"
 
 local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. " (Beta " .. betaVersion .. ")"
@@ -7111,6 +7112,14 @@ function callback_update_plugin(retval, page, status, headers, full_status, requ
         return
     end
     local upstream_version = tonumber(string.match(page, '<plugin version="([0-9%.]+)"'))
+    local pluginVer = PLUGIN_VERSION
+    if prevBeta then
+	pluginVer = pluginVer .. " (Beta " .. prevBeta .. ")"
+    end
+    if betaVersion then 
+	upstream_version = upstream_version .. " (Beta " .. betaVersion .. ")"
+    end
+    
     ImportantNote("Updating from version ", PLUGIN_VERSION, " to ", upstream_version, ". Do not touch anything!")
     local file = io.open(GetPluginInfo(GetPluginID(), 6), "w")
     file:write(page)

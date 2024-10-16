@@ -7120,7 +7120,7 @@ function callback_update_plugin(retval, page, status, headers, full_status, requ
 	upstream_version = upstream_version .. " (Beta " .. betaVersion .. ")"
     end
     
-    ImportantNote("Updating from version ", PLUGIN_VERSION, " to ", upstream_version, ". Do not touch anything!")
+    ImportantNote("Updating from version ", pluginVer, " to ", upstream_version, ". Do not touch anything!")
     local file = io.open(GetPluginInfo(GetPluginID(), 6), "w")
     file:write(page)
     file:close()

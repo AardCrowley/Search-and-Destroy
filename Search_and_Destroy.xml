@@ -50,7 +50,7 @@ PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
 PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
 SCHEMA_VERSION = 6
 
-betaVersion = "5.9i"
+betaVersion = "5.9j"
 
 local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. " (Beta " .. betaVersion .. ")"
 
@@ -379,6 +379,8 @@ local xset_sound_onoff =
     "off"
 
 local xset_express_onoff = GetVariable("mcvar_xset_express_onoff") or "on"
+local xset_express_min_kill_count = tonumber(GetVariable("xset_express_min_kill_count")) or 2
+
 local mazeStartRooms = {}
 if (GetVariable("mazeStartRooms") ~= nil) then
 	luastmt = "obj = " .. GetVariable("mazeStartRooms")
@@ -2887,7 +2889,8 @@ function build_area_targets(cp_gq, sqla)
                 [[
 					SELECT roomid, kill_count
 					FROM mobs
-					WHERE mob = %s AND zone = %s;
+					WHERE mob = %s AND zone = %s
+					ORDER BY kill_count DESC;
 				]],
                 fixsql(v.mob), fixsql(table_add.arid))
 			local stmt = SnDdb:prepare(query)
@@ -2906,12 +2909,12 @@ function build_area_targets(cp_gq, sqla)
 			end
 			-- done with this statement
 			stmt:finalize()
-			if #result_table == 1 then
+			if #result_table > 0 then
 				table_add.roomid = result_table[1]["roomid"]
 				table_add.kills = result_table[1]["kill_count"]
 				table_add.results = #result_table
 				table.insert(t, table_add)
-				if tonumber(table_add.kills) > 2 then
+				if is_express_target(table_add) then
 					DebugNote("Express target found:", v.mob)
 				end
 			else
@@ -3034,7 +3037,7 @@ function build_room_targets(cp_gq, sqlr, sqla)
             if #possibilities > 1 then
                 local mobs_by_room_query =
                     string.format(
-                    "SELECT DISTINCT(zone), kill_count, roomid, COUNT(roomid) FROM mobs WHERE mob = %s AND room = %s AND zone IN (%s);",
+                    "SELECT DISTINCT(zone), kill_count, roomid, COUNT(roomid) FROM mobs WHERE mob = %s AND room = %s AND zone IN (%s) ORDER BY kill_count DESC;",
                     fixsql(v.mob),
                     fixsql(v.loc),
                     table.concat(areas_sql, ",")
@@ -3047,7 +3050,7 @@ function build_room_targets(cp_gq, sqlr, sqla)
                             possibility.found = true
 							if tonumber(row["COUNT(roomid)"]) == 1 then
 								possibility.kills = row.kill_count
-								if tonumber(possibility.kills) > 2 then
+								if tonumber(possibility.kills) >= xset_express_min_kill_count then
 									DebugNote("Express target found:", possibility.mob)
 									possibility.results = 1
 									possibility.roomid = row.roomid
@@ -3112,7 +3115,8 @@ function build_room_targets(cp_gq, sqlr, sqla)
 					[[
 						SELECT roomid, kill_count
 						FROM mobs
-						WHERE mob = %s AND zone = %s;
+						WHERE mob = %s AND zone = %s
+						ORDER BY kill_count DESC;
 					]],
 					fixsql(v.mob), fixsql(table_add.arid))
 				local stmt = SnDdb:prepare(query)
@@ -3132,12 +3136,12 @@ function build_room_targets(cp_gq, sqlr, sqla)
 				-- done with this statement
 				stmt:finalize()
 
-				if #result_table == 1 then
+				if #result_table > 0 then
 					table_add.roomid = result_table[1]["roomid"]
 					table_add.kills = result_table[1]["kill_count"]
 					table_add.results = #result_table
 					table.insert(high_chance, table_add)
-					if tonumber(table_add.kills) > 2 then
+					if is_express_target(table_add) then
 						DebugNote("Express target found:", v.mob)
 					end
 				else
@@ -3366,6 +3370,11 @@ function character_state_string()
     return str or "in an unknown state"
 end
 
+function is_express_target(target)
+    return target.results ~= nil and target.kills ~= nil and tonumber(target.results) > 0 and
+        tonumber(target.kills) >= xset_express_min_kill_count and xset_express_onoff == "on"
+end
+
 function xcp_goto_target(index)
     DebugNote("xcp goto target index ", index)
     local t = main_target_list[index]
@@ -3380,21 +3389,13 @@ function xcp_goto_target(index)
             set_target_from_main_target_list(index)
             if is_character_ready() then
                 DebugNote("Character ready")
-				if ((tonumber(t.results) == 1) and (tonumber(t.kills) > 2) and (xset_express_onoff == "on")) then
-					local func = function()
-						next_room = t.roomid
-						table.insert(gotoList, 0, t.arid)
-						table.insert(gotoList, 1, t.roomid)
-						set_going_to_room(t.roomid)
-						goto_room_id(tostring(t.roomid), t.arid)
-						DebugNote("Attempting to go directly to an express target.")
-					end
-					if (ri.arid ~= t.arid) then -- if you're not in target area, xrunto target area.
-                        execute_in_room(get_start_room(t.arid, true), func)
-						xrun_to(t.arid, true)
-                    else
-						func()
-					end
+				if is_express_target(t) then
+					next_room = t.roomid
+					table.insert(gotoList, 0, t.arid)
+					table.insert(gotoList, 1, t.roomid)
+					set_going_to_room(t.roomid)
+					goto_room_id(tostring(t.roomid), t.arid)
+					DebugNote("Attempting to go directly to an express target.")
 				elseif (t.link_type == "area") then -- Area cp links - "xcp" goes to target area, then runs Hunt Trick to get target room.
                     if (action == "ht" and current_activity == "cp") then -- do hunt trick or quick where after arriving in area.
                         local func = function()
@@ -6160,7 +6161,7 @@ function xg_show_target_links()
             hs_right = math.min(hs_right + added_width, win_width - 5)
         end
 		local right_end = WindowText(win, font, link, hs_left, hs_top, 0, 0, color, false)
-		if ((tonumber(v.results) == 1) and (tonumber(v.kills) > 2) and (xset_express_onoff == "on")) then
+		if is_express_target(v) then
 			local added_width = WindowTextWidth(win, font, "   (Express)")
 			WindowText(win, font, "   (Express)", right_end, hs_top, 0, 0, ColourNameToRGB(text_colors.targeted), false)
             hs_left = hs_left + added_width
@@ -8002,7 +8003,7 @@ function onHelp(name, line, wildcards)
             )
         )
 	elseif str == "express" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset express")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset express <on|off> <min_kill_count>")
         Note()
         ColourNote(
             "antiquewhite",
@@ -8010,7 +8011,7 @@ function onHelp(name, line, wildcards)
             unpack(
                 {
                     helpWrap(
-                        "Toggles Express mode on or off. Express mode will look through your cp or gq targets for mobs that are always in the same room. If such mobs are found, when they are selected as the current target, you will go directly to the mob's room, thus bypassing going to the start of the area first."
+                        "Toggles Express mode on or off. Express mode will look through your cp or gq targets for mobs that you have already killed. If you have killed a mob in a room more times than min_kill_count, it will be flagged as express. When express mobs are selected as the current target, you will go directly to the mob's room, thus bypassing going to the start of the area first."
                     )
                 }
             )
@@ -9250,20 +9251,33 @@ function is_sound_enabled()
     return xset_sound_onoff == "on"
 end
 
-function xset_express()
-    if xset_express_onoff == "on" then
-		xset_express_onoff = "off"
-		set_variable("mcvar_xset_express_onoff", xset_express_onoff)
-		InfoNote("\nSearch&Destroy Express mode is now ", string.upper(xset_express_onoff))
-		xg_draw_window()
-        Redraw()
-    else
-        xset_express_onoff = "on"
-		set_variable("mcvar_xset_express_onoff", xset_express_onoff)
-		InfoNote("\nSearch&Destroy Express mode is now ", string.upper(xset_express_onoff))
-		xg_draw_window()
-        Redraw()
-    end
+function xset_express(name, line, wildcards)
+	local state = wildcards.state
+
+	if state == nil or state == "" then
+		if xset_express_onoff == "on" then
+			state = "off"
+		else
+			state = "on"
+		end
+	else
+		state = string.lower(state)
+	end
+
+	local min_kill_count = tonumber(wildcards.min_kill)
+	if min_kill_count == nil then
+		min_kill_count = xset_express_min_kill_count
+	end
+
+	set_variable("mcvar_xset_express_onoff", state)
+	set_variable("xset_express_min_kill_count", min_kill_count)
+
+	xset_express_onoff = state
+	xset_express_min_kill_count = min_kill_count
+
+	InfoNote("\nSearch&Destroy Express mode is now ", string.upper(state), " with a min kill count of ", min_kill_count)
+	xg_draw_window()
+	Redraw()
 end
 
 function xset_maze()
@@ -10285,7 +10299,7 @@ end
 
         <alias match="^xset table width (?<width>\d{2,3})$" script="xset_table_width" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
 
-	<alias	match="^xset express$" script="xset_express" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+	<alias match="^xset express ?(?<state>on|off)? ?(?<min_kill>\d+)?$" script="xset_express" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 	<alias match="^xset maze$" enabled="y" sequence="100" script="xset_maze" regexp="y"></alias>
 

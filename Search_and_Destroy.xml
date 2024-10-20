@@ -50,8 +50,8 @@ PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
 PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
 SCHEMA_VERSION = 6
 
-prevBeta = "5.9i"
-betaVersion = "5.9j"
+prevBeta = "5.9j"
+betaVersion = "5.9k"
 
 local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. " (Beta " .. betaVersion .. ")"
 
@@ -2986,170 +2986,165 @@ function build_room_targets(cp_gq, sqlr, sqla)
         end
         local results_found = false
         local select = string.format(sqlr, fixsql(v.loc))
-        local last_mob_sig = ""
         for row in db:nrows(select) do -- if not row then / print("error - room db search returned no rows") / elseif not row.areaName then / print("area name missing from row") / end
             if (area_range_index[row.areaName]) then -- don't include areas that never contain quest mobs
-                local mob_sig = row.arid .. "|" .. v.mob
-                if (mob_sig ~= last_mob_sig) then
-                    last_mob_sig = mob_sig
-                    local area_min_lvl = (area_range_index[row.areaName].min) or 1
-                    local area_max_lvl = (area_range_index[row.areaName].max) or 300
-                    if (level_taken >= area_min_lvl) and (level_taken <= (area_max_lvl + 25)) then -- limit results to sensible level range.
-                        results_found = true
-                        table.insert(areas_sql, fixsql(row.arid))
-                        table.insert(
-                            possibilities,
-                            {
-                                mob = v.mob,
-                                arid = row.arid,
-                                roomid = row.roomid,
-                                roomName = row.roomName,
-                                qty = v.qty,
-                                is_dead = dead,
-                                 --v.is_dead,
-                                minlvl = area_min_lvl,
-                                maxlvl = area_max_lvl,
-                                link_type = lt --((v.is_dead == false) and "room" or "area"),	-- deals with dead mobs when area contains roomnames same as area name e.g. Aardington Estate
-                            }
-                        )
-                    else
-                        table.insert(
-                            ig,
-                            {
-                                -- build table of search results for areas out of your level range.
-                                mob = v.mob, -- Usually invalid, but valid links can wind up here if area's level range is too broad, or wrong.
-                                arid = row.arid,
-                                roomid = row.roomid,
-                                roomName = row.roomName,
-                                qty = v.qty,
-                                is_dead = dead,
-                                minlvl = area_min_lvl,
-                                maxlvl = area_max_lvl,
-                                link_type = "ignored"
-                            }
-                        )
-                    end
+                local area_min_lvl = (area_range_index[row.areaName].min) or 1
+                local area_max_lvl = (area_range_index[row.areaName].max) or 300
+                if (level_taken >= area_min_lvl) and (level_taken <= (area_max_lvl + 25)) then -- limit results to sensible level range.
+                    results_found = true
+                    table.insert(areas_sql, fixsql(row.arid))
+                    table.insert(
+                        possibilities,
+                        {
+                            mob = v.mob,
+                            arid = row.arid,
+                            roomid = tonumber(row.roomid),
+                            roomName = row.roomName,
+                            qty = v.qty,
+                            is_dead = dead,
+                            results = 0,
+                            kills = -1,
+                             --v.is_dead,
+                            minlvl = area_min_lvl,
+                            maxlvl = area_max_lvl,
+                            link_type = lt --((v.is_dead == false) and "room" or "area"),	-- deals with dead mobs when area contains roomnames same as area name e.g. Aardington Estate
+                        }
+                    )
+                else
+                    table.insert(
+                        ig,
+                        {
+                            -- build table of search results for areas out of your level range.
+                            mob = v.mob, -- Usually invalid, but valid links can wind up here if area's level range is too broad, or wrong.
+                            arid = row.arid,
+                            roomid = tonumber(row.roomid),
+                            roomName = row.roomName,
+                            qty = v.qty,
+                            is_dead = dead,
+                            results = 0,
+                            kills = -1,
+                            minlvl = area_min_lvl,
+                            maxlvl = area_max_lvl,
+                            link_type = "ignored"
+                        }
+                    )
                 end
             end
         end
         if results_found then
-            -- When more than one possible area is found, check if you've seen the mob in that room in any of the areas
-            -- if never seen in any of the rooms, check if you've seen them anywhere in the areas
-            if #possibilities > 1 then
-                local mobs_by_room_query =
-                    string.format(
-                    "SELECT DISTINCT(zone), kill_count, roomid, COUNT(roomid) FROM mobs WHERE mob = %s AND room = %s AND zone IN (%s) ORDER BY kill_count DESC;",
-                    fixsql(v.mob),
-                    fixsql(v.loc),
-                    table.concat(areas_sql, ",")
-                )
-                local mob_found = false
-                for row in SnDdb:nrows(mobs_by_room_query) do
-                    for i, possibility in ipairs(possibilities) do
-                        if possibility.arid == row.zone then
-                            mob_found = true
-                            possibility.found = true
-							if tonumber(row["COUNT(roomid)"]) == 1 then
-								possibility.kills = row.kill_count
-								if tonumber(possibility.kills) >= xset_express_min_kill_count then
-									DebugNote("Express target found:", possibility.mob)
-									possibility.results = 1
-									possibility.roomid = row.roomid
-								end
+			-- Check if killed or seen in exact room, eligible for express
+			local mobs_by_room_query =
+			string.format(
+				[[
+					SELECT zone, room, kill_count, roomid
+					FROM mobs
+					WHERE
+						mob = %s
+						AND room = %s
+						AND zone IN (%s)
+					ORDER BY kill_count DESC;
+				]],
+				fixsql(v.mob),
+				fixsql(v.loc),
+				table.concat(areas_sql, ",")
+			)
+
+			local mob_found = false
+			for row in SnDdb:nrows(mobs_by_room_query) do
+				for i, possibility in ipairs(possibilities) do
+					if possibility.arid == row.zone then
+						mob_found = true
+						possibility.found = true
+						possibility.results = possibility.results + 1
+						-- Grant at least one kill if a matching room name found
+						if possibility.kills < 1 then
+							possibility.kills = 1
+						end
+
+						if possibility.roomid == tonumber(row.roomid) and possibility.kills < tonumber(row.kill_count) + 1 then
+							-- Exact room id match, adjust up by one kill so it gets priority over just a standard room name match
+							possibility.kills = tonumber(row.kill_count) + 1
+							if is_express_target(possibility) then
+								DebugNote("Express target found:", v.mob)
 							end
-							break
-                        end
-                    end
-                end
-
-                if not mob_found then
-                    local mobs_by_area_query =
-                        string.format(
-                        "SELECT DISTINCT(zone) FROM mobs WHERE mob = %s AND zone IN (%s);",
-                        fixsql(v.mob),
-                        table.concat(areas_sql, ",")
-                    )
-                    for row in SnDdb:nrows(mobs_by_room_query) do
-                        for i, possibility in ipairs(possibilities) do
-                            if possibility.arid == row.zone then
-                                mob_found = true
-                                possibility.found = true
-                                break
-                            end
-                        end
-                    end
-                end
-
-                table.sort(possibilities, area_sorter)
-                if mob_found then
-                    local temp_high = {}
-                    local temp_low = {}
-                    for i, possibility in ipairs(possibilities) do
-                        possibility.duplicates = #possibilities
-                        if possibility.found then
-                            table.insert(temp_high, possibility)
-                        else
-                            possibility.unlikely = true
-                            table.insert(temp_low, possibility)
-                        end
-                    end
-                    for i, possibility in ipairs(temp_high) do
-                        possibility.index = i
-                        table.insert(high_chance, possibility)
-                    end
-
-                    for i, possibility in ipairs(temp_low) do
-                        possibility.index = i + #temp_high
-                        table.insert(low_chance, possibility)
-                    end
-                else
-                    for i, possibility in ipairs(possibilities) do
-                        possibility.duplicates = #possibilities
-                        possibility.index = i
-                        table.insert(high_chance, possibility)
-                    end
-                end
-            elseif #possibilities == 1 then
-				local table_add = possibilities[1]
-				local query =
-				string.format(
-					[[
-						SELECT roomid, kill_count
-						FROM mobs
-						WHERE mob = %s AND zone = %s
-						ORDER BY kill_count DESC;
-					]],
-					fixsql(v.mob), fixsql(table_add.arid))
-				local stmt = SnDdb:prepare(query)
-				local result_table = {}
-				while true do
-					local result = stmt:step()
-					-- exit loop if done
-					if result == sqlite3.DONE then
-						break
+						end
 					end
-					-- should have ROW result
-					assert(result == sqlite3.ROW, "Row not found.")
-					-- get all values into a table
-					local row = stmt:get_named_values()
-					table.insert(result_table, row)
-				end
-				-- done with this statement
-				stmt:finalize()
-
-				if #result_table > 0 then
-					table_add.roomid = result_table[1]["roomid"]
-					table_add.kills = result_table[1]["kill_count"]
-					table_add.results = #result_table
-					table.insert(high_chance, table_add)
-					if is_express_target(table_add) then
-						DebugNote("Express target found:", v.mob)
-					end
-				else
-					table_add.results = #result_table or nil
-					table.insert(high_chance, table_add)
 				end
 			end
+
+			-- Check if mob killed anywhere in the area, not eligible for express
+			if not mob_found then
+				local mobs_by_area_query = string.format(
+						[[
+							SELECT zone, roomid, kill_count
+							FROM mobs
+							WHERE mob = %s AND zone IN (%s)
+							ORDER BY kill_count DESC;
+						]],
+						fixsql(v.mob),
+						table.concat(areas_sql, ",")
+				)
+				-- DebugNote("mobs_by_area_query: ", mobs_by_area_query)
+				for row in SnDdb:nrows(mobs_by_room_query) do
+					for i, possibility in ipairs(possibilities) do
+						if possibility.arid == row.zone then
+							mob_found = true
+							possibility.found = true
+							possibility.results = possibility.results + 1
+						end
+					end
+				end
+			end
+
+			-- remove duplicate rooms
+			filtered_possibilities = {}
+			for i, possibility in ipairs(possibilities) do
+				key = string.format("%s-%s", possibility.arid, possibility.roomName)
+				if filtered_possibilities[key] == nil then
+					filtered_possibilities[key] = possibility
+				else
+					existing = filtered_possibilities[key]
+					if possibility.kills > existing.kills then
+						filtered_possibilities[key] = possibility
+					end
+				end
+			end
+
+			possibilities = {}
+			for k, possibility in pairs(filtered_possibilities) do
+				table.insert(possibilities, possibility)
+			end
+
+            table.sort(possibilities, area_sorter)
+
+            if mob_found then
+                local temp_high = {}
+                local temp_low = {}
+                for i, possibility in ipairs(possibilities) do
+                    possibility.duplicates = #possibilities
+                    if possibility.found then
+                        table.insert(temp_high, possibility)
+                    else
+                        possibility.unlikely = true
+                        table.insert(temp_low, possibility)
+                    end
+                end
+                for i, possibility in ipairs(temp_high) do
+                    possibility.index = i
+                    table.insert(high_chance, possibility)
+                end
+
+                for i, possibility in ipairs(temp_low) do
+                    possibility.index = i + #temp_high
+                    table.insert(low_chance, possibility)
+                end
+            else
+                for i, possibility in ipairs(possibilities) do
+                    possibility.duplicates = #possibilities
+                    possibility.index = i
+                    table.insert(high_chance, possibility)
+                end
+            end
         else -- no results were returned: either the mob is dead, or the location is unknown.
             if (dead == "yes") then -- mob is dead
                 local results_found = false
@@ -7114,12 +7109,12 @@ function callback_update_plugin(retval, page, status, headers, full_status, requ
     local upstream_version = tonumber(string.match(page, '<plugin version="([0-9%.]+)"'))
     local pluginVer = PLUGIN_VERSION
     if prevBeta then
-	pluginVer = pluginVer .. " (Beta " .. prevBeta .. ")"
+        pluginVer = pluginVer .. " (Beta " .. prevBeta .. ")"
     end
     if betaVersion then 
-	upstream_version = upstream_version .. " (Beta " .. betaVersion .. ")"
+        upstream_version = upstream_version .. " (Beta " .. betaVersion .. ")"
     end
-    
+
     ImportantNote("Updating from version ", pluginVer, " to ", upstream_version, ". Do not touch anything!")
     local file = io.open(GetPluginInfo(GetPluginID(), 6), "w")
     file:write(page)
@@ -9928,7 +9923,6 @@ function trigger_campaign_rewards_tps(name, line, wildcards, style)
     cp_info_tp_reward = tp
     set_variable("mcvar_cp_info_tp_reward", tp)
 end
-
 	]]>
     </script>
     <triggers>

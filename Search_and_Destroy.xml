@@ -50,8 +50,8 @@ PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
 PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
 SCHEMA_VERSION = 6
 
-prevBeta = "5.9j"
-betaVersion = "5.9k"
+prevBeta = "5.9k"
+betaVersion = "5.9l"
 
 local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. " (Beta " .. betaVersion .. ")"
 
@@ -3284,8 +3284,12 @@ function print_room_links_ignored()
             v.minlvl,
             v.maxlvl
         )
-        Hyperlink("xmapper move " .. v.roomid, link, "Move to room " .. v.roomid, "#002460", "", 0, 1)
-        print("")
+        if v.roomid == nil then
+            ColourNote("#002460", "", link)
+        else
+            Hyperlink("xmapper move " .. v.roomid, link, "Move to room " .. v.roomid, "#002460", "", 0, 1)
+            print("")
+        end
     end
 end
 

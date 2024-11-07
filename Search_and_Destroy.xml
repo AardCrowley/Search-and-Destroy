@@ -50,8 +50,8 @@ PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
 PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
 SCHEMA_VERSION = 6
 
-prevBeta = "5.9k"
-betaVersion = "5.9l"
+prevBeta = "5.9l"
+betaVersion = "5.9m"
 
 local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. " (Beta " .. betaVersion .. ")"
 
@@ -9382,6 +9382,8 @@ local SCAN_FLAGS = {
     "C",
     "Diseased",
     "D",
+    "Flying",
+    "F",
     "Golden Aura",
     "G",
     "Hidden",

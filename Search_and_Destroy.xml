@@ -205,6 +205,9 @@ local xset_vidblain_onoff = GetVariable("mcvar_xset_vidblain_onoff") or "off"
 -- [[ Extra GQ aliases ]]
 local xset_gq_check_extra_aliases = GetVariable("mcvar_xset_gq_check_extra_aliases") or "on"
 
+-- [[ Auto-navigate on single xcp/qw result ]]
+local xset_autonav_onoff = GetVariable("mcvar_xset_autonav_onoff") or "off"
+
 -- [[ Variables from old Mapper Extender ]]
 local area_range_index = {}
 local area_start_rooms = {}
@@ -3258,6 +3261,12 @@ function xcp_goto_target(index)
                     end
                 else -- Room cp:  get target room from mapper, but don't move yet.  "go" takes you to room.
                     search_rooms_exact(t.roomName, t.arid, t.mob)
+                    -- When autonav is enabled and exactly one room was found,
+                    -- go there immediately (Pwar parity). Multi-result cases
+                    -- still require manual selection.
+                    if xset_autonav_onoff == "on" and gotoList[1] and not gotoList[2] then
+                        Execute("go 1")
+                    end
                 end
             else
                 InfoNote(string.format("\nYou can't run there while you're %s!\n", character_state_string()))
@@ -3667,8 +3676,11 @@ function qw_match(name, line, wildcards)
     xg_draw_window()
     search_rooms_exact(room, current_room.arid, Trim(wildcards.mobname))
 
-    if go_after then
-        goto_number(nil, nil, {})
+    -- When autonav is enabled and exactly one room was found, go there
+    -- immediately (Pwar parity). Replaces the prior dead `go_after` branch
+    -- that was referenced but never assigned anywhere.
+    if xset_autonav_onoff == "on" and gotoList[1] and not gotoList[2] then
+        Execute("go 1")
     end
 end
 
@@ -7045,6 +7057,7 @@ function onHelp(name, line, wildcards)
         "go",
         "xset nx",
         "xset con_overwrite",
+        "xset autonav",
         "xset gqalias",
         "xset table notes",
         "xset table width",
@@ -7521,6 +7534,20 @@ function onHelp(name, line, wildcards)
                 {
                     helpWrap(
                         "Disable replacing the output of consider. This is mainly for when you have other plugins that replace the output."
+                    )
+                }
+            )
+        )
+    elseif str == "xset autonav" then
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset autonav")
+        Note()
+        ColourNote(
+            "antiquewhite",
+            "",
+            unpack(
+                {
+                    helpWrap(
+                        "Toggles auto-navigation after 'xcp <index>' or 'qw <mob>' when there is exactly one matching mapper room. When enabled, SnD executes 'go 1' automatically as soon as the single-row table is shown instead of waiting for you to type it. Multi-room matches still require manual selection so you don't auto-navigate into the wrong area. Off by default. Matches Pwar's SnD behaviour for users migrating from that plugin. Does not affect quest retargeting, 'xm'/'xmall', or other research commands."
                     )
                 }
             )
@@ -8457,6 +8484,12 @@ end
 
 function is_con_overwritten()
     return xset_overwrite_con == "on"
+end
+
+function xset_autonav()
+    xset_autonav_onoff = (xset_autonav_onoff == "on") and "off" or "on"
+    set_variable("mcvar_xset_autonav_onoff", xset_autonav_onoff)
+    InfoNote("\nAuto-navigate on single xcp/qw room result is now ", string.upper(xset_autonav_onoff), "\n")
 end
 
 function toggle_con_overwrite_triggers()
@@ -9938,6 +9971,10 @@ end
 
 	<alias  match="^xset con_overwrite"
 		script="xset_con_overwrite"
+		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^xset autonav$"
+		script="xset_autonav"
 		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
 
 	<alias	match="^xset sound$"

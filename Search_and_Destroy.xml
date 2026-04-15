@@ -8991,8 +8991,11 @@ local SCAN_FLAGS = {
     "W",
     "wounded",
     "aimed",
+    "!",
     "Old",
-    "O"
+    "O",
+    "Flying",
+    "F"
 }
 
 local CONSIDER_OUTCOMES = {
@@ -9012,7 +9015,13 @@ local CONSIDER_OUTCOMES = {
 }
 
 function setup_scan_con_triggers()
-    local flags_string = "(?<flags>(?: ?\\[AFK\\]| ?\\((?:" .. table.concat(SCAN_FLAGS, "|") .. ")\\))*)?"
+    -- The paren group matches either a single uppercase letter (catch-all for any
+    -- current or future Aardwolf single-letter flag) or an explicit entry from
+    -- SCAN_FLAGS. Without the [A-Z] catch-all, any scan line containing a flag
+    -- not yet added to SCAN_FLAGS silently fails the regex and mobs in the line
+    -- never get their [CP]/[GQ]/[Q] activity tag. Multi-char names like "(Helper)"
+    -- remain safe because they match neither [A-Z]{1} nor the whitelist.
+    local flags_string = "(?<flags>(?: ?\\[AFK\\]| ?\\((?:[A-Z]|" .. table.concat(SCAN_FLAGS, "|") .. ")\\))*)?"
     local match = "^ {5}-" .. flags_string .. " (?<mob_name>.+)$"
     local name
 

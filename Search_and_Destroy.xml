@@ -9310,7 +9310,7 @@ end
 		enabled="n"	regexp="y" sequence="500" keep_evaluating="y" omit_from_output="y" send_to="12" >
 			<send>	EnableTrigger("trg_gq_check_end", true) </send> </trigger>
 
-	<trigger match="^(?!You still have to kill [1-3] \* .+ \(\S.+?(?: - Dead)?\))$"
+	<trigger match="^(?!You still have to kill [1-3] \* .+ \(\S.+?(?: - Dead)?\)).*$"
 		script="gq_check_end"
 		name="trg_gq_check_end" group="trg_gq_check"
 		enabled="n"	regexp="y" sequence="500" keep_evaluating="y" omit_from_output="n" send_to="12" > </trigger>
@@ -9391,7 +9391,7 @@ end
 		name="trg_cp_info_line" group="trg_campaign"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
 
-	<trigger match="^(?!Find and kill 1 \* .+ \(.+\))$"
+	<trigger match="^(?!Find and kill 1 \* .+ \(.+\)).*$"
 		script="cp_info_end"
 		name="trg_cp_info_end" group="trg_campaign"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
@@ -9405,7 +9405,7 @@ end
 			<send>	EnableTrigger("trg_cp_check_end", true)</send> </trigger>
 
 
-	<trigger match="^(?!You still have to kill \* .+ \(.+?(?: - Dead)?\))$"
+	<trigger match="^(?!You still have to kill \* .+ \(.+?(?: - Dead)?\)).*$"
 		script="cp_check_end"
 		name="trg_cp_check_end" group="trg_campaign"
 		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12" >

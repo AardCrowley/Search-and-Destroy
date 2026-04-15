@@ -4287,7 +4287,7 @@ function anex_can_get_new_cp() -- called by line 'You may take campaign this lev
             else
                 if (noexp_onoff == "on") then
                     anex_set_noexp("off")
-                    InfoNote("\nSearch and Destroy: Turning noexp OFF (you have reached level ", plevel, ")")
+                    InfoNote("\nSearch and Destroy: Turning noexp OFF (you have reached level ", level, ")")
                 end
             end
         else -- feature is turned off, just show reminder

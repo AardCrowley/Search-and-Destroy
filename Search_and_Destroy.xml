@@ -1881,7 +1881,6 @@ function gmkw(s, a) -- guess mob keywords
     else
         s3 = s2
     end
-    s3 = string.gsub(s3, "-", " ")
 
     local s4 = {}
     for w in string.gmatch(s3, "[^ ]+") do
@@ -1890,15 +1889,20 @@ function gmkw(s, a) -- guess mob keywords
     local len1 = #(s4[1])
     local len2 = #(s4[#s4]) or 0
     -- Aardwolf's command parser can't match a truncated word containing a bare
-    -- apostrophe (e.g. "nulan'b" against "a Nulan'Boar mother"), so when a word
-    -- contains one we keep the full word rather than truncating. See issue #109.
+    -- apostrophe (e.g. "nulan'b" against "a Nulan'Boar mother") or a partial
+    -- hyphenated keyword (e.g. "yama uba" or "yamauba" against "a yama-uba").
+    -- When a word contains either character, keep the full word rather than
+    -- truncating. See issues #109 (apostrophes) and #125 (hyphens).
+    local function keep_full(w)
+        return w:find("'", 1, true) or w:find("-", 1, true)
+    end
     if (#s4 > 1) then -- mob name has multiple words
         local first, last = s4[1], s4[#s4]
-        local x = first:find("'", 1, true) and #first or math.random(4, 6)
-        local y = last:find("'", 1, true) and #last or math.random(4, 6)
+        local x = keep_full(first) and #first or math.random(4, 6)
+        local y = keep_full(last) and #last or math.random(4, 6)
         guess = string.sub(first, 1, x) .. " " .. string.sub(last, 1, y)
     elseif (#s4 == 1) then -- mob name has one word
-        if s4[1]:find("'", 1, true) then
+        if keep_full(s4[1]) then
             guess = s4[1]
         else
             local x = math.random(2 + round_banker(len1 * 0.5), len1)

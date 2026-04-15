@@ -186,6 +186,7 @@ local autoHuntData = {}
 
 -- [[ hunt trick ]]
 local ht = {index = 1, first_target = true}
+local ht_last_found  -- set by ht_complete, used by ht_find to repeat last successful hunt
 
 -- [[ quick where ]]
 local qw = {index = 1}
@@ -3794,6 +3795,9 @@ end
 function ht_complete(name, line, wildcards)
     EnableTriggerGroup("AutoHunt", false)
     local ix = ht.index or 1
+    if has_target() then
+        ht_last_found = {index = ix, keyword = current_target.keyword}
+    end
     if has_activity_target() then
         qw.index = ix
         qw_exact()
@@ -3822,6 +3826,19 @@ function ht_abort(name, line, wildcards)
     EnableTriggerGroup("HuntTrick", false)
     ht_reset()
     InfoNote("Search and Destroy:  Hunt trick cancelled.")
+end
+
+function ht_find()
+    if ht_last_found then
+        if ht_last_found.index == 1 then
+            Send(string.format("hunt %s", ht_last_found.keyword))
+        else
+            Send(string.format("hunt %d.%s", ht_last_found.index, ht_last_found.keyword))
+        end
+    else
+        InfoNote("\nSearch and Destroy: 'ht find' has no previous hunt to repeat.")
+        InfoNote("Run 'ht' or 'ht <mob>' first to find a target.\n")
+    end
 end
 
 -- [[ quick scan, quick kill ("kk") ]]
@@ -7313,7 +7330,7 @@ function onHelp(name, line, wildcards)
             )
         )
     elseif str == "ht" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": ht <mob|stop>")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": ht <mob|stop|find>")
         Note()
         ColourNote(
             "antiquewhite",
@@ -7321,7 +7338,7 @@ function onHelp(name, line, wildcards)
             unpack(
                 {
                     helpWrap(
-                        "Executes the 'hunt trick' for the current campaign target or supplied argument. Use 'stop' to stop the hunt trick, which will work in most cases but may fail if a mob has a keyword of 'stop'."
+                        "Executes the 'hunt trick' for the current campaign target or supplied argument. Use 'stop' to stop the hunt trick, which will work in most cases but may fail if a mob has a keyword of 'stop'. Use 'find' to repeat the last successful hunt with the same index — useful for re-checking if your mob has moved into the current room without restarting the hunt sequence."
                     )
                 }
             )
@@ -9830,6 +9847,10 @@ end
 	<alias	match="^ht$"
 			script="ht_noarg"
 			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias	match="^ht find$"
+			script="ht_find"
+			enabled="y" regexp="y" sequence="50" ignore_case="y" send_to="12" > </alias>
 
 	<alias	match="^ht (?:(?<index>\d+)\.)?(?<mob>.+)?$"
 			script="ht_arg"

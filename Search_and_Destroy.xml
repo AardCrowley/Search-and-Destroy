@@ -1889,12 +1889,21 @@ function gmkw(s, a) -- guess mob keywords
     end
     local len1 = #(s4[1])
     local len2 = #(s4[#s4]) or 0
+    -- Aardwolf's command parser can't match a truncated word containing a bare
+    -- apostrophe (e.g. "nulan'b" against "a Nulan'Boar mother"), so when a word
+    -- contains one we keep the full word rather than truncating. See issue #109.
     if (#s4 > 1) then -- mob name has multiple words
-        local x, y = math.random(4, 6), math.random(4, 6)
-        guess = string.sub(s4[1], 1, x) .. " " .. string.sub(s4[#s4], 1, y)
+        local first, last = s4[1], s4[#s4]
+        local x = first:find("'", 1, true) and #first or math.random(4, 6)
+        local y = last:find("'", 1, true) and #last or math.random(4, 6)
+        guess = string.sub(first, 1, x) .. " " .. string.sub(last, 1, y)
     elseif (#s4 == 1) then -- mob name has one word
-        local x = math.random(2 + round_banker(len1 * 0.5), len1)
-        guess = string.sub(s4[1], 1, x)
+        if s4[1]:find("'", 1, true) then
+            guess = s4[1]
+        else
+            local x = math.random(2 + round_banker(len1 * 0.5), len1)
+            guess = string.sub(s4[1], 1, x)
+        end
     else -- Sometimes all of the mob words get deleted, if so just use original input.  In theory, if we reached this step
         guess = s or "gmkw error in stage 4" -- then the input is non-nil and I've never seen it be "" ... so, if it errors it means Lua is propagating a nil
     end
@@ -4556,6 +4565,7 @@ function simulate_cp(name, line, wildcards)
         Simulate("You still have to kill * a hideously hairy spider (The Temple of Shouggoth)\n") -- nowhere
         Simulate("You still have to kill * Don Crumble (Zangar's Demonic Grotto)\n") -- nohunt
         Simulate("You still have to kill * A very large firefly (Kobold Siege Camp)\n") -- nohunt/nowhere
+        Simulate("You still have to kill * a Nulan'Boar mother (Plains of Nulan'Boar)\n") -- mid-word apostrophe, issue #109
     else
         Simulate("You still have to kill * red velvet (tm) lipstick (Skirting a Fissure)\n")
         Simulate("You still have to kill * a staggering barbegazi (Cell block A (Lower))\n")
@@ -4578,6 +4588,7 @@ function simulate_cp(name, line, wildcards)
             "You still have to kill * Laurence, archangel of the sword and shield and other implements of war (In the clouds)\n"
         ) -- long known
         Simulate("You still have to kill * a giant bee (An Impossibly Dark Intersection in the Labyrinth)\n") -- long room name
+        Simulate("You still have to kill * a Nulan'Boar mother (A small grassy paddock)\n") -- mid-word apostrophe, issue #109
     end
     Simulate("Note: Dead means that the target is dead, not that you have killed it.\n")
     Simulate("\n")

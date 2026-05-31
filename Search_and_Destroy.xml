@@ -3499,12 +3499,25 @@ function xcp_goto_target(index)
             if is_character_ready() then
                 DebugNote("Character ready")
 				if is_express_target(t) then
-					next_room = t.roomid
-					table.insert(gotoList, 0, t.arid)
-					table.insert(gotoList, 1, t.roomid)
-					set_going_to_room(t.roomid)
-					goto_room_id(tostring(t.roomid), t.arid)
-					DebugNote("Attempting to go directly to an express target.")
+					-- Express: we already know room(s) for this mob from the DB.
+					-- List ALL of them best-bet first, then auto-go to #1; the
+					-- rest stay reachable via go 2..N / nx. Falls back to a direct
+					-- jump if (unexpectedly) no candidate rooms are found.
+					local n = search_rooms_by_mob(t.mob, t.arid)
+					if n and n > 0 then
+						if gotoList[1] then
+							set_going_to_room(gotoList[1])
+						end
+						Execute("go 1")
+						DebugNote("Express target: ", n, " candidate room(s), going to best.")
+					else
+						next_room = t.roomid
+						table.insert(gotoList, 0, t.arid)
+						table.insert(gotoList, 1, t.roomid)
+						set_going_to_room(t.roomid)
+						goto_room_id(tostring(t.roomid), t.arid)
+						DebugNote("Attempting to go directly to an express target.")
+					end
 				elseif (t.link_type == "area") then -- Area cp links - "xcp" goes to target area, then runs Hunt Trick to get target room.
                     if (action == "ht" and current_activity == "cp") then -- do hunt trick or quick where after arriving in area.
                         local func = function()
@@ -3523,8 +3536,15 @@ function xcp_goto_target(index)
                         --Execute("xrt " .. t.arid)
                         xrun_to(t.arid, true)
                     end
-                else -- Room cp:  get target room from mapper, but don't move yet.  "go" takes you to room.
-                    search_rooms_exact(t.roomName, t.arid, t.mob)
+                else -- Room cp:  get target room(s), but don't move yet.  "go" takes you to room.
+                    -- Prefer every room the mob is actually known to occupy (handles a
+                    -- mob living in several differently-named rooms, and avoids matching
+                    -- same-named rooms that don't contain it). Fall back to a mapper
+                    -- room-name search when the mob has never been recorded.
+                    local n = search_rooms_by_mob(t.mob, t.arid)
+                    if not n or n == 0 then
+                        search_rooms_exact(t.roomName, t.arid, t.mob)
+                    end
                 end
             else
                 InfoNote(string.format("\nYou can't run there while you're %s!\n", character_state_string()))
@@ -4208,6 +4228,84 @@ function xset_silentMode(name, line, wildcards)
 end
 
 -- [[ Room search processes ]]
+function search_rooms_by_mob(mob_name, arid)
+    -- Build the navigable room list from EVERY room the mob is known to occupy in
+    -- this zone (not just rooms that share one name), ranked best-bet first. This
+    -- is what lets a single named target that lives in several static rooms (e.g.
+    -- "Justice" across four different rooms in The Partroxis) be walked via
+    -- go 1 / go 2 / ... / nx. Returns the number of candidate rooms (0 if the mob
+    -- has never been recorded in this zone, so the caller can fall back).
+    if not mob_name or not arid or arid == "-1" then
+        return 0
+    end
+    local mob = normalize_mob_name(mob_name)
+    local SnDdb = assert(sqlite3.open(snd_db_file))
+    local rows = {}
+    local roomid_list = {}
+    local query =
+        string.format(
+        [[
+			SELECT roomid, room, seen_count, kill_count
+			FROM mobs
+			WHERE mob = %s AND zone = %s
+			ORDER BY kill_count DESC, seen_count DESC, roomid ASC;
+		]],
+        fixsql(mob),
+        fixsql(arid)
+    )
+    for row in SnDdb:nrows(query) do
+        table.insert(rows, row)
+        table.insert(roomid_list, tonumber(row.roomid))
+    end
+    SnDdb:close_vm()
+    if #rows == 0 then
+        return 0
+    end
+
+    -- Refresh room names/areas from the mapper (authoritative, current).
+    local namebyid = {}
+    local db = assert(sqlite3.open(mapper_db_file))
+    local mquery =
+        string.format("SELECT uid, name, area FROM rooms WHERE uid IN (%s);", table.concat(roomid_list, ","))
+    for r in db:nrows(mquery) do
+        namebyid[tonumber(r.uid)] = {name = r.name, area = r.area}
+    end
+    db:close_vm()
+
+    local sum = 0
+    for _, row in ipairs(rows) do
+        sum = sum + (tonumber(row.seen_count) or 0)
+    end
+
+    local results = {}
+    for _, row in ipairs(rows) do
+        local info = namebyid[tonumber(row.roomid)]
+        local seen = tonumber(row.seen_count) or 0
+        table.insert(
+            results,
+            {
+                rmid = tonumber(row.roomid),
+                name = (info and info.name) or row.room,
+                arid = (info and info.area) or arid,
+                seen_count = seen,
+                percentage = (sum > 0) and (seen / sum) or 0
+            }
+        )
+    end
+
+    -- Float any maze start rooms to the top (mirrors search_rooms()).
+    for k, v in ipairs(results) do
+        if mazeStartRooms[v.rmid] ~= nil then
+            local entry = table.remove(results, k)
+            entry.mz = "yes"
+            table.insert(results, 1, entry)
+        end
+    end
+
+    search_rooms_results(results)
+    return #results
+end
+
 function search_rooms_exact(room, arid, mob_name)
 	local select = ""
 	if ((arid == "soh") or (arid == "sohtwo")) then

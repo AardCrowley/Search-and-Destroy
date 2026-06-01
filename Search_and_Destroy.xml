@@ -1916,20 +1916,56 @@ function gmkw(s, a) -- guess mob keywords
     else
         s3 = s2
     end
-    s3 = string.gsub(s3, "-", " ")
-
     local s4 = {}
     for w in string.gmatch(s3, "[^ ]+") do
         table.insert(s4, w)
     end
-    local len1 = #(s4[1])
-    local len2 = #(s4[#s4]) or 0
+
+    -- Aardwolf keeps "'" and "-" as literal characters in a mob's keyword and
+    -- matches keyword PREFIXES. A keyword that is truncated mid-punctuation
+    -- (e.g. "nulan'b" from "Nulan'Boar") or that fuses/splits a hyphenated word
+    -- ("yama uba" / "yamauba" from "yama-uba") does not match. Reduce each chosen
+    -- word to the clean segment BEFORE its first apostrophe/hyphen, which is
+    -- always a valid prefix of the full token, before truncating it. This
+    -- replaces the old blanket "s3 = gsub(-, ' ')", which only worked for the
+    -- subset of hyphenated mobs whose keyword happens to split on the hyphen.
+    local function punct_safe(w)
+        if not (string.find(w, "'", 1, true) or string.find(w, "-", 1, true)) then
+            return w
+        end
+        local seg = string.match(w, "^[^'%-]*")
+        if seg and #seg >= 3 then
+            return seg
+        end
+        -- Leading segment too short (e.g. "'cal", "o'", "t-rex"): fall back to
+        -- the segment after the first punctuation.
+        local after = string.match(w, "^[^'%-]*['%-](.*)$") or ""
+        local alt = string.match(after, "^[^'%-]*") or ""
+        if #alt >= 3 then
+            return alt
+        end
+        if seg and #seg > 0 then
+            return seg
+        elseif #alt > 0 then
+            return alt
+        end
+        local stripped = string.gsub(w, "['%-]", "")
+        return stripped
+    end
+
     if (#s4 > 1) then -- mob name has multiple words
+        local first = punct_safe(s4[1])
+        local last = punct_safe(s4[#s4])
         local x, y = math.random(4, 6), math.random(4, 6)
-        guess = string.sub(s4[1], 1, x) .. " " .. string.sub(s4[#s4], 1, y)
+        guess = string.sub(first, 1, x) .. " " .. string.sub(last, 1, y)
     elseif (#s4 == 1) then -- mob name has one word
-        local x = math.random(2 + round_banker(len1 * 0.5), len1)
-        guess = string.sub(s4[1], 1, x)
+        local only = punct_safe(s4[1])
+        local len1 = #only
+        -- Clamp the lower bound so the random range is never empty (min > max),
+        -- which errors for short segments such as "rex" (from "T-Rex").
+        local lo = math.min(2 + round_banker(len1 * 0.5), len1)
+        local x = math.random(lo, len1)
+        guess = string.sub(only, 1, x)
     else -- Sometimes all of the mob words get deleted, if so just use original input.  In theory, if we reached this step
         guess = s or "gmkw error in stage 4" -- then the input is non-nil and I've never seen it be "" ... so, if it errors it means Lua is propagating a nil
     end

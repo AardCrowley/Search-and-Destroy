@@ -3267,7 +3267,7 @@ function ellipsify(str, max_length)
     if #str <= max_length then
         return str
     else
-        return str:sub(1, max_length - 1) .. "..."
+        return str:sub(1, max_length - 3) .. "..."
     end
 end
 

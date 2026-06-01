@@ -48,7 +48,7 @@ async_ok, async = pcall(require, "async")
 
 PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
 PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 prevBeta = "5.9m"
 betaVersion = "5.9n"
@@ -74,7 +74,7 @@ showStr = "@W%s @wis found in @Y%s @win/around @G%s @w(@Cmapper goto %s@w)"
 
 PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
 PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 UPDATE_CHECK_INTERVAL = 60 * 60 -- Check once per hour
 local last_update_check = -1
@@ -537,6 +537,10 @@ function migrate_database()
         add_history_table(db)
     end
 
+    if current_version < 7 then
+        normalize_existing_mobs(db)
+    end
+
     InfoNote("Migration complete!")
     db:execute(string.format("PRAGMA user_version = %i;", SCHEMA_VERSION))
 
@@ -665,6 +669,67 @@ function add_mob_area_index(db)
         CREATE INDEX IF NOT EXISTS mobs_zone_mob_room ON mobs (zone, mob, room);
         CREATE INDEX IF NOT EXISTS area_key ON area (key);
     ]])
+end
+
+function normalize_existing_mobs(db)
+    -- Schema v7: strip transient flag/aura prefixes (e.g. "(flying) (red aura) ")
+    -- from stored mob names and merge the resulting duplicate (mob, roomid) rows,
+    -- summing seen_count and kill_count. The scan path used to record a mob under
+    -- whatever combat flags it happened to be wearing, fragmenting one mob into
+    -- several rows and splitting its seen/kill history. This consolidates them.
+    DebugNote("Normalizing mob names and merging flag-duplicated rows")
+    local agg = {}
+    local order = {}
+    for row in db:nrows("SELECT mob, room, roomid, zone, seen_count, kill_count FROM mobs") do
+        local norm = normalize_mob_name(row.mob)
+        local key = string.lower(norm) .. "\0" .. tostring(row.roomid)
+        local e = agg[key]
+        if not e then
+            e = {mob = norm, room = row.room, roomid = row.roomid, zone = row.zone, seen = 0, kill = 0}
+            agg[key] = e
+            table.insert(order, key)
+        end
+        e.seen = e.seen + (tonumber(row.seen_count) or 0)
+        e.kill = e.kill + (tonumber(row.kill_count) or 0)
+        -- prefer an already-clean original as the canonical display name
+        if row.mob == norm then
+            e.mob = norm
+        end
+    end
+
+    local ops = {}
+    table.insert(ops, "ALTER TABLE mobs RENAME TO old_mobs;")
+    table.insert(
+        ops,
+        [[
+			CREATE TABLE mobs (
+				mob 		TEXT NOT NULL COLLATE NOCASE,
+				room 		TEXT NOT NULL COLLATE NOCASE,
+				roomid 		INTEGER NOT NULL,
+				zone 		TEXT NOT NULL,
+				seen_count 	INTEGER NOT NULL DEFAULT 0,
+				kill_count 	INTEGER NOT NULL DEFAULT 0,
+				UNIQUE(mob, roomid));
+		]]
+    )
+    for _, key in ipairs(order) do
+        local e = agg[key]
+        table.insert(
+            ops,
+            string.format(
+                "INSERT INTO mobs (mob,room,roomid,zone,seen_count,kill_count) VALUES (%s,%s,%i,%s,%i,%i);",
+                fixsql(e.mob),
+                fixsql(e.room),
+                tonumber(e.roomid),
+                fixsql(e.zone),
+                e.seen,
+                e.kill
+            )
+        )
+    end
+    table.insert(ops, "DROP TABLE old_mobs;")
+    table.insert(ops, "CREATE INDEX IF NOT EXISTS mobs_zone_mob_room ON mobs (zone, mob, room);")
+    execute_in_transaction(db, ops)
 end
 
 function write_marks_to_db(db)
@@ -1860,6 +1925,49 @@ function save_mob_keyword_keyword(area, mob_name, keyword)
     return true
 end
 
+-- Transient mob flags/auras the game prepends to a mob's displayed name
+-- (e.g. "(flying) (red aura) a goose", "(f)(g)(w) warloxan"). These are stripped
+-- before a mob is stored or keyed, so a single mob is not recorded as several
+-- different rows depending on the spells/flags it happened to be wearing.
+-- NOTE: identity-style parentheticals (e.g. School of Horror titles like
+-- "(Helper)", "(Shogun)") are deliberately NOT listed, so they are preserved.
+NORM_MOB_FLAGS = {
+    ["flying"] = true, ["hidden"] = true, ["invis"] = true, ["invisible"] = true,
+    ["translucent"] = true, ["wounded"] = true, ["aimed"] = true, ["charmed"] = true,
+    ["animated"] = true, ["diseased"] = true, ["angry"] = true, ["marked"] = true,
+    ["opk"] = true, ["!"] = true,
+    -- short scan flag codes
+    ["f"] = true, ["g"] = true, ["r"] = true, ["w"] = true, ["i"] = true, ["t"] = true,
+    ["h"] = true, ["p"] = true, ["d"] = true, ["x"] = true, ["c"] = true, ["a"] = true,
+}
+
+function normalize_mob_name(name)
+    if not name then
+        return name
+    end
+    local s = name
+    while true do
+        local pre, inner = string.match(s, "^(%s*%(([^()]*)%)%s*)")
+        if not inner then
+            break
+        end
+        local key = string.lower(inner)
+        key = string.gsub(key, "^%s+", "")
+        key = string.gsub(key, "%s+$", "")
+        if NORM_MOB_FLAGS[key] or string.match(key, "^%a+ aura$") then
+            s = string.sub(s, #pre + 1)
+        else
+            break -- unknown parenthetical: treat as part of the name, stop stripping
+        end
+    end
+    s = string.gsub(s, "^%s+", "")
+    s = string.gsub(s, "%s+$", "")
+    if s == "" then
+        return name -- never reduce a name to nothing
+    end
+    return s
+end
+
 function gmkw(s, a) -- guess mob keywords
     if not s then
         return ""
@@ -2317,13 +2425,14 @@ end
 
 function record_target_killed(target)
     -- a mob was killed as part of a cp/gq
+    local mob = normalize_mob_name(target.mob)
     queries = {
         string.format(
             [[
 				INSERT OR IGNORE INTO mobs (mob,room,roomid,zone)
 				VALUES (%s,%s,%s,%s);
 			]],
-            fixsql(target.mob),
+            fixsql(mob),
             fixsql(current_room.name),
             tonumber(current_room.rmid),
             fixsql(current_room.arid)
@@ -2334,7 +2443,7 @@ function record_target_killed(target)
 				SET kill_count = kill_count + 1
 				WHERE mob = %s AND roomid = %i;
 			]],
-            fixsql(target.mob),
+            fixsql(mob),
             tonumber(current_room.rmid)
         )
     }
@@ -8472,7 +8581,7 @@ function rawCopyPwarDB()
                     insertStatements,
                     string.format(
                         "INSERT OR IGNORE INTO mobs (mob,room,roomid,zone,seen_count) VALUES (%s,%s,%s,%s,%i);",
-                        fixsql(mob.mob),
+                        fixsql(normalize_mob_name(mob.mob)),
                         fixsql(room.name),
                         mob.roomid,
                         fixsql(room.area),
@@ -9196,6 +9305,7 @@ function write_mob_list_to_db(mob_list)
     local writes = {}
     local sql_mobs = {}
     for i, mob in ipairs(mob_list) do
+        mob = normalize_mob_name(mob)
         table.insert(sql_mobs, fixsql(mob))
         table.insert(
             writes,

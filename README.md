@@ -1,3 +1,10 @@
+# Archived
+This version is now archived. No new updates will be provided. I encourage you to use the new version that I wrote from the ground up, located at:
+
+https://github.com/AardCrowley/Search-and-Destroy-Revamp
+
+That is the v6 version you have been waiting on for a long, long, LONG time.
+
 # Search-and-Destroy
  Safe, Legal Search and Destroy
 

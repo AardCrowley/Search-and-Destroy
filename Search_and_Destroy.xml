@@ -1,50 +1,42 @@
 <?xml version="1.0" encoding="iso-8859-1"?><!DOCTYPE muclient>
 <!-- Saved on Saturday, July 05, 2008, 4:46 PM -->
 <muclient>
-<plugin version="5.99" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90" >
-<description trim="n"> </description> </plugin>
+    <plugin version="5.99" name="Search_and_Destroy" id="30000000537461726C696E67" date_written="2018-12-31 23:00:00" author="Crowley" language="Lua" purpose="Safe, legal Search and Destroy" save_state="y" requires="4.90">
+        <description trim="n"></description>
+    </plugin>
 
-<!-- Isolinear intermatrix (utility module) -->
-<include name="constants.lua"/>
-<variables><variable name="example"></variable></variables>
+    <!-- Isolinear intermatrix (utility module) -->
+    <include name="constants.lua"/>
+    <variables>
+        <variable name="example"></variable>
+    </variables>
 
-<timers>
-	<timer name="tim_init_plugin"
-		second="0.5" active_closed="y"
-		script="init_plugin"
-		enabled="y" send_to="12" > </timer>
+    <timers>
+        <timer name="tim_init_plugin" second="0.5" active_closed="y" script="init_plugin" enabled="y" send_to="12"></timer>
 
-	<timer name="execute_in_area_timer"
-		second="0.1"
-		script=""
-		enabled="n" send_to="12">
-			<send>	execute_in_area_tick() </send> </timer>
+        <timer name="execute_in_area_timer" second="0.1" script="" enabled="n" send_to="12">
+            <send>	execute_in_area_tick() </send>
+        </timer>
 
-	<timer name="vidblain_nav_timer"
-		second="0.1"
-		script=""
-		enabled="n" send_to="12">
-			<send>	vidblain_nav_tick() </send> </timer>
+		<timer name="execute_in_room_timer"	second="0.1" script="" enabled="n" send_to="12">
+			<send>	execute_in_room_tick() </send>
+		</timer>
 
-	<timer name="update_check_tick"
-		script="check_for_updates"
-		second="10"
-		enabled="y" send_to="12"> </timer>
+        <timer name="vidblain_nav_timer" second="0.1" script="" enabled="n" send_to="12">
+            <send>	vidblain_nav_tick() </send>
+        </timer>
 
-	<timer name="quest_timer"
-		script="quest_timer_tick"
-		second="1"
-		enabled="y" send_to="12"> </timer>
+        <timer name="update_check_tick" script="check_for_updates" second="10" enabled="y" send_to="12"></timer>
 
-	<timer name="state_change_timer"
-		script="check_state_changed"
-		second="1"
-		enabled="y" send_to="12"> </timer>
-</timers>
+        <timer name="quest_timer" script="quest_timer_tick" second="1" enabled="y" send_to="12"></timer>
 
-<script>
-<![CDATA[
+        <timer name="state_change_timer" script="check_state_changed" second="1" enabled="y" send_to="12"></timer>
+    </timers>
+
+    <script>
+    <![CDATA[
 dofile(GetInfo(60) .. "aardwolf_colors.lua")
+
 require "movewindow"
 require "serialize"
 require "tprint"
@@ -53,6 +45,15 @@ require "wait"
 json = require "json"
 
 async_ok, async = pcall(require, "async")
+
+PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
+PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
+SCHEMA_VERSION = 6
+
+prevBeta = "5.9m"
+betaVersion = "5.9n"
+
+local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. " (Beta " .. betaVersion .. ")"
 
 function ifc(condition, ctrue, cfalse)
     if condition then
@@ -73,13 +74,12 @@ showStr = "@W%s @wis found in @Y%s @win/around @G%s @w(@Cmapper goto %s@w)"
 
 PLUGIN_VERSION = GetPluginInfo(GetPluginID(), 19)
 PLUGIN_NAME = GetPluginInfo(GetPluginID(), 1)
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 6
 
 UPDATE_CHECK_INTERVAL = 60 * 60 -- Check once per hour
 local last_update_check = -1
 local automatic_update_checks = GetVariable("mcvar_automatic_update_checks") or "on"
 
-local current_sd_version = "Search & Destroy v" .. PLUGIN_VERSION .. ".4"
 local plugin_id_gmcp_handler = "3e7dedbe37e44942dd46d264" -- easier to remember the var names than the plugin id's
 local plugin_id_gmcp_mapper = "b6eae87ccedd84f510b74714"
 local plugin_id_z_order = "462b665ecb569efbf261422f"
@@ -379,6 +379,15 @@ local xset_sound_onoff =
     (IsPluginInstalled(plugin_id_soundpack) and GetPluginInfo(plugin_id_soundpack, 17) and "on") or
     "off"
 
+local xset_express_onoff = GetVariable("mcvar_xset_express_onoff") or "on"
+local xset_express_min_kill_count = tonumber(GetVariable("xset_express_min_kill_count")) or 2
+
+local mazeStartRooms = {}
+if (GetVariable("mazeStartRooms") ~= nil) then
+	luastmt = "obj = " .. GetVariable("mazeStartRooms")
+	assert(loadstring (luastmt or "")) ()
+	mazeStartRooms = obj
+end
 local target_nearby_sound = "target_nearby.wav"
 local other_target_here_sound = "other_target_here.wav"
 
@@ -402,11 +411,11 @@ function OnPluginBroadcast(msg, id, name, text)
     if (id == plugin_id_gmcp_handler) then
         if (text == "char.status") then -- character status
             current_character_state = gmcp("char.status.state")
-	    if tonumber(gmcp("char.status.level")) < 200 then
-		if anex_automatic_onoff == "on" then
-			anex_check_tnl_silent()
-		end
-	    end
+			if tonumber(gmcp("char.status.level")) < 200 then
+				if anex_automatic_onoff == "on" then
+					anex_check_tnl_silent()
+				end
+			end
         elseif (text == "room.info") then -- current/previous room info
             sound_not_played = true
             local ri = gmcp("room.info")
@@ -518,6 +527,14 @@ function migrate_database()
 
     if current_version < 4 then
         remove_bad_mobs(db)
+    end
+
+    if current_version < 5 then
+        add_mob_area_index(db)
+    end
+
+    if current_version < 6 then
+        add_history_table(db)
     end
 
     InfoNote("Migration complete!")
@@ -640,6 +657,14 @@ function remove_bad_mobs(db)
     db:execute([[
 			DELETE FROM mobs WHERE mob LIKE "%(wounded)%" OR mob LIKE "%(aimed)%";
 		]])
+end
+
+function add_mob_area_index(db)
+    DebugNote("Adding indexes to mob and area tables")
+    db:execute([[
+        CREATE INDEX IF NOT EXISTS mobs_zone_mob_room ON mobs (zone, mob, room);
+        CREATE INDEX IF NOT EXISTS area_key ON area (key);
+    ]])
 end
 
 function write_marks_to_db(db)
@@ -849,6 +874,8 @@ local areaDefaultStartRooms = {
     ["cathedral"] = {start = "27497"},
     ["cats"] = {start = "40900"},
     ["chasm"] = {start = "29446"},
+    ["chakra"] = {start = "0"},
+    ["chantry"] = {start = "0"},
     ["chessboard"] = {start = "25513"},
     ["childsplay"] = {start = "678"},
     ["cineko"] = {start = "1507"},
@@ -876,6 +903,7 @@ local areaDefaultStartRooms = {
     ["dread"] = {start = "26075"},
     ["dsr"] = {start = "30030"},
     ["dundoom"] = {start = "25661"},
+    ["dunes"] = {start = "42170"},
     ["dunoir"] = {start = "14222"},
     ["duskvalley"] = {start = "37301"},
     ["dynasty"] = {start = "30799"},
@@ -943,6 +971,7 @@ local areaDefaultStartRooms = {
     ["lemdagor"] = {start = "1966"},
     ["lidnesh"] = {start = "27995"},
     ["livingmine"] = {start = "37008"},
+    ["logging"] = {start = "31254"},
     ["longnight"] = {start = "26367"},
     ["losttime"] = {start = "28584"},
     ["lowlands"] = {start = "28044"},
@@ -1053,6 +1082,7 @@ local areaDefaultStartRooms = {
     ["ygg"] = {start = "24186"}, -- Y --
     ["yurgach"] = {start = "29450"},
     ["zangar"] = {start = "6164"}, -- Z --
+    ["zenith"] = {start = "23681"},
     ["zodiac"] = {start = "15857"},
     ["zoo"] = {start = "5920"},
     ["zyian"] = {start = "729"},
@@ -1145,6 +1175,7 @@ local areaNameXref = {
     ["Afterglow"] = "afterglow",
     ["Alagh, the Blood Lands"] = "alagh",
     ["All in a Fayke Day"] = "fayke",
+    ["An Auspicious Star's Zenith"] = "zenith",
     ["Ancient Greece"] = "greece",
     ["Andolor's Ocean Adventure Park"] = "oceanpark",
     ["Annwn"] = "annwn",
@@ -1162,6 +1193,7 @@ local areaNameXref = {
     ["Brightsea and Glimmerdim"] = "glimmerdim",
     ["Canyon Memorial Hospital"] = "canyon",
     ["Castle Vlad-Shamir"] = "vlad",
+    ["Chakra Spire"] = "chakra",
     ["Chaprenula's Laboratory"] = "lab",
     ["Child's Play"] = "childsplay",
     ["Christmas Vacation"] = "xmas",
@@ -1179,6 +1211,7 @@ local areaNameXref = {
     ["Diamond Soul Revelation"] = "dsr",
     ["Dortmund"] = "dortmund",
     ["Dread Tower"] = "dread",
+    ["Dunes in Gold"] = "dunes",
     ["Dusk Valley"] = "duskvalley",
     ["Earth Plane 4"] = "earthplane",
     ["Elemental Chaos"] = "elemental",
@@ -1188,6 +1221,7 @@ local areaNameXref = {
     ["Faerie Tales II"] = "ftii",
     ["Faerie Tales"] = "ft1",
     ["Fantasy Fields"] = "fantasy",
+    ["Fellchantry"] = "chantry",
     ["Foolish Promises"] = "promises",
     ["Fort Terramire"] = "terramire",
     ["Gallows Hill"] = "gallows",
@@ -1391,7 +1425,8 @@ local areaNameXref = {
     ["Zangar's Demonic Grotto"] = "zangar",
     -- New areas
     ["The Keep of the Asherodan"] = "asherodan",
-    ["Bloodlust Dungeon"] = "dungeon"
+    ["Bloodlust Dungeon"] = "dungeon",
+    ["Svrogan's Logging Camp"] = "logging"
 }
 
 -- 	[[ Lookup table: Game calendar data]]
@@ -1942,10 +1977,14 @@ function set_target_from_main_target_list(index, keyword)
 end
 
 function set_target_from_quest(quest_target)
+    if quest_target.room == "Outer Space" and quest_target.areaName == "The School of Horror" then
+        quest_target.arid = "sohtwo"
+    end
+    quest_target.keyword = gmkw(quest_target.mob, quest_target.arid)
     change_target(
         {
             name = quest_target.mob,
-            keyword = gmkw(quest_target.mob, quest_target.arid),
+            keyword = quest_target.keyword,
             room_name = quest_target.room,
             area = quest_target.arid,
             activity = "quest"
@@ -2076,6 +2115,10 @@ function target_quest_mob(bool) -- Re-targets your quest mob if you un-target it
             InfoNote("room: ", qt.room)
         end
     else
+        if qt.areaName == "The School of Horror" and qt.room == "Outer Space" then
+            qt.arid = "sohtwo"
+        end
+
         set_target_from_quest(qt)
         set_variable("mcvar_qt_mob", qt.mob)
         set_variable("mcvar_qt_arid", qt.arid)
@@ -2098,6 +2141,7 @@ function quest_status_gmcp(q) -- sets quest status when you take a new quest, ki
         DebugNote("Quest time: ", quest_time)
     end
     if (q.action == "start") then -- you've just taken a new quest
+        history_start(history_type_quest)
         quest_target = {
             qstat = "2",
             mob = q.targ,
@@ -2122,6 +2166,14 @@ function quest_status_gmcp(q) -- sets quest status when you take a new quest, ki
             --	target_quest_mob(true)
             quest_target.qstat = "3"
         elseif (q.action == "comp") or (q.action == "fail") or (q.action == "reset") then -- quest has ended (completed, failed, or reset)
+            local history_status = history_status_complete
+            if q.action == "fail" then
+                history_status = history_status_failed
+            elseif q.action == "reset" then
+                history_status = history_status_reset
+            end
+            history_quest_end(history_status, q.totqp, q.gold, q.pracs, q.trains, q.tp)
+
             quest_target = {qstat = "1"}
             xcp_clear_target(false)
             qw_reset(false)
@@ -2197,6 +2249,7 @@ function do_cp_check()
     cp_check_list = {}
     EnableTrigger("trg_cp_check_line", true)
     SendNoEcho("cp ch")
+    SendNoEcho("echo")
 end
 
 function cp_check_line(name, line, wildcards)
@@ -2213,6 +2266,8 @@ end
 
 --	[[ general cp status functions ]]
 function player_start_new_cp() -- called by line "good luck on your campaign" when starting new cp
+    history_start(history_type_campaign)
+
     player_on_cp = "yes"
     can_get_new_cp = "no"
     local x = tonumber(gmcp("char.status.level"))
@@ -2300,6 +2355,14 @@ end
 
 function do_cp_complete(name, line, wildcards)
     DebugNote("Campaign complete")
+    -- Delay by 0.5s to get daily bonus
+    DoAfterSpecial(0.5, [[ history_end(history_type_campaign, history_status_complete) ]], 12)
+    player_not_on_cp()
+end
+
+function do_cp_quit()
+    DebugNote("Campaign quit")
+    history_end(history_type_campaign, history_status_failed)
     player_not_on_cp()
 end
 
@@ -2467,6 +2530,7 @@ function send_gq_check()
         DoAfterSpecial(2, "simulate_send_gq_check()", sendto.script)
     else
         SendNoEcho("gq ch")
+	SendNoEcho("echo")
     end
 end
 
@@ -2820,8 +2884,45 @@ function build_area_targets(cp_gq, sqla)
                 end
             end
         elseif #possibilities == 1 then
-            table.insert(t, possibilities[1])
-        else
+			local table_add = possibilities[1]
+			local query =
+			string.format(
+                [[
+					SELECT roomid, kill_count
+					FROM mobs
+					WHERE mob = %s AND zone = %s
+					ORDER BY kill_count DESC;
+				]],
+                fixsql(v.mob), fixsql(table_add.arid))
+			local stmt = SnDdb:prepare(query)
+			local result_table = {}
+			while true do
+				local result = stmt:step()
+				-- exit loop if done
+				if result == sqlite3.DONE then
+					break
+				end
+				-- should have ROW result
+				assert(result == sqlite3.ROW, "Row not found.")
+				-- get all values into a table
+				local row = stmt:get_named_values()
+				table.insert(result_table, row)
+			end
+			-- done with this statement
+			stmt:finalize()
+			if #result_table > 0 then
+				table_add.roomid = result_table[1]["roomid"]
+				table_add.kills = result_table[1]["kill_count"]
+				table_add.results = #result_table
+				table.insert(t, table_add)
+				if is_express_target(table_add) then
+					DebugNote("Express target found:", v.mob)
+				end
+			else
+				table_add.results = #result_table or nil
+				table.insert(t, table_add)
+			end
+		else
             table.insert(
                 t,
                 {
@@ -2885,123 +2986,164 @@ function build_room_targets(cp_gq, sqlr, sqla)
         end
         local results_found = false
         local select = string.format(sqlr, fixsql(v.loc))
-        local last_mob_sig = ""
         for row in db:nrows(select) do -- if not row then / print("error - room db search returned no rows") / elseif not row.areaName then / print("area name missing from row") / end
             if (area_range_index[row.areaName]) then -- don't include areas that never contain quest mobs
-                local mob_sig = row.arid .. "|" .. v.mob
-                if (mob_sig ~= last_mob_sig) then
-                    last_mob_sig = mob_sig
-                    local area_min_lvl = (area_range_index[row.areaName].min) or 1
-                    local area_max_lvl = (area_range_index[row.areaName].max) or 300
-                    if (level_taken >= area_min_lvl) and (level_taken <= (area_max_lvl + 25)) then -- limit results to sensible level range.
-                        results_found = true
-                        table.insert(areas_sql, fixsql(row.arid))
-                        table.insert(
-                            possibilities,
-                            {
-                                mob = v.mob,
-                                arid = row.arid,
-                                roomid = row.roomid,
-                                roomName = row.roomName,
-                                qty = v.qty,
-                                is_dead = dead,
-                                 --v.is_dead,
-                                minlvl = area_min_lvl,
-                                maxlvl = area_max_lvl,
-                                link_type = lt --((v.is_dead == false) and "room" or "area"),	-- deals with dead mobs when area contains roomnames same as area name e.g. Aardington Estate
-                            }
-                        )
-                    else
-                        table.insert(
-                            ig,
-                            {
-                                -- build table of search results for areas out of your level range.
-                                mob = v.mob, -- Usually invalid, but valid links can wind up here if area's level range is too broad, or wrong.
-                                arid = row.arid,
-                                roomid = row.roomid,
-                                roomName = row.roomName,
-                                qty = v.qty,
-                                is_dead = dead,
-                                minlvl = area_min_lvl,
-                                maxlvl = area_max_lvl,
-                                link_type = "ignored"
-                            }
-                        )
-                    end
+                local area_min_lvl = (area_range_index[row.areaName].min) or 1
+                local area_max_lvl = (area_range_index[row.areaName].max) or 300
+                if (level_taken >= area_min_lvl) and (level_taken <= (area_max_lvl + 25)) then -- limit results to sensible level range.
+                    results_found = true
+                    table.insert(areas_sql, fixsql(row.arid))
+                    table.insert(
+                        possibilities,
+                        {
+                            mob = v.mob,
+                            arid = row.arid,
+                            roomid = tonumber(row.roomid),
+                            roomName = row.roomName,
+                            qty = v.qty,
+                            is_dead = dead,
+                            results = 0,
+                            kills = -1,
+                             --v.is_dead,
+                            minlvl = area_min_lvl,
+                            maxlvl = area_max_lvl,
+                            link_type = lt --((v.is_dead == false) and "room" or "area"),	-- deals with dead mobs when area contains roomnames same as area name e.g. Aardington Estate
+                        }
+                    )
+                else
+                    table.insert(
+                        ig,
+                        {
+                            -- build table of search results for areas out of your level range.
+                            mob = v.mob, -- Usually invalid, but valid links can wind up here if area's level range is too broad, or wrong.
+                            arid = row.arid,
+                            roomid = tonumber(row.roomid),
+                            roomName = row.roomName,
+                            qty = v.qty,
+                            is_dead = dead,
+                            results = 0,
+                            kills = -1,
+                            minlvl = area_min_lvl,
+                            maxlvl = area_max_lvl,
+                            link_type = "ignored"
+                        }
+                    )
                 end
             end
         end
         if results_found then
-            -- When more than one possible area is found, check if you've seen the mob in that room in any of the areas
-            -- if never seen in any of the rooms, check if you've seen them anywhere in the areas
-            if #possibilities > 1 then
-                local mobs_by_room_query =
-                    string.format(
-                    "SELECT DISTINCT(zone) FROM mobs WHERE mob = %s AND room = %s AND zone IN (%s);",
-                    fixsql(v.mob),
-                    fixsql(v.loc),
-                    table.concat(areas_sql, ",")
-                )
-                local mob_found = false
-                for row in SnDdb:nrows(mobs_by_room_query) do
-                    for i, possibility in ipairs(possibilities) do
-                        if possibility.arid == row.zone then
-                            mob_found = true
-                            possibility.found = true
-                            break
-                        end
+			-- Check if killed or seen in exact room, eligible for express
+			local mobs_by_room_query =
+			string.format(
+				[[
+					SELECT zone, room, kill_count, roomid
+					FROM mobs
+					WHERE
+						mob = %s
+						AND room = %s
+						AND zone IN (%s)
+					ORDER BY kill_count DESC;
+				]],
+				fixsql(v.mob),
+				fixsql(v.loc),
+				table.concat(areas_sql, ",")
+			)
+
+			local mob_found = false
+			for row in SnDdb:nrows(mobs_by_room_query) do
+				for i, possibility in ipairs(possibilities) do
+					if possibility.arid == row.zone then
+						mob_found = true
+						possibility.found = true
+						possibility.results = possibility.results + 1
+						-- Grant at least one kill if a matching room name found
+						if possibility.kills < 1 then
+							possibility.kills = 1
+						end
+
+						if possibility.roomid == tonumber(row.roomid) and possibility.kills < tonumber(row.kill_count) + 1 then
+							-- Exact room id match, adjust up by one kill so it gets priority over just a standard room name match
+							possibility.kills = tonumber(row.kill_count) + 1
+							if is_express_target(possibility) then
+								DebugNote("Express target found:", v.mob)
+							end
+						end
+					end
+				end
+			end
+
+			-- Check if mob killed anywhere in the area, not eligible for express
+			if not mob_found then
+				local mobs_by_area_query = string.format(
+						[[
+							SELECT zone, roomid, kill_count
+							FROM mobs
+							WHERE mob = %s AND zone IN (%s)
+							ORDER BY kill_count DESC;
+						]],
+						fixsql(v.mob),
+						table.concat(areas_sql, ",")
+				)
+				-- DebugNote("mobs_by_area_query: ", mobs_by_area_query)
+				for row in SnDdb:nrows(mobs_by_room_query) do
+					for i, possibility in ipairs(possibilities) do
+						if possibility.arid == row.zone then
+							mob_found = true
+							possibility.found = true
+							possibility.results = possibility.results + 1
+						end
+					end
+				end
+			end
+
+			-- remove duplicate rooms
+			filtered_possibilities = {}
+			for i, possibility in ipairs(possibilities) do
+				key = string.format("%s-%s", possibility.arid, possibility.roomName)
+				if filtered_possibilities[key] == nil then
+					filtered_possibilities[key] = possibility
+				else
+					existing = filtered_possibilities[key]
+					if possibility.kills > existing.kills then
+						filtered_possibilities[key] = possibility
+					end
+				end
+			end
+
+			possibilities = {}
+			for k, possibility in pairs(filtered_possibilities) do
+				table.insert(possibilities, possibility)
+			end
+
+            table.sort(possibilities, area_sorter)
+
+            if mob_found then
+                local temp_high = {}
+                local temp_low = {}
+                for i, possibility in ipairs(possibilities) do
+                    possibility.duplicates = #possibilities
+                    if possibility.found then
+                        table.insert(temp_high, possibility)
+                    else
+                        possibility.unlikely = true
+                        table.insert(temp_low, possibility)
                     end
                 end
-
-                if not mob_found then
-                    local mobs_by_area_query =
-                        string.format(
-                        "SELECT DISTINCT(zone) FROM mobs WHERE mob = %s AND zone IN (%s);",
-                        fixsql(v.mob),
-                        table.concat(areas_sql, ",")
-                    )
-                    for row in SnDdb:nrows(mobs_by_room_query) do
-                        for i, possibility in ipairs(possibilities) do
-                            if possibility.arid == row.zone then
-                                mob_found = true
-                                possibility.found = true
-                                break
-                            end
-                        end
-                    end
+                for i, possibility in ipairs(temp_high) do
+                    possibility.index = i
+                    table.insert(high_chance, possibility)
                 end
 
-                table.sort(possibilities, area_sorter)
-                if mob_found then
-                    local temp_high = {}
-                    local temp_low = {}
-                    for i, possibility in ipairs(possibilities) do
-                        possibility.duplicates = #possibilities
-                        if possibility.found then
-                            table.insert(temp_high, possibility)
-                        else
-                            possibility.unlikely = true
-                            table.insert(temp_low, possibility)
-                        end
-                    end
-                    for i, possibility in ipairs(temp_high) do
-                        possibility.index = i
-                        table.insert(high_chance, possibility)
-                    end
-
-                    for i, possibility in ipairs(temp_low) do
-                        possibility.index = i + #temp_high
-                        table.insert(low_chance, possibility)
-                    end
-                else
-                    for i, possibility in ipairs(possibilities) do
-                        possibility.duplicates = #possibilities
-                        possibility.index = i
-                        table.insert(high_chance, possibility)
-                    end
+                for i, possibility in ipairs(temp_low) do
+                    possibility.index = i + #temp_high
+                    table.insert(low_chance, possibility)
                 end
-            elseif #possibilities == 1 then
-                table.insert(high_chance, possibilities[1])
+            else
+                for i, possibility in ipairs(possibilities) do
+                    possibility.duplicates = #possibilities
+                    possibility.index = i
+                    table.insert(high_chance, possibility)
+                end
             end
         else -- no results were returned: either the mob is dead, or the location is unknown.
             if (dead == "yes") then -- mob is dead
@@ -3125,7 +3267,7 @@ function ellipsify(str, max_length)
     if #str <= max_length then
         return str
     else
-        return str:sub(1, max_length - 1) .. "…"
+        return str:sub(1, max_length - 1) .. "..."
     end
 end
 
@@ -3142,8 +3284,12 @@ function print_room_links_ignored()
             v.minlvl,
             v.maxlvl
         )
-        Hyperlink("xmapper move " .. v.roomid, link, "Move to room " .. v.roomid, "#002460", "", 0, 1)
-        print("")
+        if v.roomid == nil then
+            ColourNote("#002460", "", link)
+        else
+            Hyperlink("xmapper move " .. v.roomid, link, "Move to room " .. v.roomid, "#002460", "", 0, 1)
+            print("")
+        end
     end
 end
 
@@ -3224,6 +3370,11 @@ function character_state_string()
     return str or "in an unknown state"
 end
 
+function is_express_target(target)
+    return target.results ~= nil and target.kills ~= nil and tonumber(target.results) > 0 and
+        tonumber(target.kills) >= xset_express_min_kill_count and xset_express_onoff == "on"
+end
+
 function xcp_goto_target(index)
     DebugNote("xcp goto target index ", index)
     local t = main_target_list[index]
@@ -3238,7 +3389,14 @@ function xcp_goto_target(index)
             set_target_from_main_target_list(index)
             if is_character_ready() then
                 DebugNote("Character ready")
-                if (t.link_type == "area") then -- Area cp links - "xcp" goes to target area, then runs Hunt Trick to get target room.
+				if is_express_target(t) then
+					next_room = t.roomid
+					table.insert(gotoList, 0, t.arid)
+					table.insert(gotoList, 1, t.roomid)
+					set_going_to_room(t.roomid)
+					goto_room_id(tostring(t.roomid), t.arid)
+					DebugNote("Attempting to go directly to an express target.")
+				elseif (t.link_type == "area") then -- Area cp links - "xcp" goes to target area, then runs Hunt Trick to get target room.
                     if (action == "ht" and current_activity == "cp") then -- do hunt trick or quick where after arriving in area.
                         local func = function()
                             do_hunt_trick(1, t.kw)
@@ -3326,9 +3484,14 @@ function xrun_to_alias(name, line, wildcards)
 end
 
 function xrun_to(arid, exact)
+    local s = nil
     local ri = current_room
     if (arid == "ft2") then
         arid = "ftii"
+    end
+    if (arid == "start") then
+        arid = current_room.arid
+        s = "walk"
     end
     local rmid = get_start_room(arid, exact)
     if (rmid == "-1") then -- area has no start room defined.
@@ -3336,11 +3499,15 @@ function xrun_to(arid, exact)
         SendNoEcho("areas 1 299 keywords " .. arid)
     else
         InfoNote("X-runto: " .. arid .. ", room ID: " .. rmid .. " (" .. start_room_type .. ")\n")
-        goto_room_id(rmid, arid)
+        goto_room_id(rmid, arid, s)
     end
 end
 
-function goto_room_id(rmid, arid) -- go to specific room id (do not confuse with goto_number, see below)
+function goto_room_id(rmid, arid, s) -- go to specific room id (do not confuse with goto_number, see below)
+    if (s == nil or s == "") then
+        s = speed
+    end
+
     local ri = current_room
     local rmid = rmid
     local arid = arid or getAreaFromRoomId(rmid)
@@ -3351,7 +3518,7 @@ function goto_room_id(rmid, arid) -- go to specific room id (do not confuse with
             do_mapper_goto(rmid, "walk")
         end
     else
-        do_mapper_goto(rmid)
+        do_mapper_goto(rmid, s)
     end
 end
 
@@ -3542,10 +3709,58 @@ function execute_in_area_tick()
     end
 end
 
+--	[[ Execute in Room ]]
 function execute_in_room(rmid, func)
+    local ri = current_room
+    local ch_state = current_character_state
+    local fn
+    if (type(func) == "function") then
+        fn = func
+    else
+        fn = function()
+        end
+    end
+    execute_in_room_tbl = {i = 0, j = 0, rmid = rmid, f = fn, stat = ch_state}
+    if (ri.rmid == rmid) then -- in target room
+        func()
+        execute_in_room_tbl = {i = 0, j = 0, arid = "", f = "", stat = 1}
+    elseif (ri.rmid == nil) then --
+        print("execute_in_room - nil room id")
+        send_gmcp_packet("request room")
+    else
+        EnableTimer("execute_in_room_timer", true)
+    end
 end
 
 function execute_in_room_tick()
+    local ri = current_room
+    local ch_state = current_character_state
+    local eiat = execute_in_room_tbl
+    if (ri.rmid ~= nil) and (ch_state ~= nil) then
+        if (ri.rmid ~= eiat.rmid) then
+            eiat.i = eiat.i + 1
+            if (eiat.i > 200) then
+                EnableTimer("execute_in_room_timer", false)
+                xcp_clear_target(true)
+                InfoNote("** execute-in-room:  abort timer - took too long to get to destination.")
+                execute_in_room_tbl = {i = 0, j = 0, rmid = "", f = "", stat = 1}
+            end
+        else
+            if (ch_state == "3") and (ch_state == eiat.stat) then
+                eiat.j = eiat.j + 1
+                if (eiat.j > 3) then
+                    EnableTimer("execute_in_room_timer", false)
+                    eiat.f()
+                end
+            else
+                eiat.stat = ch_state
+                if (ch_state == "8") then
+                    EnableTimer("execute_in_room_timer", false)
+                    DoAfterSpecial(1.5, [[ EnableTimer("execute_in_room_timer", true) ]], 12)
+                end
+            end
+        end
+    end
 end
 
 --	[[ quick where ]]
@@ -3885,18 +4100,34 @@ end
 
 -- [[ Room search processes ]]
 function search_rooms_exact(room, arid, mob_name)
-    local select =
-        string.format(
-        [[
-			SELECT uid, name, area
-			FROM rooms
-			WHERE name = %s AND area = %s
-			ORDER BY area
-		]],
-        fixsql(room),
-        fixsql(arid)
-    )
-    search_rooms(select, mob_name)
+	local select = ""
+	if ((arid == "soh") or (arid == "sohtwo")) then
+		select =
+			string.format(
+			[[
+				SELECT uid, name, area
+				FROM rooms
+				WHERE name = %s AND (area = %s OR area = %s)
+				ORDER BY area
+			]],
+			fixsql(room),
+			fixsql("soh"),
+			fixsql("sohtwo")
+		)
+	else
+		select =
+			string.format(
+			[[
+				SELECT uid, name, area
+				FROM rooms
+				WHERE name = %s AND area = %s
+				ORDER BY area
+			]],
+			fixsql(room),
+			fixsql(arid)
+		)
+	end
+	search_rooms(select, mob_name)
 end
 
 function search_rooms_fuzzy(room, arid)
@@ -3990,8 +4221,14 @@ function search_rooms(query, mob_name)
         end
 
         table.sort(results, sort_rooms_by_seen_count)
+		for k, v in ipairs(results) do
+			if mazeStartRooms[v.rmid] ~= nil then
+				local entry = table.remove(results, k)
+				entry.mz = "yes"
+				table.insert(results, 1, entry)
+			end
+		end
     end
-
     search_rooms_results(results)
 end
 
@@ -4044,9 +4281,20 @@ function search_rooms_results(results) -- Display list of 'go' links from hunt-t
             last_area = v.arid
         end
         background = (line_num % 2) == 0 and text_colors.alternating_row or ""
-        local name = ellipsify(string.gsub(v.name, "@[a-zA-Z]", ""), 38)
-        local text = string.format("%3d  %-38s  %-7s ", mapper_area_index, name, string.format("(%s)", v.rmid))
-        Hyperlink("go " .. mapper_area_index, text, "go to item " .. mapper_area_index, "lightblue", background, 0, 1)
+		local name, text = "", ""
+		if v.mz ~= "yes" then
+			name = ellipsify(string.gsub(v.name, "@[a-zA-Z]", ""), 38)
+			text = string.format("%3d  %-38s  %-7s ", mapper_area_index, name, string.format("(%s)", v.rmid))
+			Hyperlink("go " .. mapper_area_index, text, "go to item " .. mapper_area_index, "lightblue", background, 0, 1)
+		else
+			name = ellipsify(string.gsub(v.name, "@[a-zA-Z]", ""), 34)
+			text = string.format("%3d  %-34s  %-7s ", mapper_area_index, name, string.format("(%s)", v.rmid))
+			Hyperlink("go " .. mapper_area_index, string.sub(text, 1, 4), "go to item " .. mapper_area_index, "lightblue", background, 0, 1)
+			ColourTell("ghostwhite", background, "[")
+			ColourTell("magenta", background, "MZ")
+			ColourTell("ghostwhite", background, "]")
+			Hyperlink("go " .. mapper_area_index, string.sub(text, 5), "go to item " .. mapper_area_index, "lightblue", background, 0, 1)
+		end
 
         local instruction = "mapper where " .. v.rmid
         local tooltip = "click for speedwalk to this room"
@@ -5232,14 +5480,18 @@ local window_fonts = {
 }
 
 function xg_create_window(name, line, wildcards)
-    if name then win_init = false end
+    if name then
+       WindowPosition(win, 0, 0, 12, 16)
+       xset_ToggleWindowDisplay("", "", {onoff = "max"})
+       CallPlugin(plugin_id_z_order, "boostMe", win)
+    end
     if (win_init == false) then
         win_init = true
         local width = win_width
         local height = win_height
-	local left = ((windowinfo.window_left+width) < GetSystemMetrics(0) and windowinfo.window_left) or 0
-	local top =  ((windowinfo.window_top+height) < GetSystemMetrics(1) and windowinfo.window_top) or 0
-        WindowCreate(
+	local left = ((windowinfo.window_left+width) < GetSystemMetrics(78) and windowinfo.window_left) or 0
+	local top =  ((windowinfo.window_top+height) < GetSystemMetrics(79) and windowinfo.window_top) or 0
+	WindowCreate(
             win,
             left,
             top,
@@ -5908,8 +6160,14 @@ function xg_show_target_links()
             hs_left = hs_left + added_width
             hs_right = math.min(hs_right + added_width, win_width - 5)
         end
-        WindowText(win, font, link, hs_left, hs_top, 0, 0, color, false)
-        if (hs_bottom > win_height - resize_tag) then -- Prevent list item's hotspot from overlapping with the resize tag
+		local right_end = WindowText(win, font, link, hs_left, hs_top, 0, 0, color, false)
+		if is_express_target(v) then
+			local added_width = WindowTextWidth(win, font, "   (Express)")
+			WindowText(win, font, "   (Express)", right_end, hs_top, 0, 0, ColourNameToRGB(text_colors.targeted), false)
+            hs_left = hs_left + added_width
+            hs_right = math.min(hs_right + added_width, win_width - 5)
+		end
+		if (hs_bottom > win_height - resize_tag) then -- Prevent list item's hotspot from overlapping with the resize tag
             hs_right = math.min(hs_right, win_width - resize_tag - 5)
         end
         table.insert(win_target_hotspots, index)
@@ -6448,18 +6706,18 @@ end
 --	return new_t
 --end
 
-function dbcheck(code, query)
-    if
-        (code ~= sqlite3.OK) and -- no error
-            (code ~= sqlite3.ROW) and -- completed OK with another row of data
-            (code ~= sqlite3.DONE)
-     then -- completed OK, no more rows
-        local err = db:errmsg() -- the rollback will change the error message
-        err = err .. "\n\nCODE: " .. code .. "\nQUERY: " .. query .. "\n"
-        db:exec("ROLLBACK") -- rollback any transaction to unlock the database
-        error(err, 2) -- show error in caller's context
-    end
-end
+function dbcheck(db, code, query)
+    if code ~= sqlite3.OK and       -- no error
+        code ~= sqlite3.ROW and     -- completed OK with another row of data
+        code ~= sqlite3.DONE        -- completed OK, no more rows
+    then
+        local msg = db:errmsg()
+        local err = msg.."\n\nCODE: "..code.."\nQUERY: "..query.."\n"
+        db:exec("ROLLBACK")      -- rollback any transaction to unlock the database
+        db:close_vm()            -- close the database
+        error(err, 3)            -- show error in caller's context
+    end -- if
+end -- dbcheck
 
 function fixsql(s)
     if s then
@@ -6853,7 +7111,15 @@ function callback_update_plugin(retval, page, status, headers, full_status, requ
         return
     end
     local upstream_version = tonumber(string.match(page, '<plugin version="([0-9%.]+)"'))
-    ImportantNote("Updating from version ", PLUGIN_VERSION, " to ", upstream_version, ". Do not touch anything!")
+    local pluginVer = PLUGIN_VERSION
+    if prevBeta then
+        pluginVer = pluginVer .. " (Beta " .. prevBeta .. ")"
+    end
+    if betaVersion then 
+        upstream_version = upstream_version .. " (Beta " .. betaVersion .. ")"
+    end
+
+    ImportantNote("Updating from version ", pluginVer, " to ", upstream_version, ". Do not touch anything!")
     local file = io.open(GetPluginInfo(GetPluginID(), 6), "w")
     file:write(page)
     file:close()
@@ -7043,9 +7309,11 @@ function onHelp(name, line, wildcards)
         "kw|keyword",
         "nx",
         "go",
+		"express",
         "xset nx",
         "xset con_overwrite",
         "xset gqalias",
+		"xset maze",
         "xset table notes",
         "xset table width",
         "sound",
@@ -7061,7 +7329,9 @@ function onHelp(name, line, wildcards)
         "snd reload",
         "snd check_update",
         "snd changelog",
-        "summary"
+        "summary",
+        "history",
+        "stats"
     }
 
     local headers = {
@@ -7086,6 +7356,7 @@ function onHelp(name, line, wildcards)
         ColourNote("darkcyan", "", "Maintained by  ", "antiquewhite", "", " : Crowley")
         ColourNote("darkcyan", "", "Original Author", "antiquewhite", "", " : WinkleWinkle")
         ColourNote("darkcyan", "", "Credit to      ", "antiquewhite", "", " : Nokfah and Starling")
+	ColourNote("darkcyan", "", "Plugin Link    ", "antiquewhite", "", " : http://github.com/AardCrowley/Search-and-Destroy")
         Note()
         ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xhelp <command> (to view helpfiles below)")
         Note()
@@ -7275,7 +7546,7 @@ function onHelp(name, line, wildcards)
             )
         )
     elseif str == "xmap" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xmap move <roomID> <walk|run>")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xmap move <roomID><walk|run>")
         Note()
         ColourNote(
             "antiquewhite",
@@ -7299,7 +7570,7 @@ function onHelp(name, line, wildcards)
             )
         )
     elseif str == "qw" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": qw<x> <mobname>")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": qw<x><mobname>")
         Note()
         ColourNote(
             "antiquewhite",
@@ -7327,7 +7598,7 @@ function onHelp(name, line, wildcards)
             )
         )
     elseif str == "ah" or str == "aha" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": ah<a> <mobname>")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": ah<a><mobname>")
         Note()
         ColourNote(
             "antiquewhite",
@@ -7341,7 +7612,7 @@ function onHelp(name, line, wildcards)
             )
         )
     elseif str == "ak" or str == "kk" or str == "qk" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <xset> <ak|kk|qk> <commands>")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <xset><ak|kk|qk><commands>")
         Note()
         ColourNote(
             "antiquewhite",
@@ -7526,7 +7797,7 @@ function onHelp(name, line, wildcards)
             )
         )
     elseif str == "xrt" or str == "xrun" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <xrt|xrun> <area keyword>")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <xrt|xrun><area keyword>")
         Note()
         ColourNote(
             "antiquewhite",
@@ -7554,7 +7825,7 @@ function onHelp(name, line, wildcards)
             )
         )
     elseif str == "cp" or str == "gq" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <cp|gq> <i|info|c|check>")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <cp|gq><i|info|c|check>")
         Note()
         ColourNote(
             "antiquewhite",
@@ -7618,13 +7889,13 @@ function onHelp(name, line, wildcards)
             unpack(
                 {
                     helpWrap(
-                        "Whenever Crowley announces a new version, this command will make it easy to update the Search & Destroy plugin."
+                        "Whenever Crowley announces a new version, this command will make it easy to update the Search & Destroy plugin. There is a hidden update command for beta versions: snd force update beta"
                     )
                 }
             )
         )
     elseif str == "ms" or str == "msearch" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <<x>ms|<x>msearch> <here|area> <mob name>")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <<x>ms|<x>msearch><here|area><mob name>")
         Note()
         ColourNote(
             "antiquewhite",
@@ -7638,7 +7909,7 @@ function onHelp(name, line, wildcards)
             )
         )
     elseif str == "mgo" or str == "mgoto" or str == "xmgo" or str == "xmgoto" then
-        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <x>mgo<to> <idx>")
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": <x>mgo<to><idx>")
         Note()
         ColourNote(
             "antiquewhite",
@@ -7739,7 +8010,35 @@ function onHelp(name, line, wildcards)
                 }
             )
         )
-    elseif str == "changelog" then
+	elseif str == "express" then
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset express <on|off> <min_kill_count>")
+        Note()
+        ColourNote(
+            "antiquewhite",
+            "",
+            unpack(
+                {
+                    helpWrap(
+                        "Toggles Express mode on or off. Express mode will look through your cp or gq targets for mobs that you have already killed. If you have killed a mob in a room more times than min_kill_count, it will be flagged as express. When express mobs are selected as the current target, you will go directly to the mob's room, thus bypassing going to the start of the area first."
+                    )
+                }
+            )
+        )
+	elseif str == "maze" then
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": xset maze")
+        Note()
+        ColourNote(
+            "antiquewhite",
+            "",
+            unpack(
+                {
+                    helpWrap(
+                        "Toggles current room as entrance to a maze. If mobs are found in a room with the same name as a toggled maze room, the maze room(s) will appear first in your room search results."
+                    )
+                }
+            )
+        )
+	elseif str == "changelog" then
         ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd changelog")
         Note()
         ColourNote(
@@ -7776,6 +8075,18 @@ function onHelp(name, line, wildcards)
             "antiquewhite",
             "",
             unpack({helpWrap("xset mark:  Sets current room as 'start' for the current area.")})
+        )
+        Note()
+		ColourNote(
+            "antiquewhite",
+            "",
+            unpack({helpWrap("xset express:  Try and go directly to mobs that are always found in the same room.")})
+        )
+        Note()
+		ColourNote(
+            "antiquewhite",
+            "",
+            unpack({helpWrap("xset maze:  Sets current room as the start of a maze.")})
         )
         Note()
         ColourNote(
@@ -7820,7 +8131,7 @@ function onHelp(name, line, wildcards)
             unpack(
                 {
                     helpWrap(
-                        "xmap move <roomID> <run|walk>:  Move to the room id at default speed, or walks (without portals) or runs (with portals) based on argument."
+                        "xmap move <roomID><run|walk>:  Move to the room id at default speed, or walks (without portals) or runs (with portals) based on argument."
                     )
                 }
             )
@@ -7844,7 +8155,7 @@ function onHelp(name, line, wildcards)
             unpack(
                 {
                     helpWrap(
-                        "qw<x> <mobname>:  Where's the current stored target or argument. Use 'x' to where exact mob name."
+                        "qw<x><mobname>:  Where's the current stored target or argument. Use 'x' to where exact mob name."
                     )
                 }
             )
@@ -7865,7 +8176,7 @@ function onHelp(name, line, wildcards)
         ColourNote(
             "antiquewhite",
             "",
-            unpack({helpWrap("ah<a> <targ>:  Autohunts target. Append 'a' with no target to abort.")})
+            unpack({helpWrap("ah<a><targ>:  Autohunts target. Append 'a' with no target to abort.")})
         )
         Note()
         ColourNote(
@@ -7949,7 +8260,7 @@ function onHelp(name, line, wildcards)
         ColourNote(
             "antiquewhite",
             "",
-            unpack({helpWrap("<xrt|xrun> <area>:  Runs to the area matching the argument.")})
+            unpack({helpWrap("<xrt|xrun><area>:  Runs to the area matching the argument.")})
         )
         Note()
         ColourNote("antiquewhite", "", unpack({helpWrap("<cp|gq> i|info:  Displays campaign/gquest info.")}))
@@ -7999,13 +8310,13 @@ function onHelp(name, line, wildcards)
         ColourNote(
             "antiquewhite",
             "",
-            unpack({helpWrap("ms<earch> <area|here|all> <mob>: Searches for mobs in the mob database.")})
+            unpack({helpWrap("ms<earch><area|here|all><mob>: Searches for mobs in the mob database.")})
         )
         Note()
         ColourNote(
             "antiquewhite",
             "",
-            unpack({helpWrap("mgo<to> <idx>: After searching for mobs, goes to the index chosen.")})
+            unpack({helpWrap("mgo<to><idx>: After searching for mobs, goes to the index chosen.")})
         )
         Note()
         ColourNote("antiquewhite", "", unpack({helpWrap("snd reload: Reloads the plugin if it errors out.")}))
@@ -8017,6 +8328,61 @@ function onHelp(name, line, wildcards)
                 {
                     helpWrap(
                         "snd migrate: If you used Pwar's plugin and have a database, this will migrate it over to this version so you do not lose your hard earned data."
+                    )
+                }
+            )
+        )
+    elseif str == "history" then
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd history <q|quest|cp|campaign>")
+        Note()
+        ColourNote(
+            "antiquewhite",
+            "",
+            unpack(
+                {
+                    helpWrap(
+                        "Prints a table with the last 20 quests and campaigns or optional type taken along with their rewards."
+                    )
+                }
+            )
+        )
+    elseif str == "stats" then
+        ColourNote("yellow", "", "Syntax", "antiquewhite", "", ": snd stats <quests|campaigns|overtime>")
+        Note()
+        ColourNote("limegreen", "", "snd stats overtime:")
+        ColourNote(
+            "antiquewhite",
+            "",
+            unpack(
+                {
+                    helpWrap(
+                        "Prints a table of quest and campaign stats over the past two weeks."
+                    )
+                }
+            )
+        )
+        Note()
+        ColourNote("limegreen", "", "snd stats quests:")
+        ColourNote(
+            "antiquewhite",
+            "",
+            unpack(
+                {
+                    helpWrap(
+                        "Prints a table of quest stats by level."
+                    )
+                }
+            )
+        )
+        Note()
+        ColourNote("limegreen", "", "snd stats quests:")
+        ColourNote(
+            "antiquewhite",
+            "",
+            unpack(
+                {
+                    helpWrap(
+                        "Prints a table of campaign stats by level."
                     )
                 }
             )
@@ -8195,7 +8561,7 @@ end
     if sendit then
         mobLookup(name, zone, ifc(level, level, ""))
     else
-        InfoNote("*** Syntax error! Use: ", "xmsearch <areakey|here|all> <mob>")
+        InfoNote("*** Syntax error! Use: ", "xmsearch <areakey|here|all><mob>")
     end
 end
 
@@ -8893,6 +9259,51 @@ function is_sound_enabled()
     return xset_sound_onoff == "on"
 end
 
+function xset_express(name, line, wildcards)
+	local state = wildcards.state
+
+	if state == nil or state == "" then
+		if xset_express_onoff == "on" then
+			state = "off"
+		else
+			state = "on"
+		end
+	else
+		state = string.lower(state)
+	end
+
+	local min_kill_count = tonumber(wildcards.min_kill)
+	if min_kill_count == nil then
+		min_kill_count = xset_express_min_kill_count
+	end
+
+	set_variable("mcvar_xset_express_onoff", state)
+	set_variable("xset_express_min_kill_count", min_kill_count)
+
+	xset_express_onoff = state
+	xset_express_min_kill_count = min_kill_count
+
+	InfoNote("\nSearch&Destroy Express mode is now ", string.upper(state), " with a min kill count of ", min_kill_count)
+	xg_draw_window()
+	Redraw()
+end
+
+function xset_maze()
+	local roomId = tonumber(current_room.rmid)
+        if roomId > 0 then
+		if (mazeStartRooms[roomId] == nil) then
+			mazeStartRooms[roomId] = { areaname = current_room.arid }
+			InfoNote("Maze start flag ", "ADDED", " to: ", current_room.rmid)
+		else
+			mazeStartRooms[roomId] = nil
+			InfoNote("Maze start flag ", "REMOVED", " from: ", current_room.rmid)
+		end
+		SetVariable("mazeStartRooms", serialize.save_simple(mazeStartRooms))
+	else
+		InfoNote("Current room: ", tostring(roomId), " is invalid.")
+	end
+end
+
 function xset_table_notes()
     if table_notes == "on" then
         table_notes = "off"
@@ -8971,6 +9382,8 @@ local SCAN_FLAGS = {
     "C",
     "Diseased",
     "D",
+    "Flying",
+    "F",
     "Golden Aura",
     "G",
     "Hidden",
@@ -9031,1080 +9444,958 @@ function setup_scan_con_triggers()
     end
 end
 
+--
+-- History Methods
+--
+
+history_type_quest = 1
+history_type_global_quest = 2
+history_type_campaign = 3
+
+history_status_in_progress = 1
+history_status_complete = 2
+history_status_timeout = 3
+history_status_failed = 4
+history_status_reset = 5
+history_status_skipped = 6
+
+local cp_info_qp_reward = tonumber(GetVariable("mcvar_cp_info_qp_reward")) or 0
+local cp_info_gold_reward = tonumber(GetVariable("mcvar_cp_info_gold_reward")) or 0
+local cp_info_train_reward = tonumber(GetVariable("mcvar_cp_info_train_reward")) or 0
+local cp_info_practices_reward = tonumber(GetVariable("mcvar_cp_info_practices_reward")) or 0
+local cp_info_tp_reward = tonumber(GetVariable("mcvar_cp_info_tp_reward")) or 0
+
+local quest_status = 0
+local quest_qp_reward = 0
+local quest_gold_reward = 0
+local quest_practices_reward = 0
+local quest_trains_reward = 0
+local quest_tp_reward = 0
+
+function add_history_table(db)
+    DebugNote("Adding history table and indexes")
+    db:execute([[
+        CREATE TABLE history (
+            id              INTEGER PRIMARY KEY,
+            type            INTEGER NOT NULL,
+            level_taken     INTEGER NOT NULL,
+            start_time      INTEGER NOT NULL,
+            end_time        INTEGER,
+            status          INTEGER DEFAULT 1,
+            qp_rewards      INTEGER DEFAULT 0,
+            tp_rewards      INTEGER DEFAULT 0,
+            train_rewards   INTEGER DEFAULT 0,
+            prac_rewards    INTEGER DEFAULT 0,
+            gold_rewards    INTEGER DEFAULT 0
+        );
+        CREATE INDEX history_start_time_type ON history (start_time, type);
+        CREATE INDEX history_type_status ON history (type, status);
+        CREATE INDEX history_end_time_status_type ON history (end_time, status, type);
+    ]])
+end
+
+function history_start(history_type)
+    history_type = tonumber(history_type)
+    if history_type < history_type_quest or history_type > history_type_campaign then
+        ErrorNote("Invalid history type: " .. history_type)
+        return
+    end
+
+    local level_taken = tonumber(gmcp("char.status.level"))
+    local start_time = os.time()
+
+    -- Build the query
+    local sqlQuery = 'INSERT INTO history (type, level_taken, start_time) VALUES ("%d", "%d", "%d")'
+    sqlQuery = sqlQuery:format(history_type, level_taken, start_time)
+
+    -- Execute the query
+    local snd_db = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
+    local code = snd_db:exec(sqlQuery)
+    dbcheck(snd_db, code, sqlQuery)
+    snd_db:close_vm()
+end
+
+function history_end(history_type, status)
+    history_type = tonumber(history_type)
+    if history_type < history_type_quest or history_type > history_type_campaign then
+        ErrorNote("Invalid history type: " .. history_type)
+        return
+    end
+    status = tonumber(status)
+    if status < history_status_in_progress or status > history_status_skipped then
+        ErrorNote("Invalid history status: " .. status)
+        return
+    end
+
+    local qp_rewards = 0
+    local tp_rewards = 0
+    local train_rewards = 0
+    local prac_rewards = 0
+    local gold_rewards = 0
+
+    if history_type == history_type_campaign then
+        qp_rewards = cp_info_qp_reward
+        gold_rewards = cp_info_gold_reward
+        train_rewards = cp_info_train_reward
+        prac_rewards = cp_info_practices_reward
+        tp_rewards = cp_info_tp_reward
+
+        -- reset variables
+        cp_info_qp_reward = 0
+        set_variable("mcvar_cp_info_qp_reward", "0")
+        cp_info_gold_reward = 0
+        set_variable("mcvar_cp_info_gold_reward", "0")
+        cp_info_train_reward = 0
+        set_variable("mcvar_cp_info_train_reward", "0")
+        cp_info_practices_reward = 0
+        set_variable("mcvar_cp_info_practices_reward", "0")
+        cp_info_tp_reward = 0
+        set_variable("mcvar_cp_info_tp_reward", "0")
+    elseif history_type == history_type_quest then
+        qp_rewards = quest_qp_reward
+        gold_rewards = quest_gold_reward
+        prac_rewards = quest_practices_reward
+        train_rewards = quest_trains_reward
+        tp_rewards = quest_tp_reward
+
+        -- reset variables
+        quest_status = 0
+        quest_qp_reward = 0
+        quest_gold_reward = 0
+        quest_practices_reward = 0
+        quest_trains_reward = 0
+        quest_tp_reward = 0
+    end
+
+    local end_time = os.time()
+
+    local snd_db = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
+
+    -- Find a valid history record to update
+    local sqlQuery = 'SELECT id, start_time, status FROM history WHERE type = "%d" ORDER BY start_time DESC LIMIT 1;'
+    sqlQuery = sqlQuery:format(history_type)
+
+    local id = -1
+
+    for r in snd_db:nrows(sqlQuery) do
+        -- TODO check start_time to throw out invalid values (i.e. quests older than 60m)
+        if r.status == history_status_in_progress then
+            id = r.id
+        end
+    end
+
+    if id ~= -1 then
+        -- Update the history record
+        local sqlQuery = [[
+            UPDATE history
+            SET
+                end_time = "%d", status = "%d", qp_rewards = "%d", tp_rewards = "%d",
+                train_rewards = "%d", prac_rewards = "%d", gold_rewards = "%d"
+            WHERE id = "%d";
+        ]]
+        sqlQuery = sqlQuery:format(end_time, status, qp_rewards, tp_rewards, train_rewards, prac_rewards, gold_rewards, id)
+        local code = snd_db:exec(sqlQuery)
+        dbcheck(snd_db, code, sqlQuery)
+    end
+
+    snd_db:close_vm()
+end
+
+function history_type_to_string(history_type)
+    if history_type == history_type_quest then
+        return "quest"
+    elseif history_type == history_type_global_quest then
+        return "gquest"
+    elseif history_type == history_type_campaign then
+        return "campaign"
+    end
+    return "unknown"
+end
+
+function history_status_to_string(history_status)
+    if history_status == history_status_in_progress then
+        return "in progress"
+    elseif history_status == history_status_complete then
+        return "complete"
+    elseif history_status == history_status_timeout then
+        return "timeout"
+    elseif history_status == history_status_failed then
+        return "failed"
+    elseif history_status == history_status_reset then
+        return "reset"
+    elseif history_status == history_status_skipped then
+        return "skipped"
+    end
+    return "unknown"
+end
+
+function alias_print_history(name, line, wildcards)
+    local history_map = {
+        q = 1, quest = 1,
+        gq = 2, gquest = 2,
+        cp = 3, campaign = 3
+    }
+
+    local hist_type = (wildcards.hist_type ~= "" and wildcards.hist_type:gsub(" ", "")) or nil
+
+    history_print(history_map[hist_type] or hist_type)
+end
+
+function history_print(history_type)
+    local addSql = ""
+
+    if history_type ~= nil then
+        addSql = "WHERE type = " .. history_type
+    end
+
+    local sqlQuery = [[
+        SELECT
+            type, level_taken, start_time, end_time, status,
+            qp_rewards, tp_rewards, train_rewards, prac_rewards, gold_rewards
+        FROM history
+        ]] .. addSql .. [[
+        ORDER BY start_time DESC
+        LIMIT 20;
+    ]]
+
+    local snd_db = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
+
+    local rows = {}
+
+    for r in snd_db:nrows(sqlQuery) do
+        local duration = 0
+        if r.end_time ~= nil then
+            duration = r.end_time - r.start_time
+        end
+
+        local rewards = ""
+        if r.qp_rewards > 0 then
+            rewards = rewards .. r.qp_rewards .. "qp "
+        end
+        if r.tp_rewards > 0 then
+            rewards = rewards .. r.tp_rewards .. "tp "
+        end
+        if r.train_rewards > 0 then
+            rewards = rewards .. r.train_rewards .. "tr "
+        end
+        if r.prac_rewards > 0 then
+            rewards = rewards .. r.prac_rewards .. "pr"
+        end
+
+        row = {
+            type=history_type_to_string(r.type),
+            level_taken=r.level_taken,
+            started=os.date('%Y-%m-%d %H:%M', r.start_time),
+            duration=duration,
+            status=history_status_to_string(r.status),
+            rewards=rewards
+        }
+        table.insert(rows, row)
+    end
+
+    snd_db:close_vm()
+
+    if (#rows > 0) then
+        local header = "| Type     | Level Taken | Started          |    Duration | Status      | Rewards          |"
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+        ColourNote("#E0E0E0", "", header)
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+
+        for i, v in ipairs(
+            rows
+        ) do
+            local duration = format_duration(v.duration)
+            if v.status == "reset" or v.status == "skipped" then
+                duration = "N/A"
+            end
+            local background = (i % 2) == 0 and "#000040" or ""
+            local text = string.format("| %-8s | %11d | %-16s | %11s | %-11s | %-16s |", v.type, v.level_taken, v.started, duration, v.status, v.rewards)
+            ColourNote("#E0E0E0", background, text)
+        end
+
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+    else
+        InfoNote("   No history to show.")
+    end
+end
+
+function alias_print_stats(name, line, wildcards)
+    local arg1 = ""
+    if wildcards.arg1 ~= nil then
+        arg1 = Trim(wildcards.arg1)
+    end
+    local arg2 = ""
+    if wildcards.arg2 ~= nil then
+        arg2 = Trim(wildcards.arg2)
+    end
+
+    if arg1 == "quest" then
+        history_stats(history_type_quest)
+    elseif arg1 == "campaign" then
+        history_stats(history_type_campaign)
+    elseif arg1 == "gquest" then
+        history_stats(history_type_global_quest)
+    elseif arg1 == "overtime" then
+        history_stats_over_time()
+    else
+        ErrorNote("Invalid argument " .. arg1 .. ".  Supported values are quest, campaign, gquest, and overtime.")
+    end
+end
+
+function format_duration(duration)
+    if duration ~= nil then
+        local days = math.floor(duration/86400)
+        local hours = math.floor(math.fmod(duration, 86400)/3600)
+        local minutes = math.floor(math.fmod(duration,3600)/60)
+        local seconds = math.floor(math.fmod(duration,60))
+        if days > 0 then
+            return string.format("%dd%dh%dm%ds", days, hours, minutes, seconds)
+        elseif hours > 0 then
+            return string.format("%dh%dm%ds", hours, minutes, seconds)
+        elseif minutes > 0 then
+            return string.format("%dm%ds", minutes, seconds)
+        elseif seconds > 0 then
+            return string.format("%ds", seconds)
+        end
+    end
+    return "N/A"
+end
+
+function history_stats(history_type)
+    history_type = tonumber(history_type)
+    if history_type < history_type_quest or history_type > history_type_campaign then
+        ErrorNote("Invalid history type: " .. history_type)
+        return
+    end
+
+    local sqlQuery = [[
+        SELECT
+            level_taken,
+            min(end_time - start_time) as min_duration,
+            round(avg(end_time - start_time)) as avg_duration,
+            max(end_time - start_time) as max_duration,
+            count(*) as total
+        FROM history WHERE type = "%d" AND status = 2
+        GROUP BY level_taken
+        ORDER BY level_taken;
+    ]]
+    sqlQuery = sqlQuery:format(history_type)
+
+    local snd_db = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
+
+    local rows = {}
+
+    for r in snd_db:nrows(sqlQuery) do
+        local duration = 0
+        if r.end_time ~= nil then
+            duration = r.end_time - r.start_time
+        end
+
+        row = {
+            level_taken=r.level_taken,
+            min_duration=r.min_duration,
+            avg_duration=r.avg_duration,
+            max_duration=r.max_duration,
+            total=r.total
+        }
+        table.insert(rows, row)
+    end
+
+    snd_db:close_vm()
+
+    if (#rows > 0) then
+        local header = "| Level Taken | Min Duration | Avg Duration | Max Duration | Total |"
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+        ColourNote("#E0E0E0", "", header)
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+
+        for i, v in ipairs(
+            rows
+        ) do
+            local min_duration = format_duration(v.min_duration)
+            local avg_duration = format_duration(v.avg_duration)
+            local max_duration = format_duration(v.max_duration)
+
+            local background = (i % 2) == 0 and "#000040" or ""
+            local text = string.format("| %11d | %12s | %12s | %12s | %5d |", v.level_taken, min_duration, avg_duration, max_duration, v.total)
+            ColourNote("#E0E0E0", background, text)
+        end
+
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+    else
+        InfoNote("   No stats to show.")
+    end
+end
+
+function history_stats_over_time()
+    local sqlQuery = [[
+        SELECT
+            date(end_time, 'unixepoch', 'localtime') AS day,
+            count(case when type = 1 then 1 end) AS total_quests,
+            count(case when type = 3 then 1 end) AS total_campaigns,
+            sum(qp_rewards) as total_qp_rewards,
+            sum(tp_rewards) as total_tp_rewards,
+            sum(train_rewards) as total_train_rewards,
+            sum(prac_rewards) as total_prac_rewards,
+            sum(gold_rewards) as total_gold_rewards
+        FROM history
+        WHERE status = 2
+        AND end_time >= unixepoch(DATE('now', '-14 day'))
+        GROUP BY day
+        ORDER BY day DESC
+    ]]
+    sqlQuery = sqlQuery:format(history_type)
+
+    local snd_db = sqlite3.open(GetInfo(66) .. "/SnDdb.db")
+
+    local rows = {}
+
+    for r in snd_db:nrows(sqlQuery) do
+        table.insert(rows, r)
+    end
+
+    snd_db:close_vm()
+
+    if (#rows > 0) then
+        local header = "| Day        | Quests | Campaigns |  QPs | TPs | TRs | PRs |    Gold |"
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+        ColourNote("#E0E0E0", "", header)
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+
+        for i, v in ipairs(
+            rows
+        ) do
+            local background = (i % 2) == 0 and "#000040" or ""
+            local text = string.format("| %10s | %6d | %9d | %4d | %3d | %3d | %3d | %7d |",
+                v.day, v.total_quests, v.total_campaigns, v.total_qp_rewards, v.total_tp_rewards,
+                v.total_train_rewards, v.total_prac_rewards, v.total_gold_rewards)
+            ColourNote("#E0E0E0", background, text)
+        end
+
+        ColourNote("#E0E0E0", "", string.rep("-", string.len(header)))
+    else
+        InfoNote("   No stats to show.")
+    end
+end
+
+function history_quest_end(status, qp, gold, practices, trains, tp)
+    if status == history_status_complete then
+        quest_qp_reward = tonumber(qp)
+        quest_gold_reward = tonumber(gold)
+        quest_practices_reward = tonumber(practices)
+        quest_trains_reward = tonumber(trains)
+        quest_tp_reward = tonumber(tp)
+    end
+
+    history_end(history_type_quest, status)
+end
+
+function trigger_quest_premonition(name, line, wildcards, style)
+    history_end(history_type_quest, history_status_skipped)
+end
+
+function trigger_campaign_rewards_qp(name, line, wildcards, style)
+    local qp = tonumber(wildcards.qp)
+    cp_info_qp_reward = qp
+    set_variable("mcvar_cp_info_qp_reward", qp)
+end
+
+function trigger_campaign_rewards_bonus_qp(name, line, wildcards, style)
+    local qp = tonumber(wildcards.qp)
+    cp_info_qp_reward = cp_info_qp_reward + qp
+    set_variable("mcvar_cp_info_qp_reward", cp_info_qp_reward)
+end
+
+function trigger_campaign_rewards_gold(name, line, wildcards, style)
+    local gold = tonumber(wildcards.gold)
+    cp_info_gold_reward = gold
+    set_variable("mcvar_cp_info_gold_reward", gold)
+end
+
+function trigger_campaign_rewards_trains(name, line, wildcards, style)
+    local train = tonumber(wildcards.train)
+    cp_info_train_reward = train
+    set_variable("mcvar_cp_info_train_reward", train)
+end
+
+function trigger_campaign_rewards_practices(name, line, wildcards, style)
+    local prac = tonumber(wildcards.prac)
+    cp_info_practices_reward = prac
+    set_variable("mcvar_cp_info_practices_reward", prac)
+end
+
+function trigger_campaign_rewards_tps(name, line, wildcards, style)
+    local tp = tonumber(wildcards.tp)
+    cp_info_tp_reward = tp
+    set_variable("mcvar_cp_info_tp_reward", tp)
+end
 	]]>
-</script>
-<triggers>
-+<!-- Receive xp -->
-	<trigger match="^You (?:don't )?receive \d+(?:\+\d+)* experience points?\."
-		script="trigger_receive_xp" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+    </script>
+    <triggers>
++                                <!-- Receive xp -->
+        <trigger match="^You (?:don't )?receive \d+(?:\+\d+)* experience points?\." script="trigger_receive_xp" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-<!-- Damage triggers -->
-	<trigger match="^.+\w tickles +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <!-- Damage triggers -->
+        <trigger match="^.+\w[^A-Za-z]+(?:tickles|bruises|scratches|grazes|nicks|scars|hits|injures|wounds|mauls|maims|mangles|mars|LACERATES|DECIMATES|DEVASTATES|ERADICATES|OBLITERATES|EXTIRPATES|INCINERATES|MUTILATES|DISEMBOWELS|MASSACRES|DISMEMBERS|RENDS|BLASTS|DEMOLISHES|SHREDS|DESTROYS|PULVERIZES|VAPORIZES|ATOMIZES|ASPHYXIATES|RAVAGES|FISSURES|LIQUIDATES|EVAPORATES|SUNDERS|TEARS INTO|WASTES|CREMATES|ANNIHILATES|IMPLODES|EXTERMINATES|SHATTERS|SLAUGHTERS|RUPTURES|NUKES|GLACIATES|METEORITES|SUPERNOVAS|does UN\w+ things to|damages?|shreds|destroys|pulverizes|vaporizes|atomizes|asphyxiates|ravages|fissures|liquidates|evaporates|sunders|into|wastes|cremates|annihilates|implodes|exterminates|shatters|slaughters|ruptures|nukes|glaciates|meteorites|supernovas)[^A-Za-z]+(?<mob_name>\S.*)[!\.] \[\d+\]$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w bruises +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^(?:You assassinate |You catch |You attempt to bury .* deep into |You lunge at)(?<mob_name>.*)(?: with cold efficiency\.| completely off-guard and inflict massive damage on .*\.|'s? back!|with a .*!)$" script="trigger_damage_done" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
 
-	<trigger match="^.+\w scratches +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <!-- Gquest operations -->
+        <!-- group: trg_gq -->
+        <trigger match="^Quest Name\.\.\.\.\.\.\.\.\.: \[ Global quest # (?<gq_id>\d{1,5}) \]$" script="gq_info_quest_name" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^.+\w grazes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^---------------------------------------------------------------------------$" script="gq_info_end" group="trg_gq_info" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^.+\w nicks +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^Quest Status\.\.\.\.\.\.\.: \[ Extended \]$" script="gq_info_extended" group="trg_gq_info" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^.+\w scars +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^Quest Status\.\.\.\.\.\.\.: \[ Finished \]$" script="gq_info_finished" group="trg_gq_info" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^.+\w hits +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^Level range\.\.\.\.\.\.\.\.: \[\s+(?<minlvl>\d{1,3}) \] - \[\s+(?<maxlvl>\d{1,3}) \]$" script="gq_info_level_range" group="trg_gq_info" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^.+\w injures +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^Kill at least (?<qty>\d) \* (?<target>.+)\.$" script="gq_info_line" group="trg_gq_info" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^.+\w wounds +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^You still have to kill (?<qty>[1-3]) \* (?<target>.+)$" script="gq_check_line" name="trg_gq_check_line" group="trg_gq_check" enabled="n" regexp="y" sequence="500" keep_evaluating="y" omit_from_output="y" send_to="12">
+            <send>	EnableTrigger("trg_gq_check_end", true) </send>
+        </trigger>
 
-	<trigger match="^.+\w mauls +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^(?!You still have to kill [1-3] \* .+ \(\S.+?(?: - Dead)?\))$" script="gq_check_end" name="trg_gq_check_end" group="trg_gq_check" enabled="n" regexp="y" sequence="500" keep_evaluating="y" omit_from_output="n" send_to="12"></trigger>
 
-	<trigger match="^.+\w maims +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <!-- gq messages to always listen for -->
+        <trigger match="^You have now joined Global Quest # (?<gq_id>\d{1,5})\. See 'help gquest' for available commands\.$" script="gqmsg_joined" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^.+\w mangles +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,5}) for levels (?<min_lvl>\d{1,3}) to (?<max_lvl>\d{1,3})(?: - .*)? has now started\.$" script="gqmsg_started" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^.+\w mars +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <!-- gq messages to only listen for when in a gquest -->
+        <trigger match="^You have finished this global quest\.$" script="player_not_on_gq" name="trg_gq_finished_extended" group="trg_gqmsg" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^.+\w LACERATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^Global Quest: Global Quest # (?<gq_id>\d{1,5}) has been won by (?<winner>[A-Z][A-Za-z]+) - \d*(?:1st|2nd|3rd|\dth) win\.$" script="gqmsg_winner" name="trg_gqmsg_winner" group="trg_gqmsg" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^.+\w DECIMATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^Global Quest: Global Quest # (?<gq_id>\d{1,5}) will go into extended time for 5 more minutes\.$" script="gqmsg_extended_time" name="trg_gqmsg_extended_time" group="trg_gqmsg_ext" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^.+\w DEVASTATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,5})(?: \(extended\))? is now over\.$" script="gq_ended" name="trg_gqmsg_extended_end" group="trg_gqmsg" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^.+\w ERADICATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,5}) has been cancelled due to lack of activity\.$" script="gq_ended" name="trg_gqmsg_extended_end2" group="trg_gqmsg" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^.+\w OBLITERATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^You are no longer part of Global Quest # (?<gq_id>\d{1,5}) and will be unable to rejoin\.$" script="player_not_on_gq" name="trg_gqmsg_quit" group="trg_gqmsg" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^.+\w EXTIRPATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^Congratulations, that was one of the GLOBAL QUEST mobs\!$" script="gq_mob_killed" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^.+\w INCINERATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^You are not in a global quest\.$" script="player_not_on_gq" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^.+\w MUTILATES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^There are no global quests running\.$" script="player_not_on_gq" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^.+\w DISEMBOWELS +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <trigger match="^Global Quest # (?<gq_id>\d{1,5}) has not yet started\.$" script="gq_check_not_yet_started" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^.+\w MASSACRES +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
+        <!-- CAMPAIGN OPERATIONS -->
+        <trigger match="^Level Taken\.{8}: \[\s+(?<level>[1-2]?\d{1,2}) \]$" script="cp_info_level_taken" name="trg_cp_info_level_taken" group="trg_campaign" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12">
+            <send>	EnableTrigger("trg_cp_info_level_taken", false) </send>
+        </trigger>
 
-	<trigger match="^.+\w DISMEMBERS +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w RENDS +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w - BLASTS - +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w -= DEMOLISHES =- +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w \*\* SHREDS \*\* +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w \*\*\*\* DESTROYS \*\*\*\* +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w \*\*\*\*\* PULVERIZES \*\*\*\*\* +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w -=- VAPORIZES -=- +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-==-> ATOMIZES <-==-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-:-> ASPHYXIATES <-:-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-\*-> RAVAGES <-\*-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <>\*<> FISSURES <>\*<> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <\*><\*> LIQUIDATES <\*><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <\*><\*><\*> EVAPORATES <\*><\*><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-=-> SUNDERS <-=-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <=-=><=-=> TEARS INTO <=-=><=-=> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <->\*<=> WASTES <=>\*<-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-\+-><-\*-> CREMATES <-\*-><-\+-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <\*><\*><\*><\*> ANNIHILATES <\*><\*><\*><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <--\*--><--\*--> IMPLODES <--\*--><--\*--> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-><-=-><-> EXTERMINATES <-><-=-><-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-==-><-==-> SHATTERS <-==-><-==-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <\*><-:-><\*> SLAUGHTERS <\*><-:-><\*> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-\*-><-><-\*-> RUPTURES <-\*-><-><-\*-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-\*-><\*><-\*-> NUKES <-\*-><\*><-\*-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w -<\[=-\+-=\]<:::<>:::> GLACIATES <:::<>:::>\[=-\+-=\]>- +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-=-><-:-\*-:-><\*--\*> METEORITES <\*--\*><-:-\*-:-><-=-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w <-:-><-:-\*-:-><-\*-> SUPERNOVAS <-\*-><-:-\*-:-><-:-> +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w does UN\w+ things to +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w damages? +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +shreds +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +destroys +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +pulverizes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +vaporizes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +atomizes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +asphyxiates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +ravages +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +fissures +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +liquidates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +evaporates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +sunders +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +into +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +wastes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +cremates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +annihilates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +implodes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +exterminates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +shatters +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +slaughters +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +ruptures +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +nukes +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +glaciates +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +meteorites +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^.+\w +supernovas +(?<mob_name>\S.*)[!\.] \[\d+\]$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-	<trigger match="^(?:You assassinate |You catch |You attempt to bury .* deep into |You lunge at)(?<mob_name>.*)(?: with cold efficiency\.| completely off-guard and inflict massive damage on .*\.|'s? back!|with a .*!)$"
-		script="trigger_damage_done" ignore_case="y"  enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" > </trigger>
-
-<!-- Gquest operations -->
-	<!-- group: trg_gq -->
-	<trigger match="^Quest Name\.\.\.\.\.\.\.\.\.: \[ Global quest # (?<gq_id>\d{1,5}) \]$"
-		script="gq_info_quest_name"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-
-	<trigger match="^---------------------------------------------------------------------------$"
-		script="gq_info_end"
-		group="trg_gq_info"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-
-	<trigger match="^Quest Status\.\.\.\.\.\.\.: \[ Extended \]$"
-		script="gq_info_extended"
-		group="trg_gq_info"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-
-	<trigger match="^Quest Status\.\.\.\.\.\.\.: \[ Finished \]$"
-		script="gq_info_finished"
-		group="trg_gq_info"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-
-	<trigger match="^Level range\.\.\.\.\.\.\.\.: \[\s+(?<minlvl>\d{1,3}) \] - \[\s+(?<maxlvl>\d{1,3}) \]$"
-		script="gq_info_level_range"
-		group="trg_gq_info"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-
-	<trigger match="^Kill at least (?<qty>\d) \* (?<target>.+)\.$"
-		script="gq_info_line"
-		group="trg_gq_info"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-
-	<trigger match="^You still have to kill (?<qty>[1-3]) \* (?<target>.+)$"
-		script="gq_check_line"
-		name="trg_gq_check_line" group="trg_gq_check"
-		enabled="n"	regexp="y" sequence="500" keep_evaluating="y" omit_from_output="y" send_to="12" >
-			<send>	EnableTrigger("trg_gq_check_end", true) </send> </trigger>
-
-	<trigger match="^(?!You still have to kill [1-3] \* .+ \(\S.+?(?: - Dead)?\))$"
-		script="gq_check_end"
-		name="trg_gq_check_end" group="trg_gq_check"
-		enabled="n"	regexp="y" sequence="500" keep_evaluating="y" omit_from_output="n" send_to="12" > </trigger>
-
-	<!-- gq messages to always listen for -->
-	<trigger match="^You have now joined Global Quest # (?<gq_id>\d{1,5})\. See 'help gquest' for available commands\.$"
-		script="gqmsg_joined"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-
-	<trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,5}) for levels (?<min_lvl>\d{1,3}) to (?<max_lvl>\d{1,3})(?: - (?:200|10) or fewer wins only)? has now started\.$"
-		script="gqmsg_started"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-
-	<!-- gq messages to only listen for when in a gquest -->
-	<trigger match="^You have finished this global quest\.$"
-		script="player_not_on_gq"
-		name="trg_gq_finished_extended" 	group="trg_gqmsg"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-
-	<trigger match="^Global Quest: Global Quest # (?<gq_id>\d{1,5}) has been won by (?<winner>[A-Z][A-Za-z]+) - \d*(?:1st|2nd|3rd|\dth) win\.$"
-		script="gqmsg_winner"
-		name="trg_gqmsg_winner" 			group="trg_gqmsg"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-
-	<trigger match="^Global Quest: Global Quest # (?<gq_id>\d{1,5}) will go into extended time for 5 more minutes\.$"
-		script="gqmsg_extended_time"
-		name="trg_gqmsg_extended_time" 		group="trg_gqmsg_ext"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-
-	<trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,5})(?: \(extended\))? is now over\.$"
-		script="gq_ended"
-		name="trg_gqmsg_extended_end" 		group="trg_gqmsg"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-
-	<trigger match="^Global Quest: Global quest # (?<gq_id>\d{1,5}) has been cancelled due to lack of activity\.$"
-		script="gq_ended"
-		name="trg_gqmsg_extended_end2" 		group="trg_gqmsg"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-
-	<trigger match="^You are no longer part of Global Quest # (?<gq_id>\d{1,5}) and will be unable to rejoin\.$"
-		script="player_not_on_gq"
-		name="trg_gqmsg_quit" 				group="trg_gqmsg"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-
-	<trigger match="^Congratulations, that was one of the GLOBAL QUEST mobs\!$"
-		script="gq_mob_killed"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-
-	<trigger match="^You are not in a global quest\.$"
-		script="player_not_on_gq"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-
-	<trigger match="^There are no global quests running\.$"
-		script="player_not_on_gq"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-
-	<trigger match="^Global Quest # (?<gq_id>\d{1,5}) has not yet started\.$"
-		script="gq_check_not_yet_started"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
-
-<!-- CAMPAIGN OPERATIONS -->
-	<trigger match="^Level Taken\.{8}: \[\s+(?<level>[1-2]?\d{1,2}) \]$"
-		script="cp_info_level_taken"
-		name="trg_cp_info_level_taken" group="trg_campaign"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
-			<send>	EnableTrigger("trg_cp_info_level_taken", false) </send> </trigger>
-
-	<trigger match="^The targets for this campaign are:$"
-		script=""
-		name="trg_cp_info_targets" group="trg_campaign"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
-			<send>	EnableTrigger("trg_cp_info_targets", false)
+        <trigger match="^The targets for this campaign are:$" script="" name="trg_cp_info_targets" group="trg_campaign" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12">
+            <send>	EnableTrigger("trg_cp_info_targets", false)
 					EnableTrigger("trg_cp_info_line", true)
-					EnableTrigger("trg_cp_info_end", true) </send> </trigger>
+					EnableTrigger("trg_cp_info_end", true) </send>
+        </trigger>
 
-	<trigger match="^Find and kill 1 \* (?<target>.+)$"
-		script="cp_info_line"
-		name="trg_cp_info_line" group="trg_campaign"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^Find and kill 1 \* (?<target>.+)$" script="cp_info_line" name="trg_cp_info_line" group="trg_campaign" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^(?!Find and kill 1 \* .+ \(.+\))$"
-		script="cp_info_end"
-		name="trg_cp_info_end" group="trg_campaign"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" >
-			<send>	EnableTrigger("trg_cp_info_line", false)
-					EnableTrigger("trg_cp_info_end", false) </send> </trigger>
+        <trigger match="^(?!Find and kill 1 \* .+ \(.+\))$" script="cp_info_end" name="trg_cp_info_end" group="trg_campaign" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12">
+            <send>	EnableTrigger("trg_cp_info_line", false)
+					EnableTrigger("trg_cp_info_end", false) </send>
+        </trigger>
 
-	<trigger match="^You still have to kill \* (?<target>.+)$"
-		script="cp_check_line"
-		name="trg_cp_check_line" group="trg_campaign"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12" >
-			<send>	EnableTrigger("trg_cp_check_end", true)</send> </trigger>
+        <trigger match="^You still have to kill \* (?<target>.+)$" script="cp_check_line" name="trg_cp_check_line" group="trg_campaign" enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12">
+            <send>	EnableTrigger("trg_cp_check_end", true)</send>
+        </trigger>
 
 
-	<trigger match="^(?!You still have to kill \* .+ \(.+?(?: - Dead)?\))$"
-		script="cp_check_end"
-		name="trg_cp_check_end" group="trg_campaign"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12" >
-			<send>	EnableTrigger("trg_cp_check_gag_dead", true)
+        <trigger match="^(?!You still have to kill \* .+ \(.+?(?: - Dead)?\))$" script="cp_check_end" name="trg_cp_check_end" group="trg_campaign" enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12">
+            <send>	EnableTrigger("trg_cp_check_gag_dead", true)
 					EnableTrigger("trg_cp_check_line", false)
-					EnableTrigger("trg_cp_check_end", false) </send> </trigger>
+					EnableTrigger("trg_cp_check_end", false) </send>
+        </trigger>
 
-	<trigger match="^Note: Dead means that the target is dead, not that you have killed it\.$"
-		name="trg_cp_check_gag_dead" group="trg_campaign"
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12" >
-			<send>	EnableTrigger("trg_cp_check_gag_dead", false) </send> </trigger>
+        <trigger match="^Note: Dead means that the target is dead, not that you have killed it\.$" name="trg_cp_check_gag_dead" group="trg_campaign" enabled="y" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" send_to="12">
+            <send>	EnableTrigger("trg_cp_check_gag_dead", false) </send>
+        </trigger>
 
-<!-- CAMPAIGN STATUS TRACKING -->
-	<trigger match="^Congratulations, that was one of your CAMPAIGN mobs\!$"
-		script="cp_mob_killed"
-		name="trg_cp_mob_killed" 	group="trg_cp_2"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <!-- CAMPAIGN STATUS TRACKING -->
+        <trigger match="^Congratulations, that was one of your CAMPAIGN mobs\!$" script="cp_mob_killed" name="trg_cp_mob_killed" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^CONGRATULATIONS\! You have completed your campaign\.$"
-		script="do_cp_complete"
-		name="trg_cp_complete" 		group="trg_cp_2"
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y"> </trigger>
+        <trigger match="^CONGRATULATIONS\! You have completed your campaign\.$" script="do_cp_complete" name="trg_cp_complete" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^Campaign cleared\.$"
-		script="player_not_on_cp"
-		name="trg_cp_quit" 			group="trg_cp_2"
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <trigger match="^Campaign cleared\.$" script="do_cp_quit" name="trg_cp_quit" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^\w.+ tells you 'Good luck in your campaign\!'$"
-		script="player_start_new_cp"
-		name="trg_cp_request" 		group="trg_cp_2"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^\w.+ tells you 'Good luck in your campaign\!'$" script="player_start_new_cp" name="trg_cp_request" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^You are not currently on a campaign\.$"
-		script="player_not_on_cp"
-		name="trg_player_not_on_cp" group="trg_cp_2"
-		enabled="y"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^You are not currently on a campaign\.$" script="player_not_on_cp" name="trg_player_not_on_cp" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^(?:(?:## )?You may now take another campaign\.|You may take (?:a campaign at this level|another campaign)\.)$"
-		script="cp_check_can_get_new_cp"
-		name="trg_can_get_new_cp" group="trg_cp_2"
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <trigger match="^(?:(?:## )?You may now take another campaign\.|You may take (?:a campaign at this level|another campaign)\.)$" script="cp_check_can_get_new_cp" name="trg_can_get_new_cp" group="trg_cp_2" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^You (?:will have to level before you can go on another campaign|cannot take another campaign for (?:(?:\d+ hours?, )?\d+ minutes? and )?\d+ seconds?)\.$"
-		name="trg_cannot_get_new_cp" group="trg_cp_2"
-		script="cp_check_cannot_get_new_cp"
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <trigger match="^You (?:will have to level before you can go on another campaign|cannot take another campaign for (?:(?:\d+ hours?, )?\d+ minutes? and )?\d+ seconds?)\.$" name="trg_cannot_get_new_cp" group="trg_cp_2" script="cp_check_cannot_get_new_cp" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^You use a daily blessing campaign reset token to reset your campaign\.$"
-		name="trg_cp_reset_token" group="trg_cp_2"
-		script=""
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="n" send_to="12" > </trigger>
+        <trigger match="^You use a daily blessing campaign reset token to reset your campaign\.$" name="trg_cp_reset_token" group="trg_cp_2" script="" enabled="y" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="n" send_to="12"></trigger>
 
-<!-- QUICK WHERE -->
-	<trigger match="^(?<mobname>.{30}) (?<roomname>[^ (0-9].*)$"
-		script="qw_match"
-		name="trg_quick_where_match" group="QuickWhere"
-		enabled="n"	regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <!-- QUICK WHERE -->
+        <trigger match="^(?<mobname>.{30}) (?<roomname>[^ (0-9].*)$" script="qw_match" name="trg_quick_where_match" group="QuickWhere" enabled="n" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^There is no \w.+ around here\.$"
-		script="qw_no_match"
-		name="trg_quick_where_no_match" group="QuickWhere"
-		enabled="n"	regexp="y" sequence="50" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^There is no \w.+ around here\.$" script="qw_no_match" name="trg_quick_where_no_match" group="QuickWhere" enabled="n" regexp="y" sequence="50" keep_evaluating="y" send_to="12"></trigger>
 
-<!-- HUNT TRICK -->
-	<trigger match="^You are (?:almost )?certain that \w.+ is (?:north|south|east|west|up|down) from here\.|You are confident that \w.+ passed through here, heading (?:north|south|east|west|up|down)\.|The trail of \w.+ is confusing, but you're reasonably sure \w.+ headed (?:north|south|east|west|up|down)\.|There are traces of \w.+ having been here. Perhaps they lead (?:north|south|east|west|up|down)\?|You have no idea what you\'re doing\, but maybe \w.+ is (?:north|south|east|west|up|down)\?|You couldn\'t find a path to \w.+ from here\.|\w.+ is here\!$"
-		script="ht_continue"
-		name="trg_hunt_trick_continue_dir" group="HuntTrick"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <!-- HUNT TRICK -->
+        <trigger match="^You are (?:almost )?certain that \w.+ is (?:north|south|east|west|up|down) from here\.|You are confident that \w.+ passed through here, heading (?:north|south|east|west|up|down)\.|The trail of \w.+ is confusing, but you're reasonably sure \w.+ headed (?:north|south|east|west|up|down)\.|There are traces of \w.+ having been here. Perhaps they lead (?:north|south|east|west|up|down)\?|You have no idea what you\'re doing\, but maybe \w.+ is (?:north|south|east|west|up|down)\?|You couldn\'t find a path to \w.+ from here\.|\w.+ is here\!$" script="ht_continue" name="trg_hunt_trick_continue_dir" group="HuntTrick" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^You are (?:almost )?certain that \w.+ is through .+\.|You are confident that \w.+ passed through here, heading through .+\.|The trail of \w.+ is confusing, but you're reasonably sure \w.+ headed through .+\.|There are traces of \w.+ having been here\. Perhaps they lead through \w.+\?|You have no idea which way \w.+ went\.$"
-		script="ht_continue"
-		name="trg_hunt_trick_continue_portal" group="HuntTrick"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^You are (?:almost )?certain that \w.+ is through .+\.|You are confident that \w.+ passed through here, heading through .+\.|The trail of \w.+ is confusing, but you're reasonably sure \w.+ headed through .+\.|There are traces of \w.+ having been here\. Perhaps they lead through \w.+\?|You have no idea which way \w.+ went\.$" script="ht_continue" name="trg_hunt_trick_continue_portal" group="HuntTrick" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^You seem unable to hunt that target for some reason\.$"
-		script="ht_complete"
-		name="trg_hunt_trick_complete" group="HuntTrick"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^You seem unable to hunt that target for some reason\.$" script="ht_complete" name="trg_hunt_trick_complete" group="HuntTrick" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^\w.+ is here\!$"
-		name="trg_hunt_trick_continue_2" group="HuntTrick"
-		script="ht_continue"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^\w.+ is here\!$" name="trg_hunt_trick_continue_2" group="HuntTrick" script="ht_continue" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^No one in this area by the name '\w.+'\.$"
-		name="trg_hunt_trick_fail" group="HuntTrick"
-		script="ht_fail"
-		enabled="n" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <trigger match="^No one in this area by the name '\w.+'\.$" name="trg_hunt_trick_fail" group="HuntTrick" script="ht_fail" enabled="n" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^Not while you are fighting\!|You can't hunt while (?:resting|sitting)\.|You dream about going on a nice hunting trip, with pony rides, and campfires too\.$"
-		name="trg_hunt_trick_abort" group="HuntTrick"
-		script="ht_abort"
-		enabled="n" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <trigger match="^Not while you are fighting\!|You can't hunt while (?:resting|sitting)\.|You dream about going on a nice hunting trip, with pony rides, and campfires too\.$" name="trg_hunt_trick_abort" group="HuntTrick" script="ht_abort" enabled="n" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-<!--  AUTO HUNT -->
-	<trigger match="^You are (?:almost )?certain that (?<mob>\w.+) is (?<dir>north|south|east|west|up|down) from here\.$"
-		script="auto_hunt_next"
-		name="trg_autohunt_next_1" group="AutoHunt"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <!--  AUTO HUNT -->
+        <trigger match="^You are (?:almost )?certain that (?<mob>\w.+) is (?<dir>north|south|east|west|up|down) from here\.$" script="auto_hunt_next" name="trg_autohunt_next_1" group="AutoHunt" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^You are confident that (?<mob>.+) passed through here\, heading (?<dir>north|south|east|west|up|down)\.$"
-		script="auto_hunt_next"
-		name="trg_autohunt_next_2" group="AutoHunt"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^You are confident that (?<mob>.+) passed through here\, heading (?<dir>north|south|east|west|up|down)\.$" script="auto_hunt_next" name="trg_autohunt_next_2" group="AutoHunt" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^The trail of \w.+ is confusing, but you\'re reasonably sure .+ headed (?:north|south|east|west|up|down)\.|There are traces of \w.+ having been here\. Perhaps they lead (?:north|south|east|west|up|down)\?|You have no idea what you\'re doing, but maybe \w.+ is (?:north|south|east|west|up|down)\?$"
-		script="auto_hunt_lowskill"
-		name="trg_autohunt_lowskill" group="AutoHunt"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^The trail of \w.+ is confusing, but you\'re reasonably sure .+ headed (?:north|south|east|west|up|down)\.|There are traces of \w.+ having been here\. Perhaps they lead (?:north|south|east|west|up|down)\?|You have no idea what you\'re doing, but maybe \w.+ is (?:north|south|east|west|up|down)\?$" script="auto_hunt_lowskill" name="trg_autohunt_lowskill" group="AutoHunt" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^You are (?:almost )?certain that \w.+ is through .+\.|You are confident that \w.+ passed through here, heading through .+\.|The trail of \w.+ is confusing, but you're reasonably sure \w.+ headed through .+\.|There are traces of \w.+ having been here\. Perhaps they lead through .+\?|You have no idea what you\'re doing\, but maybe \w.+ is through .+\?$"
-		script="auto_hunt_portal"
-		name="trg_autohunt_portal" group="AutoHunt"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^You are (?:almost )?certain that \w.+ is through .+\.|You are confident that \w.+ passed through here, heading through .+\.|The trail of \w.+ is confusing, but you're reasonably sure \w.+ headed through .+\.|There are traces of \w.+ having been here\. Perhaps they lead through .+\?|You have no idea what you\'re doing\, but maybe \w.+ is through .+\?$" script="auto_hunt_portal" name="trg_autohunt_portal" group="AutoHunt" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^No one in this area by the name '\w.+'\.|You couldn\'t find a path to \w.+ from here\.|No one in this area by that name\.|Not while you are fighting\!|You can't hunt while (?:resting|sitting)\.|You dream about going on a nice hunting trip, with pony rides, and campfires too\.$"
-		script="auto_hunt_abort"
-		name="trg_autohunt_abort" group="AutoHunt"
-		enabled="n" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <trigger match="^No one in this area by the name '\w.+'\.|You couldn\'t find a path to \w.+ from here\.|No one in this area by that name\.|Not while you are fighting\!|You can't hunt while (?:resting|sitting)\.|You dream about going on a nice hunting trip, with pony rides, and campfires too\.$" script="auto_hunt_abort" name="trg_autohunt_abort" group="AutoHunt" enabled="n" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^You seem unable to hunt that target for some reason\.$"
-		script="auto_hunt_abort"
-		name="trg_hunt_trick" group="AutoHunt"
-		enabled="n" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <trigger match="^You seem unable to hunt that target for some reason\.$" script="auto_hunt_abort" name="trg_hunt_trick" group="AutoHunt" enabled="n" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^\w.+ is here\!$"
-		script="auto_hunt_complete"
-		name="trg_autohunt_complete" group="AutoHunt"
-		enabled="n" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <trigger match="^\w.+ is here\!$" script="auto_hunt_complete" name="trg_autohunt_complete" group="AutoHunt" enabled="n" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^Magical wards around \w.+ bounce you back\.$"
-		name="trg_autohunt_nopass" group="AutoHunt"
-		script="auto_hunt_door"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^Magical wards around \w.+ bounce you back\.$" name="trg_autohunt_nopass" group="AutoHunt" script="auto_hunt_door" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^The \w.+ is closed\.$"
-		name="trg_autohunt_door" group="AutoHunt"
-		script="auto_hunt_door"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^The \w.+ is closed\.$" name="trg_autohunt_door" group="AutoHunt" script="auto_hunt_door" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^You do not have a key for \w.+\.$"
-		name="trg_autohunt_no_key" group="AutoHunt"
-		script="auto_hunt_abort"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^You do not have a key for \w.+\.$" name="trg_autohunt_no_key" group="AutoHunt" script="auto_hunt_abort" enabled="n" regexp="y" sequence="100"></trigger>
 
-	<trigger match="^You open \w.+\.$"
-		name="trg_autohunt_door_open" group="AutoHunt"
-		script="auto_hunt_door_open"
-		enabled="n" regexp="y" sequence="100" > </trigger>
+        <trigger match="^You open \w.+\.$" name="trg_autohunt_door_open" group="AutoHunt" script="auto_hunt_door_open" enabled="n" regexp="y" sequence="100"></trigger>
 
-<!-- AUTO SET NOEXP -->
-	<trigger match="^You will no longer receive experience\. Happy questing\!$"
-		script="anex_automatic_off"
-		name="trg_anex_automatic_off"
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <!-- AUTO SET NOEXP -->
+        <trigger match="^You will no longer receive experience\. Happy questing\!$" script="anex_automatic_off" name="trg_anex_automatic_off" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^You will now receive experience\. Happy leveling\!$"
-		script="anex_automatic_on"
-		name="trg_anex_automatic_on"
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y" > </trigger>
+        <trigger match="^You will now receive experience\. Happy leveling\!$" script="anex_automatic_on" name="trg_anex_automatic_on" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-	<trigger match="^You (?:don't )?receive (\d+)(?:\+\d+)? experience points?\.$"
-		script="anex_mobdeath_xp1"
-		name="trg_anex_mobdeath_xp1"
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12" > </trigger>
+        <trigger match="^You (?:don't )?receive (\d+)(?:\+\d+)? experience points?\.$" script="anex_mobdeath_xp1" name="trg_anex_mobdeath_xp1" enabled="y" regexp="y" sequence="100" keep_evaluating="y" send_to="12"></trigger>
 
-	<trigger match="^You raise a level\! You are now level \d+\.$"
-		script="player_level_up"
-		name="trg_player_level_up"
-		enabled="y" regexp="y" sequence="100" keep_evaluating="y"> </trigger>
+        <trigger match="^You raise a level\! You are now level \d+\.$" script="player_level_up" name="trg_player_level_up" enabled="y" regexp="y" sequence="100" keep_evaluating="y"></trigger>
 
-<!-- AREA INDEX PROCESS -->
-	<trigger match="^              \[ Listing all areas in range 1 to 300 \]$"
-		script="area_index_start"
-		name="trg_area_index_start" group="AreaIndex"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" >
-			<send>	EnableTrigger("trg_area_index_gag_headers", true)
+        <!-- AREA INDEX PROCESS -->
+        <trigger match="^              \[ Listing all areas in range 1 to 300 \]$" script="area_index_start" name="trg_area_index_start" group="AreaIndex" enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12">
+            <send>	EnableTrigger("trg_area_index_gag_headers", true)
 					EnableTrigger("trg_area_index_gag_header_lines", true)
 					EnableTrigger("trg_area_index_line", true)
 					EnableTrigger("trg_area_index_gag_lock_means", true)
-					EnableTrigger("trg_area_index_end", true) </send> </trigger>
-
-	<trigger match="^From To   Lock  Keyword          Area Name                      $"
-		name="trg_area_index_gag_headers" group="AreaIndex"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" >
-			<send>	EnableTrigger("trg_area_index_gag_headers", false) </send> </trigger>
-
-	<trigger match="^---- ---- ----  ---------------  ------------------------------$"
-		name="trg_area_index_gag_header_lines" group="AreaIndex"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" >
-			<send>	EnableTrigger("trg_area_index_gag_header_lines", false) </send> </trigger>
-
-	<trigger match="^\s+(?<min>\d+)\s+(?<max>\d+)\s+(?<lock>\d+)?\s+?(?<arid>[0-9a-z]+?)\s+(?<areaName>[A-Z].+?)$"
-		script="area_index_line"
-		name="trg_area_index_line" group="AreaIndex"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^'Lock' means you cannot enter until you are that level or higher\.$"
-		name="trg_area_index_gag_lock_means" group="AreaIndex"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" >
-			<send>	EnableTrigger("trg_area_index_gag_lock_means", false) </send> </trigger>
-
-	<trigger match="^---------------------------------------------------------------$"
-		script="area_index_end"
-		name="trg_area_index_end" group="AreaIndex"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" keep_evaluating="y" send_to="12" >
-			<send>	EnableTrigger("trg_area_index_line", false)
-					EnableTrigger("trg_area_index_end", false) </send> </trigger>
-
-<!-- Consider -->
-
-	<trigger match="^(?<name>.+) has divine protection\.$"
-		script="consider_unkillable" name="consider_protected" group="consider"
-		enabled="y" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
-
-	<trigger match="^If you killed (?<name>.+), who would serve .+ customers\?$"
-		script="consider_unkillable" name="consider_shopkeeper" group="consider"
-		enabled="y" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
-
-	<trigger match="^$"
-		name="consider_end"
-		group="consider_end"
-		script="consider_end"
-		enabled="n" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
-
-	<trigger match="^(?:You see no one here but yourself!|Strange forces prevent violence here\.)$"
-		name="consider_end_empty"
-		group="consider_end"
-		script="consider_end"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-<!-- Scan -->
-	<trigger match="^Tag option scan turned ON$"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="{scan}"
-		script="scan_start"
-		enabled="y" regexp="n" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="{/scan}"
-		script="scan_end"
-		enabled="y" regexp="n" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^Right here you see:$"
-		script="scan_location_current_room"
-		group="scan"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^(\d )?(North|East|South|West|Up|Down) from here you see:$"
-		script="scan_location_nearby_room"
-		group="scan"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^You see .+\.$"
-		script="scan_door_nearby"
-		group="scan"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^Nothing to see around here, might as well move on\.$"
-		script="scan_empty"
-		group="scan"
-		enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-<!-- Roomchars -->
-	<trigger match="^Tag option roomchars turned ON$"
-		enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="{roomchars}"
-		script="roomchars_start"
-		enabled="y" regexp="n" sequence="50" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="{/roomchars}"
-		script="roomchars_end"
-		enabled="y" regexp="n" sequence="50" omit_from_output="y" send_to="12" > </trigger>
-
-	<trigger match="^.+$"
-		script="roomchars" name="roomchars"
-		enabled="n" regexp="y" sequence="100" omit_from_output="n" send_to="12" > </trigger>
-
-<!-- PAGE SIZE -->
-	<trigger match="^You currently display ([0-9]+) lines per page\.|You do not page long messages\.$"
-		script="capture_page_size"
-		name="trg_capture_page_size"
-		enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output = "y" > </trigger>
-
-	<trigger match="^Use 'pagesize \<lines\>' to change, or 'pagesize 0' to disable paging\.$"
-		script=""
-		name="trg_pagesize_gag_1"
-		enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output = "y" send_to="12" >
-			<send>	EnableTrigger("trg_pagesize_gag_1", false) </send> </trigger>
-
-<!-- Misc. gag triggers -->
-	<trigger match="^Players found: \[\d+\], Max this reboot: \[\d+\], Connections this reboot: \[\d+\]$"
-		name="trg_gag_who_footer_1"
-		enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" > </trigger>
-
-	<trigger match="^Players invis: \[\d+\], Max on ever: \[\d+\]$"
-		name="trg_gag_who_footer_2"
-		enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y" > </trigger>
-
-	<trigger match="^[\s\S]*$"
-		name="trg_gag_everything"
-		enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="y" > </trigger>
-</triggers>
-
-<aliases>
-<!-- Plugin Update automatic -->
-	<alias enabled="y" match="snd update" script="update_plugin" sequence="100">
-	</alias>
-	<alias enabled="y" match="^(?:xhelp|snd help)(?:\s(?<search>.*))?$" regexp="y" script="onHelp" sequence="100">
-	</alias>
-
-	<alias enabled="y" match="^snd force update(?: (?<branch>\S+))?$" script="force_update_plugin" regexp="y" sequence="100">
-	</alias>
-
-	<alias enabled="y" match="snd check_update" script="toggle_automatic_update_checking" sequence="100">
-	</alias>
-
-	<alias enabled="y" match="^xset silent(?: (on|off))?" regexp="y" script="xset_silentMode" sequence="100">
-	</alias>
-
-<!-- Auto-hunt commands-->
-	<alias	match="^ah (?<arg>\w.+)$"
-			script="auto_hunt"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^(?:aha|ah0)$"
-			script="auto_hunt_abort"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-	
-	<alias	match="^ah$"
-			script="auto_hunt_noarg"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- campaign data input: cp info, check -->
-	<alias	match="^cp (?:i|info)$"
-			script="do_cp_info"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^cp (?:ch|check)$"
-			script="do_cp_check"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- gquest data input: gq info, check -->
-	<alias	match="^gq i(?:n(?:fo?)?)?$"
-			script="do_gq_info"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^(?:gg|qq)$"
-			script="do_gq_check"
-			name="extra_gq_check_aliases"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^(?:gq (?:c|ch|check))$"
-			script="do_gq_check"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- xcp commands  -->
-	<alias	match="^xcp$"
-			script="xcp_noarg"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xcp (?<index>[0-9]+)$"
-			script="xcp_arg"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xcp mode(?: (?<option>ht|qw|off))?$"
-			script="xcp_set_action_mode"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xcp q(uest)?$"
-		script="xcp_toggle_quest_targeting"
-		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- movement: xrunto, go, nx, etc.  -->
-	<alias	match="^(?:xrt|xrun|xrunto) (?<destination>.+)$"
-			script="xrun_to_alias"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^(?:go|goto)( (?<index>[0-9]+))?$"
-			script="goto_number"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" keep_evaluating="y" > </alias>
-
-	<alias	match="^nx$"
-			script="goto_next"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^nx-$"
-			script="goto_previous"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- Automatic noexp -->
-	<alias	match="^xset noexp( (?<arg>off|[0-9]+))?$"
-			script="xset_noexp_tnl"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- Quest commands -->
-	<alias	match="^(?:xq|xq1)$"
-			script="xq_command"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xqt$"
-			script="retarget_quest"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- Quick scan -->
-	<alias	match="^qs$"
-			script="quick_scan"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- Quick-kill commands: qk, ak, kk, xset attack -->
-	<alias	match="^(?:quick kill|ak|kk|qk)$"
-			script="quick_kill"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset (?:kk|ak|qk|qkill)(?: (?<arg>.+))?$"
-			script="xset_quick_kill_command"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- Hunt trick -->
-	<alias	match="^ht$"
-			script="ht_noarg"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^ht (?:(?<index>\d+)\.)?(?<mob>.+)?$"
-			script="ht_arg"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^ht(?:a|0| abort| stop)$"
-			script="ht_abort"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- Quick where -->
-	<alias	match="^qw$"
-			script="qw_noarg"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^qw (?:(?<index>\d+)\.)?(?<mob>.+)?$"
-			script="qw_arg_alias"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^qwx$"
-			script="qw_exact"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- roomnotes -->
-	<alias	match="^(?:roomnote|rn)$"
-			script="room_note"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^(?:roomnote|rn) a(?:rea)?(?: (?<arid>.+))?$"
-			script="room_note_area"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^(?:roomnote|rn) (?<roomid>\d+)$"
-			script="room_note_room"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- Sql Execution -->
-	<alias	match="^runsql (?<sql>.+)$"
-			script="RunSql"
-			enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^execsql (?<sql>.+)$"
-			script="ExecSql"
-			enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12" > </alias>
-
-<!-- xmapper  -->
-	<alias	match="^(?:xmap|xmapper) move (?<roomid>\d+|-1)(?: (?<speed>run|walk))?$"
-			script="xmapper_move"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xm(?:\ {(?<mob>[^\}]+)\})? (?<loc>.+)$"
-			script="map_area"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xmall(?:\ {(?<mob>[^\}]+)\})? (?<loc>.+)$"
-			script="map_area_all"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^(?:xm|xmap|xmapper) rlh(?: (?<room_id>\d+))?$"
-			script="xmap_rooms_linking_here"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- xset commands -->
-	<alias  match="^xset (?:index areas|area index)$"
-			script="area_index_process"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset (?:mark|start)(?:\s(\w+))?(?:\s(\d+))?$"
-			script="xset_to_mark"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias  match="^xset gqalias$"
-			script="xset_gqalias"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias  match="^xset vidblain$"
-			script="xset_vidblain"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias  match="^xset vidblain level(?: (?<level>\d{1,3}))?$"
-			script="xset_vidblain_setlevel"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias  match="^xset speed ?(?<speed>run|walk)?$"
-			script="set_speed"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset sendecho$"
-			script=""
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset kw$"
-		script="set_mob_keyword"
-		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset kw (?<keyword>.+)$"
-		script="set_current_mob_keyword"
-		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset nx$"
-		script="xset_nx_check"
-		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset nx (?<action>smartscan|con|scan|scanhere|qs|none)$"
-		script="xset_nx"
-		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias  match="^xset con_overwrite"
-		script="xset_con_overwrite"
-		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset sound$"
-		script="xset_sound"
-		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset table notes$"
-		script="xset_table_notes"
-		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset table width (?<width>\d{2,3})$"
-		script="xset_table_width"
-		enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- xset window commands -->
-	<alias	match="^xset fontsize.*$"
-			script="deprecated_xset_font_size"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset linespace.*$"
-			script="deprecated_xset_line_space"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset winreset$"
-			script="xg_create_window"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" >
-				<send>	win_init = false	</send> </alias>
-
-	<alias	match="^xset (?:window|win) (?<onoff>on|off|show|hide|0|1|true|false|max(?:imize)?|expand|min(?:imize)?|collapse)$"
-			script="xset_ToggleWindowDisplay"
-			enabled="y" regexp="y" sequence="100" > </alias>
-
-	<alias	match="^(?:xw|xwh|xwhere)( (?<n1>\d+))?( (?<n2>\d+))?( (?<mob>.+))?$"
-			script="do_xwhere"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^(?:xg|xgui) (?:ref|refresh)$"
-			script="xgui_RefreshLinks"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" > </alias>
-
-	<alias	match="^(?:xg|xgui) (?:rel|reload)$"
-			script="xgui_ReloadLinks"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" > </alias>
-
-<!-- xset page size (area index process) -->
-	<alias	match="^xset suspend page size$"
-			script="suspend_page_size"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xset resume page size$"
-			script="resume_page_size"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- xtest commands -->
-	<alias  match="^xtest areadata$"
-			script="xtest_areadata"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest mcvars$"
-			script="xtest_mcvars"
-			enabled="y" regexp="y" sequence="100" > </alias>
-
-	<alias	match="^xtest roomhist$"
-			script="xtest_roomhist"
-			enabled="y" regexp="y" sequence="100" > </alias>
-
-	<alias	match="^xtest simulate cp(?: (?<type>area|room))?$"
-			script="simulate_cp"
-			enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate level (?<level>\d{1,3})$"
-			script="spoof_level"
-			enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate q(?:uest)?(?: (?<status>start|status|killed|comp|fail|reset|ready|timeout|statkilled|wait|ready))?$"
-			script="simulate_quest"
-			enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest debug gq(uest)?$"
-			script="xtest_debug_gquest"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate gq wait(?: (?<num>\d{1,5}))?$"
-			script="xtest_gq_waiting"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate gq start(?: (?<type>area|room))?(?: (?<num>\d{1,5}))?$"
-			script="xtest_gq_start"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate gq join (?<num>\d{1,5})(?: (?<silent>s))?$"
-			script="xtest_gq_join"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate gq end(?: (?<num>\d{1,5}))?$"
-			script="xtest_gq_end"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate gq win(?: (?<num>\d{1,5}))?$"
-			script="xtest_gq_win"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate gq lose(?: (?<num>\d{1,5}))?(?<noextend> noextended)$"
-			script="xtest_gq_lose"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate gq kill(?: (?<num>\d+))?$"
-			script="xtest_gq_kill"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate gq quit(?: (?<num>\d{1,5}))?$"
-			script="xtest_gq_quit"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest simulate xcp(?: (?<num>\d+))?$"
-			script="xtest_xcp"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias  match="^xtest gqid$"
-			script="echo_gqid_joined"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest loadroom(?: (?<roomid>\d+))?$"
-			script="xtest_loadroom"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest popmsg$"
-			script="xtest_popmsg"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest debug$"
-			script="xtest_debug"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest qt (?<qt>\d{1,2})$"
-			script="xtest_set_qt"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias	match="^xtest target$"
-			script="xtest_print_target"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias  match="^snd reload$"
-			script="sndReload"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-<!-- New commands -->
-	<alias	match="^x?m(?:ob)?s(?:earch)? ([\p{P}\w]+)(?:\s([^0-9]+))?(?:\s+(\d+))?$"
-			script="onSearch"
-			group="Mob_Database"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias 	match="^x?mgo(?:to)? (\d+)$"
-			script="mobGo"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias 	match="^(snd migrate|mergePwar)$"
-			script="copyPwarWarn"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-	<alias 	match="^(snd migrate|mergePwar) confirm$"
-			script="copyPwarDB"
-			enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
-
-
-	<alias	match="snd changelog"
-			enabled="y" sequence="100" ignore_case="y" send_to="12" >
-			<send>get_changelog(true)</send> </alias>
-</aliases>
+					EnableTrigger("trg_area_index_end", true) </send>
+        </trigger>
+
+        <trigger match="^From To   Lock  Keyword          Area Name                      $" name="trg_area_index_gag_headers" group="AreaIndex" enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12">
+            <send>	EnableTrigger("trg_area_index_gag_headers", false) </send>
+        </trigger>
+
+        <trigger match="^---- ---- ----  ---------------  ------------------------------$" name="trg_area_index_gag_header_lines" group="AreaIndex" enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12">
+            <send>	EnableTrigger("trg_area_index_gag_header_lines", false) </send>
+        </trigger>
+
+        <trigger match="^\s+(?<min>\d+)\s+(?<max>\d+)\s+(?<lock>\d+)?\s+?(?<arid>[0-9a-z]+?)\s+(?<areaName>[A-Z].+?)$" script="area_index_line" name="trg_area_index_line" group="AreaIndex" enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="^'Lock' means you cannot enter until you are that level or higher\.$" name="trg_area_index_gag_lock_means" group="AreaIndex" enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12">
+            <send>	EnableTrigger("trg_area_index_gag_lock_means", false) </send>
+        </trigger>
+
+        <trigger match="^---------------------------------------------------------------$" script="area_index_end" name="trg_area_index_end" group="AreaIndex" enabled="n" regexp="y" sequence="100" omit_from_output="y" keep_evaluating="y" send_to="12">
+            <send>	EnableTrigger("trg_area_index_line", false)
+					EnableTrigger("trg_area_index_end", false) </send>
+        </trigger>
+
+        <!-- Consider -->
+
+        <trigger match="^(?<name>.+) has divine protection\.$" script="consider_unkillable" name="consider_protected" group="consider" enabled="y" regexp="y" sequence="100" omit_from_output="n" send_to="12"></trigger>
+
+        <trigger match="^If you killed (?<name>.+), who would serve .+ customers\?$" script="consider_unkillable" name="consider_shopkeeper" group="consider" enabled="y" regexp="y" sequence="100" omit_from_output="n" send_to="12"></trigger>
+
+        <trigger match="^$" name="consider_end" group="consider_end" script="consider_end" enabled="n" regexp="y" sequence="100" omit_from_output="n" send_to="12"></trigger>
+
+        <trigger match="^(?:You see no one here but yourself!|Strange forces prevent violence here\.)$" name="consider_end_empty" group="consider_end" script="consider_end" enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <!-- Scan -->
+        <trigger match="^Tag option scan turned ON$" enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="{scan}" script="scan_start" enabled="y" regexp="n" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="{/scan}" script="scan_end" enabled="y" regexp="n" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="^Right here you see:$" script="scan_location_current_room" group="scan" enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="^(\d )?(North|East|South|West|Up|Down) from here you see:$" script="scan_location_nearby_room" group="scan" enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="^You see .+\.$" script="scan_door_nearby" group="scan" enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="^Nothing to see around here, might as well move on\.$" script="scan_empty" group="scan" enabled="n" regexp="y" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <!-- Roomchars -->
+        <trigger match="^Tag option roomchars turned ON$" enabled="y" regexp="y" sequence="100" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="{roomchars}" script="roomchars_start" enabled="y" regexp="n" sequence="50" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="{/roomchars}" script="roomchars_end" enabled="y" regexp="n" sequence="50" omit_from_output="y" send_to="12"></trigger>
+
+        <trigger match="^.+$" script="roomchars" name="roomchars" enabled="n" regexp="y" sequence="100" omit_from_output="n" send_to="12"></trigger>
+
+        <!-- PAGE SIZE -->
+        <trigger match="^You currently display ([0-9]+) lines per page\.|You do not page long messages\.$" script="capture_page_size" name="trg_capture_page_size" enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output = "y"></trigger>
+
+        <trigger match="^Use 'pagesize \<lines\>' to change, or 'pagesize 0' to disable paging\.$" script="" name="trg_pagesize_gag_1" enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output = "y" send_to="12">
+            <send>	EnableTrigger("trg_pagesize_gag_1", false) </send>
+        </trigger>
+
+        <!-- Misc. gag triggers -->
+        <trigger match="^Players found: \[\d+\], Max this reboot: \[\d+\], Connections this reboot: \[\d+\]$" name="trg_gag_who_footer_1" enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y"></trigger>
+
+        <trigger match="^Players invis: \[\d+\], Max on ever: \[\d+\]$" name="trg_gag_who_footer_2" enabled="n" regexp="y" sequence="100" keep_evaluating="y" omit_from_output="y"></trigger>
+
+        <trigger match="^[\s\S]*$" name="trg_gag_everything" enabled="n" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="y"></trigger>
+
+        <!-- History triggers -->
+         <trigger name="trigger_quest_premonition" match="^You ignore your premonition and request another quest.*$" script="trigger_quest_premonition" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n"></trigger>
+
+        <trigger name="trigger_campaign_rewards_qp" match="^Quest Points\.{7}: \[\s+(?<qp>\d+) \]$" script="trigger_campaign_rewards_qp" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
+        <trigger name="trigger_campaign_rewards_gold" match="^Gold Coins\.{9}: \[\s+(?<gold>\d+) \]$" script="trigger_campaign_rewards_gold" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
+        <trigger name="trigger_campaign_rewards_trains" match="^Training Sessions\.{2}: \[\s+(?<train>\d+) \]$" script="trigger_campaign_rewards_trains" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
+        <trigger name="trigger_campaign_rewards_practices" match="^Practice Sessions\.{2}: \[\s+(?<prac>\d+) \]$" script="trigger_campaign_rewards_practices" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
+        <trigger name="trigger_campaign_rewards_tps" match="^Trivia Points\.{6}: \[\s+(?<tp>\d+) \]$" script="trigger_campaign_rewards_tps" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
+        <trigger name="trigger_campaign_rewards_bonus_qp" match="^You receive (?<qp>\d+) quest points bonus for your first campaign completed today.$" script="trigger_campaign_rewards_bonus_qp" ignore_case="y" enabled="y" regexp="y" sequence="1" keep_evaluating="y" omit_from_output="n" group="trigger_group_campaign_rewards"></trigger>
+    </triggers>
+
+    <aliases>
+        <!-- Plugin Update automatic -->
+        <alias enabled="y" match="snd update" script="update_plugin" sequence="100">
+        </alias>
+        <alias enabled="y" match="^(?:xhelp|snd help)(?:\s(?<search>.*))?$" regexp="y" script="onHelp" sequence="100">
+        </alias>
+
+        <alias enabled="y" match="^snd force update(?: (?<branch>\S+))?$" script="force_update_plugin" regexp="y" sequence="100">
+        </alias>
+
+        <alias enabled="y" match="snd check_update" script="toggle_automatic_update_checking" sequence="100">
+        </alias>
+
+        <alias enabled="y" match="^xset silent(?: (on|off))?" regexp="y" script="xset_silentMode" sequence="100">
+        </alias>
+
+        <!-- Auto-hunt commands-->
+        <alias match="^ah (?<arg>\w.+)$" script="auto_hunt" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(?:aha|ah0)$" script="auto_hunt_abort" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^ah$" script="auto_hunt_noarg" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- campaign data input: cp info, check -->
+        <alias match="^cp (?:i|info)$" script="do_cp_info" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^cp (?:ch|check)$" script="do_cp_check" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- gquest data input: gq info, check -->
+        <alias match="^gq i(?:n(?:fo?)?)?$" script="do_gq_info" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(?:gg|qq)$" script="do_gq_check" name="extra_gq_check_aliases" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(?:gq (?:c|ch|check))$" script="do_gq_check" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- xcp commands  -->
+        <alias match="^xcp$" script="xcp_noarg" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xcp (?<index>[0-9]+)$" script="xcp_arg" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xcp mode(?: (?<option>ht|qw|off))?$" script="xcp_set_action_mode" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xcp q(uest)?$" script="xcp_toggle_quest_targeting" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- movement: xrunto, go, nx, etc.  -->
+        <alias match="^(?:xrt|xrun|xrunto) (?<destination>.+)$" script="xrun_to_alias" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(?:go|goto)( (?<index>[0-9]+))?$" script="goto_number" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" keep_evaluating="y"></alias>
+
+        <alias match="^nx$" script="goto_next" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^nx-$" script="goto_previous" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- Automatic noexp -->
+        <alias match="^xset noexp( (?<arg>off|[0-9]+))?$" script="xset_noexp_tnl" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- Quest commands -->
+        <alias match="^(?:xq|xq1)$" script="xq_command" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xqt$" script="retarget_quest" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- Quick scan -->
+        <alias match="^qs$" script="quick_scan" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- Quick-kill commands: qk, ak, kk, xset attack -->
+        <alias match="^(?:quick kill|ak|kk|qk)$" script="quick_kill" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset (?:kk|ak|qk|qkill)(?: (?<arg>.+))?$" script="xset_quick_kill_command" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- Hunt trick -->
+        <alias match="^ht$" script="ht_noarg" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^ht (?:(?<index>\d+)\.)?(?<mob>.+)?$" script="ht_arg" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^ht(?:a|0| abort| stop)$" script="ht_abort" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- Quick where -->
+        <alias match="^qw$" script="qw_noarg" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^qw (?:(?<index>\d+)\.)?(?<mob>.+)?$" script="qw_arg_alias" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^qwx$" script="qw_exact" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- roomnotes -->
+        <alias match="^(?:roomnote|rn)$" script="room_note" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(?:roomnote|rn) a(?:rea)?(?: (?<arid>.+))?$" script="room_note_area" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(?:roomnote|rn) (?<roomid>\d+)$" script="room_note_room" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- Sql Execution -->
+        <alias match="^runsql (?<sql>.+)$" script="RunSql" enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^execsql (?<sql>.+)$" script="ExecSql" enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12"></alias>
+
+        <!-- xmapper  -->
+        <alias match="^(?:xmap|xmapper) move (?<roomid>\d+|-1)(?: (?<speed>run|walk))?$" script="xmapper_move" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xm(?:\ {(?<mob>[^\}]+)\})? (?<loc>.+)$" script="map_area" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xmall(?:\ {(?<mob>[^\}]+)\})? (?<loc>.+)$" script="map_area_all" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(?:xm|xmap|xmapper) rlh(?: (?<room_id>\d+))?$" script="xmap_rooms_linking_here" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- xset commands -->
+        <alias match="^xset (?:index areas|area index)$" script="area_index_process" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset (?:mark|start)(?:\s(\w+))?(?:\s(\d+))?$" script="xset_to_mark" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset gqalias$" script="xset_gqalias" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset vidblain$" script="xset_vidblain" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset vidblain level(?: (?<level>\d{1,3}))?$" script="xset_vidblain_setlevel" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset speed ?(?<speed>run|walk)?$" script="set_speed" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset sendecho$" script="" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset kw$" script="set_mob_keyword" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset kw (?<keyword>.+)$" script="set_current_mob_keyword" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset nx$" script="xset_nx_check" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset nx (?<action>smartscan|con|scan|scanhere|qs|none)$" script="xset_nx" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset con_overwrite" script="xset_con_overwrite" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset sound$" script="xset_sound" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset table notes$" script="xset_table_notes" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset table width (?<width>\d{2,3})$" script="xset_table_width" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+	<alias match="^xset express ?(?<state>on|off)? ?(?<min_kill>\d+)?$" script="xset_express" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12" > </alias>
+
+	<alias match="^xset maze$" enabled="y" sequence="100" script="xset_maze" regexp="y"></alias>
+
+        <!-- xset window commands -->
+        <alias match="^xset fontsize.*$" script="deprecated_xset_font_size" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset linespace.*$" script="deprecated_xset_line_space" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset winreset$" script="xg_create_window" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12">
+            <send>	win_init = false	</send>
+        </alias>
+
+        <alias match="^xset (?:window|win) (?<onoff>on|off|show|hide|0|1|true|false|max(?:imize)?|expand|min(?:imize)?|collapse)$" script="xset_ToggleWindowDisplay" enabled="y" regexp="y" sequence="100"></alias>
+
+        <alias match="^(?:xw|xwh|xwhere)( (?<n1>\d+))?( (?<n2>\d+))?( (?<mob>.+))?$" script="do_xwhere" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(?:xg|xgui) (?:ref|refresh)$" script="xgui_RefreshLinks" enabled="y" regexp="y" sequence="100" ignore_case="y"></alias>
+
+        <alias match="^(?:xg|xgui) (?:rel|reload)$" script="xgui_ReloadLinks" enabled="y" regexp="y" sequence="100" ignore_case="y"></alias>
+
+        <!-- xset page size (area index process) -->
+        <alias match="^xset suspend page size$" script="suspend_page_size" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xset resume page size$" script="resume_page_size" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- xtest commands -->
+        <alias match="^xtest areadata$" script="xtest_areadata" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest mcvars$" script="xtest_mcvars" enabled="y" regexp="y" sequence="100"></alias>
+
+        <alias match="^xtest roomhist$" script="xtest_roomhist" enabled="y" regexp="y" sequence="100"></alias>
+
+        <alias match="^xtest simulate cp(?: (?<type>area|room))?$" script="simulate_cp" enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate level (?<level>\d{1,3})$" script="spoof_level" enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate q(?:uest)?(?: (?<status>start|status|killed|comp|fail|reset|ready|timeout|statkilled|wait|ready))?$" script="simulate_quest" enabled="y" regexp="y" sequence="1" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest debug gq(uest)?$" script="xtest_debug_gquest" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate gq wait(?: (?<num>\d{1,5}))?$" script="xtest_gq_waiting" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate gq start(?: (?<type>area|room))?(?: (?<num>\d{1,5}))?$" script="xtest_gq_start" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate gq join (?<num>\d{1,5})(?: (?<silent>s))?$" script="xtest_gq_join" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate gq end(?: (?<num>\d{1,5}))?$" script="xtest_gq_end" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate gq win(?: (?<num>\d{1,5}))?$" script="xtest_gq_win" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate gq lose(?: (?<num>\d{1,5}))?(?<noextend> noextended)$" script="xtest_gq_lose" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate gq kill(?: (?<num>\d+))?$" script="xtest_gq_kill" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate gq quit(?: (?<num>\d{1,5}))?$" script="xtest_gq_quit" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest simulate xcp(?: (?<num>\d+))?$" script="xtest_xcp" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest gqid$" script="echo_gqid_joined" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest loadroom(?: (?<roomid>\d+))?$" script="xtest_loadroom" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest popmsg$" script="xtest_popmsg" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest debug$" script="xtest_debug" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest qt (?<qt>\d{1,2})$" script="xtest_set_qt" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^xtest target$" script="xtest_print_target" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^snd reload$" script="sndReload" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <!-- New commands -->
+        <alias match="^x?m(?:ob)?s(?:earch)? ([\p{P}\w]+)(?:\s([^0-9]+))?(?:\s+(\d+))?$" script="onSearch" group="Mob_Database" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^x?mgo(?:to)? (\d+)$" script="mobGo" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(snd migrate|mergePwar)$" script="copyPwarWarn" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="^(snd migrate|mergePwar) confirm$" script="copyPwarDB" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+
+        <alias match="snd changelog" enabled="y" sequence="100" ignore_case="y" send_to="12">
+            <send>get_changelog(true)</send>
+        </alias>
+
+        <!-- History commands -->
+        <alias match="^snd history(?<hist_type> (campaign|cp|quest|q|gq|gquest))?$" script="alias_print_history" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+        <alias match="^snd stats(?<arg1> \w+)?(?<arg2> \w+)?$" script="alias_print_stats" enabled="y" regexp="y" sequence="100" ignore_case="y" send_to="12"></alias>
+    </aliases>
 </muclient>
